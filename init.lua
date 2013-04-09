@@ -1,6 +1,7 @@
 -- settings
 
-IO_CONNECT_DISTANCE = 50
+CONNECT_DISTANCE = 50
+EXPORT_IGNORE = {"air", "structures:io_disabled", "structures:io_enabled", "structures:io_marker"}
 
 -- import and export functions
 local function calculate_distance (pos1, pos2)
@@ -22,23 +23,29 @@ local function structure_export (pos, filename)
 	local points = { x = positions[0].x, y = positions[1].y, z = positions[2].z }
 	local file = io.open(filename, "w")
 
-	-- write overall size in the first line
-	local size = calculate_distance(pos, points)
-	s = size.x..","..size.y..","..size.z.."\n"
-	file:write(s)
-
 	-- write each node in the marked area to a line
 	for loop_x = math.min(pos.x, points.x), math.max(pos.x, points.x) do
 		for loop_y = math.min(pos.y, points.y), math.max(pos.y, points.y) do
 			for loop_z = math.min(pos.z, points.z), math.max(pos.z, points.z) do
-
-				-- we want to save origins as distance from the main I/O node
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
-				local dist = calculate_distance(pos, pos_here)
 
-				s = minetest.env:get_node(pos_here).name.." "..
-				dist.x..","..dist.y..","..dist.z.."\n"
-				file:write(s)
+				-- see if this node is in the ignore list
+				found_ignored = false
+				for i, v in ipairs(EXPORT_IGNORE) do
+					if (minetest.env:get_node(pos_here).name == v) then
+						found_ignored = true
+					end
+				end
+
+				if (found_ignored == false) then
+					-- we want to save origins as distance from the main I/O node
+					local dist = calculate_distance(pos, pos_here)
+
+					-- parameter order: node type, x position, y position, z position
+					s = minetest.env:get_node(pos_here).name.." "..
+					dist.x.." "..dist.y.." "..dist.z.."\n"
+					file:write(s)
+				end
 			end
 		end
 	end
@@ -51,12 +58,28 @@ end
 local function structure_import (pos, filename)
 	-- imports structure from a text file
 
-	-- To be done :)
+	-- re-check markers and get their positions
+	local positions = io_connect_get(pos)
+	if (positions[0] == nil) or (positions[1] == nil) or (positions[2] == nil) then return false end
+	-- [0] = x, [1] = y, [2] = z
+	local start = { x = math.min(pos.x, positions[0].x), y = math.min(pos.y, positions[1].y), z = math.min(pos.z, positions[2].z) }
+	local file = io.open(filename, "r")
 
-	--s = "test text 1234"
-	--for w in string.gmatch(s, "%w+") do
-	--	file:write(w)
-	--end
+	for line in io.lines(filename) do
+		local parameters = {}
+		for item in string.gmatch(line, "%S+") do
+			table.insert(parameters, item)
+		end
+
+		-- parameter order: node type [1], x position [2], y position [3], z position [4]
+		local origin = { x = start.x + tonumber(parameters[2]), y = start.y + tonumber(parameters[3]), z = start.z + tonumber(parameters[4]) }
+		minetest.env:add_node(origin, { name = parameters[1] })
+
+	end
+
+	file:close()
+
+
 	
 end
 
@@ -72,21 +95,21 @@ io_connect_get = function (pos)
 
 	positions = {nil, nil, nil}
 	-- search X
-	for search = pos.x - IO_CONNECT_DISTANCE, pos.x + IO_CONNECT_DISTANCE do
+	for search = pos.x - CONNECT_DISTANCE, pos.x + CONNECT_DISTANCE do
 		pos_search = {x = search, y = pos.y, z = pos.z}
 		if(minetest.env:get_node(pos_search).name == "structures:io_marker") then
 			positions[0] = pos_search
 		end
 	end
 	-- search Y
-	for search = pos.y - IO_CONNECT_DISTANCE, pos.y + IO_CONNECT_DISTANCE do
+	for search = pos.y - CONNECT_DISTANCE, pos.y + CONNECT_DISTANCE do
 		pos_search = {x = pos.x, y = search, z = pos.z}
 		if(minetest.env:get_node(pos_search).name == "structures:io_marker") then
 			positions[1] = pos_search
 		end
 	end
 	-- search Z
-	for search = pos.z - IO_CONNECT_DISTANCE, pos.z + IO_CONNECT_DISTANCE do
+	for search = pos.z - CONNECT_DISTANCE, pos.z + CONNECT_DISTANCE do
 		pos_search = {x = pos.x, y = pos.y, z = search}
 		if(minetest.env:get_node(pos_search).name == "structures:io_marker") then
 			positions[2] = pos_search
@@ -138,6 +161,10 @@ minetest.register_node("structures:io_enabled", {
 	on_receive_fields = function(pos, formname, fields, sender)
 		if (fields.export) then
 			structure_export(pos, fields.file)
+		end
+
+		if (fields.import) then
+			structure_import(pos, fields.file)
 		end
 	end
 })
