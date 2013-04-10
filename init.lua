@@ -107,14 +107,20 @@ local function area_export (pos, filename)
 		for loop_y = math.min(pos.y, pos_markers.y), math.max(pos.y, pos_markers.y) do
 			for loop_z = math.min(pos.z, pos_markers.z), math.max(pos.z, pos_markers.z) do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
+				local node_name = minetest.env:get_node(pos_here).name
+				local liquidtype = minetest.registered_nodes[node_name].liquidtype
 
-				if (is_ignored(minetest.env:get_node(pos_here).name) == false) then
+				-- don't export flowing liquid nodes, just sources
+				if (is_ignored(node_name) == false) and (liquidtype ~= "flowing") then
 					-- we want to save origins as distance from the main I/O node
 					local dist = distance(pos, pos_here)
+					-- param2 must be persisted
+					local node_param2 = minetest.env:get_node(pos_here).param2
 
-					-- parameter order: node type, x position, y position, z position
+					-- parameter order: node type, x position, y position, z position, param2
 					s = minetest.env:get_node(pos_here).name.." "..
-					dist.x.." "..dist.y.." "..dist.z.."\n"
+					dist.x.." "..dist.y.." "..dist.z..
+					" "..node_param2.."\n"
 					file:write(s)
 				end
 			end
@@ -142,15 +148,36 @@ local function area_import (pos, angle, filename)
 			table.insert(parameters, item)
 		end
 
-		-- parameter order: node type [1], x position [2], y position [3], z position [4]
-		local origin = {}
+		-- parameter order: node type [1], x position [2], y position [3], z position [4], param2 [5]
+		local node_pos = {}
+		local node_name = parameters[1]
+		local node_paramtype2 = minetest.registered_nodes[node_name].paramtype2
+		local node_param2 = parameters[5]
+
 		if(angle == 180) then
-			origin = { x = pos_start.x + tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_start.z + tonumber(parameters[4]) }
+			node_pos = { x = pos_start.x + tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_start.z + tonumber(parameters[4]) }
+
+			-- if param2 is facedir, rotate it accordingly
+			-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
+			if (node_paramtype2 == "facedir") then
+				if (node_param2 == "0") then node_param2 = "2"
+				elseif (node_param2 == "1") then node_param2 = "3"
+				elseif (node_param2 == "2") then node_param2 = "0"
+				elseif (node_param2 == "3") then node_param2 = "1" end
+			end
+
+			-- if param2 is wallmounted, rotate it accordingly
+			if (node_paramtype2 == "wallmounted") then
+				if (node_param2 == "2") then node_param2 = "3"
+				elseif (node_param2 == "3") then node_param2 = "2"
+				elseif (node_param2 == "4") then node_param2 = "5"
+				elseif (node_param2 == "5") then node_param2 = "4" end
+			end
 		else -- 0 degrees
-			origin = { x = pos_end.x - tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_end.z - tonumber(parameters[4]) }
+			node_pos = { x = pos_end.x - tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_end.z - tonumber(parameters[4]) }
 		end
 
-		minetest.env:add_node(origin, { name = parameters[1] })
+		minetest.env:add_node(node_pos, { name = node_name, param2 = node_param2 })
 
 	end
 
