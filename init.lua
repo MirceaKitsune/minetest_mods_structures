@@ -5,7 +5,7 @@ EXPORT_IGNORE = {"air", "structures:io_disabled", "structures:io_enabled", "stru
 
 -- import and export functions
 
-local function calculate_distance (pos1, pos2)
+local function distance (pos1, pos2)
 	local size = { x = 0, y = 0, z = 0 }
 	if pos1.x < pos2.x then size.x = pos2.x - pos1.x else size.x = pos1.x - pos2.x end
 	if pos1.y < pos2.y then size.y = pos2.y - pos1.y else size.y = pos1.y - pos2.y end
@@ -24,30 +24,64 @@ local function is_ignored (node)
 	return false
 end
 
-local function io_formspec (file, angle)
-        local formspec="size[6,3]"..
-                "field[0,0;4,2;file;File;"..file.."]"..
-                "field[4,0;2,2;angle;Import angle (0, 180);"..angle.."]"..
-                "button[0,1;2,1;import;Import]"..
-                "button[2,1;2,1;export;Export]"..
-                "button[4,1;2,1;clear;Clear]"..
-                "button_exit[0,2;6,1;exit;OK]"
-        return formspec
+local function make_formspec (file, angle, size, nodes)
+		local formspec="size[6,4]"..
+			"label[0,0;Area size: X = "..size.x.." Y = "..size.y.." Z = "..size.z.." Nodes in area: "..nodes.."]"..
+			"button_exit[4,0;2,1;unset;Remove markers]"..
+			"field[0,1;4,2;file;File;"..file.."]"..
+			"field[4,1;2,2;angle;Import angle (0, 180);"..angle.."]"..
+			"button[0,2;2,1;import;Import]"..
+			"button[2,2;2,1;export;Export]"..
+			"button[4,2;2,1;clear;Clear]"..
+			"button_exit[0,3;6,1;exit;OK]"
+		return formspec
 end
 
-local function structure_clear (pos)
-	-- clears import / export area of any objects which aren't ignored
+local function make_formspec_size (pos)
+	local pos_markers = markers_get(pos)
+	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return nil end
 
-	-- re-check markers and get their positions
-	local positions = io_connect_get(pos)
-	if (positions[0] == nil) or (positions[1] == nil) or (positions[2] == nil) then return false end
-	-- [0] = x, [1] = y, [2] = z
-	local points = { x = positions[0].x, y = positions[1].y, z = positions[2].z }
+	local size = distance(pos, pos_markers)
+	s = size.x..","..size.y..","..size.z.."\n"
+
+	return size
+end
+
+local function make_formspec_nodes (pos)
+	-- re-check markers and get their pos_markers
+	local pos_markers = markers_get(pos)
+	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return nil end
+	
+	local nodes = 0
 
 	-- write each node in the marked area to a line
-	for loop_x = math.min(pos.x, points.x), math.max(pos.x, points.x) do
-		for loop_y = math.min(pos.y, points.y), math.max(pos.y, points.y) do
-			for loop_z = math.min(pos.z, points.z), math.max(pos.z, points.z) do
+	for loop_x = math.min(pos.x, pos_markers.x), math.max(pos.x, pos_markers.x) do
+		for loop_y = math.min(pos.y, pos_markers.y), math.max(pos.y, pos_markers.y) do
+			for loop_z = math.min(pos.z, pos_markers.z), math.max(pos.z, pos_markers.z) do
+				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
+
+				if (is_ignored(minetest.env:get_node(pos_here).name) == false) then
+					-- we want to save origins as distance from the main I/O node
+					nodes = nodes + 1
+				end
+			end
+		end
+	end
+
+	return nodes
+end
+
+local function area_clear (pos)
+	-- clears import / export area of any objects which aren't ignored
+
+	-- re-check markers and get their pos_markers
+	local pos_markers = markers_get(pos)
+	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return end
+
+	-- write each node in the marked area to a line
+	for loop_x = math.min(pos.x, pos_markers.x), math.max(pos.x, pos_markers.x) do
+		for loop_y = math.min(pos.y, pos_markers.y), math.max(pos.y, pos_markers.y) do
+			for loop_z = math.min(pos.z, pos_markers.z), math.max(pos.z, pos_markers.z) do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 
 				if (is_ignored(minetest.env:get_node(pos_here).name) == false) then
@@ -56,31 +90,27 @@ local function structure_clear (pos)
 			end
 		end
 	end
-
-	return true
 end
 
-local function structure_export (pos, filename)
+local function area_export (pos, filename)
 	-- exports structure to a text file
 
-	-- re-check markers and get their positions
-	local positions = io_connect_get(pos)
-	if (positions[0] == nil) or (positions[1] == nil) or (positions[2] == nil) then return false end
-	-- [0] = x, [1] = y, [2] = z
-	local points = { x = positions[0].x, y = positions[1].y, z = positions[2].z }
-	
+	-- re-check markers and get their pos_markers
+	local pos_markers = markers_get(pos)
+	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return end
+
 	local file = io.open(filename, "w")
 	if (file == nil) then return end
 
 	-- write each node in the marked area to a line
-	for loop_x = math.min(pos.x, points.x), math.max(pos.x, points.x) do
-		for loop_y = math.min(pos.y, points.y), math.max(pos.y, points.y) do
-			for loop_z = math.min(pos.z, points.z), math.max(pos.z, points.z) do
+	for loop_x = math.min(pos.x, pos_markers.x), math.max(pos.x, pos_markers.x) do
+		for loop_y = math.min(pos.y, pos_markers.y), math.max(pos.y, pos_markers.y) do
+			for loop_z = math.min(pos.z, pos_markers.z), math.max(pos.z, pos_markers.z) do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 
 				if (is_ignored(minetest.env:get_node(pos_here).name) == false) then
 					-- we want to save origins as distance from the main I/O node
-					local dist = calculate_distance(pos, pos_here)
+					local dist = distance(pos, pos_here)
 
 					-- parameter order: node type, x position, y position, z position
 					s = minetest.env:get_node(pos_here).name.." "..
@@ -92,18 +122,16 @@ local function structure_export (pos, filename)
 	end
 
 	file:close()
-	return true
 end
 
-local function structure_import (pos, angle, filename)
+local function area_import (pos, angle, filename)
 	-- imports structure from a text file
 
-	-- re-check markers and get their positions
-	local positions = io_connect_get(pos)
-	if (positions[0] == nil) or (positions[1] == nil) or (positions[2] == nil) then return false end
-	-- [0] = x, [1] = y, [2] = z
-	local pos_start = { x = math.min(pos.x, positions[0].x), y = math.min(pos.y, positions[1].y), z = math.min(pos.z, positions[2].z) }
-	local pos_end = { x = math.max(pos.x, positions[0].x), y = math.max(pos.y, positions[1].y), z = math.max(pos.z, positions[2].z) }
+	-- re-check markers and get their pos_markers
+	local pos_markers = markers_get(pos)
+	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return end
+	local pos_start = { x = math.min(pos.x, pos_markers.x), y = math.min(pos.y, pos_markers.y), z = math.min(pos.z, pos_markers.z) }
+	local pos_end = { x = math.max(pos.x, pos_markers.x), y = math.max(pos.y, pos_markers.y), z = math.max(pos.z, pos_markers.z) }
 
 	local file = io.open(filename, "r")
 	if (file == nil) then return end
@@ -127,46 +155,71 @@ local function structure_import (pos, angle, filename)
 	end
 
 	file:close()
-	return true
 end
 
 -- functions
 
-io_connect_get = function (pos)
-	-- search for in-line markers on the X / Y / Z axes within radius and return their positions
+markers_remove = function (pos)
+	-- removes all 3 markers so the player can set up new ones
+	local pos_markers = markers_get(pos)
+	local pos_here = {}
 
-	positions = {nil, nil, nil}
+	-- remove X
+	pos_here = { x = pos_markers.x, y = pos.y, z = pos.z }
+	if (minetest.env:get_node(pos_here).name == "structures:io_marker") then
+		minetest.env:remove_node(pos_here)
+	end
+	-- remove Y
+	pos_here = { x = pos.x, y = pos_markers.y, z = pos.z }
+	if (minetest.env:get_node(pos_here).name == "structures:io_marker") then
+		minetest.env:remove_node(pos_here)
+	end
+	-- remove Z
+	pos_here = { x = pos.x, y = pos.y, z = pos_markers.z }
+	if (minetest.env:get_node(pos_here).name == "structures:io_marker") then
+		minetest.env:remove_node(pos_here)
+	end
+
+	-- switch to disabled node
+	minetest.env:add_node(pos, { name = "structures:io_disabled" })
+end
+
+markers_get = function (pos)
+	-- search for in-line markers on the X / Y / Z axes within radius and return their pos_markers
+
+	pos_markers = {x = nil, y = nil, z = nil}
 	-- search X
 	for search = pos.x - CONNECT_DISTANCE, pos.x + CONNECT_DISTANCE do
 		pos_search = {x = search, y = pos.y, z = pos.z}
 		if(minetest.env:get_node(pos_search).name == "structures:io_marker") then
-			positions[0] = pos_search
+			pos_markers.x = pos_search.x
 		end
 	end
 	-- search Y
 	for search = pos.y - CONNECT_DISTANCE, pos.y + CONNECT_DISTANCE do
 		pos_search = {x = pos.x, y = search, z = pos.z}
 		if(minetest.env:get_node(pos_search).name == "structures:io_marker") then
-			positions[1] = pos_search
+			pos_markers.y = pos_search.y
 		end
 	end
 	-- search Z
 	for search = pos.z - CONNECT_DISTANCE, pos.z + CONNECT_DISTANCE do
 		pos_search = {x = pos.x, y = pos.y, z = search}
 		if(minetest.env:get_node(pos_search).name == "structures:io_marker") then
-			positions[2] = pos_search
+			pos_markers.z = pos_search.z
 		end
 	end
-	return positions
+
+	return pos_markers
 end
 
-io_connect_morph = function (pos)
+markers_transform = function (pos)
 	-- check that the block is connected to 3 markers and change it accordingly
 
-	local positions = io_connect_get(pos)
-	if (positions[0] ~= nil)
-	and (positions[1] ~= nil)
-	and (positions[2] ~= nil) then
+	local pos_markers = markers_get(pos)
+	if (pos_markers.x ~= nil)
+	and (pos_markers.y ~= nil)
+	and (pos_markers.z ~= nil) then
 		if(minetest.env:get_node(pos).name == "structures:io_disabled") then
 			minetest.env:add_node(pos, { name = "structures:io_enabled" })
 		end
@@ -200,23 +253,25 @@ minetest.register_node("structures:io_enabled", {
 		local meta = minetest.env:get_meta(pos)
 		meta:set_string("file", "structure.txt")
 		meta:set_float("angle", 0)
-		meta:set_string("formspec", io_formspec("structure.txt", 0))
+		meta:set_string("formspec", make_formspec("structure.txt", 0, make_formspec_size(pos), make_formspec_nodes(pos)))
 		meta:set_string("infotext", "I/O ready")
 	end,
 
 	on_receive_fields = function(pos, formname, fields, sender)
-		if (fields.export) then
-			structure_export(pos, fields.file)
-		elseif (fields.import) then
-			structure_import(pos, tonumber(fields.angle), fields.file)
-		elseif (fields.clear) then
-			structure_clear(pos)
-		end
-
 		local meta = minetest.env:get_meta(pos)
 		meta:set_string("file", fields.file)
 		meta:set_float("angle", fields.angle)
-		meta:set_string("formspec", io_formspec(fields.file, fields.angle))
+		meta:set_string("formspec", make_formspec(fields.file, fields.angle, make_formspec_size(pos), make_formspec_nodes(pos)))
+
+		if (fields.export) then
+			area_export(pos, fields.file)
+		elseif (fields.import) then
+			area_import(pos, tonumber(fields.angle), fields.file)
+		elseif (fields.clear) then
+			area_clear(pos)
+		elseif (fields.unset) then
+			markers_remove(pos)
+		end
 	end
 })
 
@@ -244,6 +299,6 @@ minetest.register_abm({
 	chance = 1,
 
 	action = function(pos, node, active_object_count, active_object_count_wider)
-		io_connect_morph(pos)
+		markers_transform(pos)
 	end
 })
