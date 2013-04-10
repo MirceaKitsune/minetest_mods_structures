@@ -115,12 +115,13 @@ local function area_export (pos, filename)
 					-- we want to save origins as distance from the main I/O node
 					local dist = distance(pos, pos_here)
 					-- param2 must be persisted
+					local node_param1 = minetest.env:get_node(pos_here).param1
 					local node_param2 = minetest.env:get_node(pos_here).param2
 
-					-- parameter order: node type, x position, y position, z position, param2
-					s = minetest.env:get_node(pos_here).name.." "..
-					dist.x.." "..dist.y.." "..dist.z..
-					" "..node_param2.."\n"
+					-- parameters: x position, y position, z position, node type, param1, param2
+					s = dist.x.." "..dist.y.." "..dist.z.." "..
+					minetest.env:get_node(pos_here).name.." "..
+					node_param1.." "..node_param2.."\n"
 					file:write(s)
 				end
 			end
@@ -148,11 +149,12 @@ local function area_import (pos, angle, filename)
 			table.insert(parameters, item)
 		end
 
-		-- parameter order: node type [1], x position [2], y position [3], z position [4], param2 [5]
-		local node_pos = { x = pos_start.x + tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_start.z + tonumber(parameters[4]) }
-		local node_name = parameters[1]
+		-- parameters: x position [1], y position [2], z position [3], node type [4], param1 [5], param2 [6]
+		local node_pos = { x = pos_start.x + tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[3]) }
+		local node_name = parameters[4]
+		local node_param1 = parameters[5]
+		local node_param2 = parameters[6]
 		local node_paramtype2 = minetest.registered_nodes[node_name].paramtype2
-		local node_param2 = parameters[5]
 
 		-- clear and abort if a node is larger than the marked area
 		if (node_pos.x > pos_end.x) or (node_pos.y > pos_end.y) or (node_pos.z > pos_end.z) then
@@ -162,7 +164,7 @@ local function area_import (pos, angle, filename)
 		end
 
 		if(angle == 180) then
-			-- node_pos = { x = pos_start.x + tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_start.z + tonumber(parameters[4]) }
+			-- node_pos = { x = pos_start.x + tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[3]) }
 
 			-- if param2 is facedir, rotate it accordingly
 			-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
@@ -181,9 +183,9 @@ local function area_import (pos, angle, filename)
 				elseif (node_param2 == "5") then node_param2 = "4" end
 			end
 		else -- 0 degrees
-			node_pos = { x = pos_end.x - tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_end.z - tonumber(parameters[4]) }
+			node_pos = { x = pos_end.x - tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[3]) }
 		end
-		minetest.env:add_node(node_pos, { name = node_name, param2 = node_param2 })
+		minetest.env:add_node(node_pos, { name = node_name, param1 = node_param1, param2 = node_param2 })
 	end
 
 	file:close()
