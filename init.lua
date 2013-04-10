@@ -149,13 +149,20 @@ local function area_import (pos, angle, filename)
 		end
 
 		-- parameter order: node type [1], x position [2], y position [3], z position [4], param2 [5]
-		local node_pos = {}
+		local node_pos = { x = pos_start.x + tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_start.z + tonumber(parameters[4]) }
 		local node_name = parameters[1]
 		local node_paramtype2 = minetest.registered_nodes[node_name].paramtype2
 		local node_param2 = parameters[5]
 
+		-- clear and abort if a node is larger than the marked area
+		if (node_pos.x > pos_end.x) or (node_pos.y > pos_end.y) or (node_pos.z > pos_end.z) then
+			print("Structure I/O Error: Structure is larger than the marked area, clearing and aborting.")
+			area_clear(pos)
+			return
+		end
+
 		if(angle == 180) then
-			node_pos = { x = pos_start.x + tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_start.z + tonumber(parameters[4]) }
+			-- node_pos = { x = pos_start.x + tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_start.z + tonumber(parameters[4]) }
 
 			-- if param2 is facedir, rotate it accordingly
 			-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
@@ -176,9 +183,7 @@ local function area_import (pos, angle, filename)
 		else -- 0 degrees
 			node_pos = { x = pos_end.x - tonumber(parameters[2]), y = pos_start.y + tonumber(parameters[3]), z = pos_end.z - tonumber(parameters[4]) }
 		end
-
 		minetest.env:add_node(node_pos, { name = node_name, param2 = node_param2 })
-
 	end
 
 	file:close()
