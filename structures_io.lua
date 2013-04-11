@@ -4,6 +4,7 @@
 -- Settings
 
 local EXPORT_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
+local DIRECTORY_STRUCTURES = "structures"
 
 -- Global functions - Calculate
 
@@ -58,7 +59,7 @@ function io_area_export (pos, filename)
 	local pos_start = { x = math.min(pos.x, pos_markers.x), y = math.min(pos.y, pos_markers.y), z = math.min(pos.z, pos_markers.z) }
 	local pos_end = { x = math.max(pos.x, pos_markers.x), y = math.max(pos.y, pos_markers.y), z = math.max(pos.z, pos_markers.z) }
 
-	local path = minetest.get_modpath("structures").."/structures/"..filename
+	local path = minetest.get_modpath("structures").."/"..DIRECTORY_STRUCTURES.."/"..filename
 	local file = io.open(path, "w")
 	if (file == nil) then return end
 
@@ -98,7 +99,7 @@ function io_area_import (pos, angle, filename)
 	local pos_start = { x = math.min(pos.x, pos_markers.x), y = math.min(pos.y, pos_markers.y), z = math.min(pos.z, pos_markers.z) }
 	local pos_end = { x = math.max(pos.x, pos_markers.x), y = math.max(pos.y, pos_markers.y), z = math.max(pos.z, pos_markers.z) }
 
-	local path = minetest.get_modpath("structures").."/structures/"..filename
+	local path = minetest.get_modpath("structures").."/"..DIRECTORY_STRUCTURES.."/"..filename
 	local file = io.open(path, "r")
 	if (file == nil) then return end
 
@@ -119,10 +120,10 @@ function io_area_import (pos, angle, filename)
 		local node_paramtype2 = minetest.registered_nodes[node_name].paramtype2
 
 		if (angle == 90) or (angle == -270) then
-			node_pos = { x = pos_start.x + tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[1]) }
+			node_pos = { x = pos_end.x - tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[1]) }
 
 			-- clear and abort if a node is larger than the marked area
-			if (node_pos.x > pos_end.x) or (node_pos.y > pos_end.y) or (node_pos.z > pos_end.z) then
+			if (node_pos.x < pos_start.x) or (node_pos.y > pos_end.y) or (node_pos.z > pos_end.z) then
 				print("Structure I/O Error: Structure is larger than the marked area, clearing and aborting.")
 				io_area_clear(pos)
 				return
@@ -131,17 +132,17 @@ function io_area_import (pos, angle, filename)
 			-- if param2 is facedir, rotate it accordingly
 			-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
 			if (node_paramtype2 == "facedir") then
-				if (node_param2 == "0") then node_param2 = "1"
+				if (node_param2 == "0") then node_param2 = "3"
 				elseif (node_param2 == "1") then node_param2 = "0"
-				elseif (node_param2 == "2") then node_param2 = "3"
+				elseif (node_param2 == "2") then node_param2 = "1"
 				elseif (node_param2 == "3") then node_param2 = "2" end
 			end
 			-- if param2 is wallmounted, rotate it accordingly
 			if (node_paramtype2 == "wallmounted") then
 				if (node_param2 == "2") then node_param2 = "4"
 				elseif (node_param2 == "3") then node_param2 = "5"
-				elseif (node_param2 == "4") then node_param2 = "2"
-				elseif (node_param2 == "5") then node_param2 = "3" end
+				elseif (node_param2 == "4") then node_param2 = "3"
+				elseif (node_param2 == "5") then node_param2 = "2" end
 			end
 		elseif (angle == 180) then
 			node_pos = { x = pos_end.x - tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[3]) }
@@ -169,10 +170,10 @@ function io_area_import (pos, angle, filename)
 				elseif (node_param2 == "5") then node_param2 = "4" end
 			end
 		elseif (angle == 270) or (angle == -90) then
-			node_pos = { x = pos_end.x - tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[1]) }
+			node_pos = { x = pos_start.x + tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[1]) }
 
 			-- clear and abort if a node is larger than the marked area
-			if (node_pos.x < pos_start.x) or (node_pos.y > pos_end.y) or (node_pos.z < pos_start.z) then
+			if (node_pos.x > pos_end.x) or (node_pos.y > pos_end.y) or (node_pos.z < pos_start.z) then
 				print("Structure I/O Error: Structure is larger than the marked area, clearing and aborting.")
 				io_area_clear(pos)
 				return
@@ -181,17 +182,17 @@ function io_area_import (pos, angle, filename)
 			-- if param2 is facedir, rotate it accordingly
 			-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
 			if (node_paramtype2 == "facedir") then
-				if (node_param2 == "0") then node_param2 = "3"
+				if (node_param2 == "0") then node_param2 = "1"
 				elseif (node_param2 == "1") then node_param2 = "2"
-				elseif (node_param2 == "2") then node_param2 = "1"
+				elseif (node_param2 == "2") then node_param2 = "3"
 				elseif (node_param2 == "3") then node_param2 = "0" end
 			end
 			-- if param2 is wallmounted, rotate it accordingly
 			if (node_paramtype2 == "wallmounted") then
 				if (node_param2 == "2") then node_param2 = "5"
 				elseif (node_param2 == "3") then node_param2 = "4"
-				elseif (node_param2 == "4") then node_param2 = "3"
-				elseif (node_param2 == "5") then node_param2 = "2" end
+				elseif (node_param2 == "4") then node_param2 = "2"
+				elseif (node_param2 == "5") then node_param2 = "3" end
 			end
 		else -- 0 degrees
 			node_pos = { x = pos_start.x + tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[3]) }
