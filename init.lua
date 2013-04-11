@@ -1,7 +1,7 @@
 -- settings
 
 CONNECT_DISTANCE = 50
-EXPORT_IGNORE = {"air", "structures:io_disabled", "structures:io_enabled", "structures:io_marker"}
+EXPORT_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:io_disabled", "structures:io_enabled", "structures:io_marker"}
 
 -- import and export functions
 
@@ -74,14 +74,16 @@ end
 local function area_clear (pos)
 	-- clears import / export area of any objects which aren't ignored
 
-	-- re-check markers and get their pos_markers
+	-- re-check markers and get their positions
 	local pos_markers = markers_get(pos)
 	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return end
+	local pos_start = { x = math.min(pos.x, pos_markers.x), y = math.min(pos.y, pos_markers.y), z = math.min(pos.z, pos_markers.z) }
+	local pos_end = { x = math.max(pos.x, pos_markers.x), y = math.max(pos.y, pos_markers.y), z = math.max(pos.z, pos_markers.z) }
 
-	-- write each node in the marked area to a line
-	for loop_x = math.min(pos.x, pos_markers.x), math.max(pos.x, pos_markers.x) do
-		for loop_y = math.min(pos.y, pos_markers.y), math.max(pos.y, pos_markers.y) do
-			for loop_z = math.min(pos.z, pos_markers.z), math.max(pos.z, pos_markers.z) do
+	-- erase each node in the marked area to a line
+	for loop_x = pos_start.x, pos_end.x do
+		for loop_y = pos_start.y, pos_end.y do
+			for loop_z = pos_start.z, pos_end.z do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 
 				if (is_ignored(minetest.env:get_node(pos_here).name) == false) then
@@ -95,17 +97,19 @@ end
 local function area_export (pos, filename)
 	-- exports structure to a text file
 
-	-- re-check markers and get their pos_markers
+	-- re-check markers and get their positions
 	local pos_markers = markers_get(pos)
 	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return end
+	local pos_start = { x = math.min(pos.x, pos_markers.x), y = math.min(pos.y, pos_markers.y), z = math.min(pos.z, pos_markers.z) }
+	local pos_end = { x = math.max(pos.x, pos_markers.x), y = math.max(pos.y, pos_markers.y), z = math.max(pos.z, pos_markers.z) }
 
 	local file = io.open(filename, "w")
 	if (file == nil) then return end
 
 	-- write each node in the marked area to a line
-	for loop_x = math.min(pos.x, pos_markers.x), math.max(pos.x, pos_markers.x) do
-		for loop_y = math.min(pos.y, pos_markers.y), math.max(pos.y, pos_markers.y) do
-			for loop_z = math.min(pos.z, pos_markers.z), math.max(pos.z, pos_markers.z) do
+	for loop_x = pos_start.x, pos_end.x do
+		for loop_y = pos_start.y, pos_end.y do
+			for loop_z = pos_start.z, pos_end.z do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 				local node_name = minetest.env:get_node(pos_here).name
 				local liquidtype = minetest.registered_nodes[node_name].liquidtype
@@ -113,7 +117,7 @@ local function area_export (pos, filename)
 				-- don't export flowing liquid nodes, just sources
 				if (is_ignored(node_name) == false) and (liquidtype ~= "flowing") then
 					-- we want to save origins as distance from the main I/O node
-					local dist = distance(pos, pos_here)
+					local dist = distance(pos_start, pos_here)
 					-- param2 must be persisted
 					local node_param1 = minetest.env:get_node(pos_here).param1
 					local node_param2 = minetest.env:get_node(pos_here).param2
@@ -134,7 +138,7 @@ end
 local function area_import (pos, angle, filename)
 	-- imports structure from a text file
 
-	-- re-check markers and get their pos_markers
+	-- re-check markers and get their positions
 	local pos_markers = markers_get(pos)
 	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return end
 	local pos_start = { x = math.min(pos.x, pos_markers.x), y = math.min(pos.y, pos_markers.y), z = math.min(pos.z, pos_markers.z) }
@@ -142,6 +146,9 @@ local function area_import (pos, angle, filename)
 
 	local file = io.open(filename, "r")
 	if (file == nil) then return end
+
+	-- clear the area before we get started
+	area_clear(pos)
 
 	for line in io.lines(filename) do
 		local parameters = {}
@@ -164,7 +171,7 @@ local function area_import (pos, angle, filename)
 		end
 
 		if(angle == 180) then
-			-- node_pos = { x = pos_start.x + tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[3]) }
+			node_pos = { x = pos_end.x - tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[3]) }
 
 			-- if param2 is facedir, rotate it accordingly
 			-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
@@ -183,7 +190,7 @@ local function area_import (pos, angle, filename)
 				elseif (node_param2 == "5") then node_param2 = "4" end
 			end
 		else -- 0 degrees
-			node_pos = { x = pos_end.x - tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[3]) }
+			node_pos = { x = pos_start.x + tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[3]) }
 		end
 		minetest.env:add_node(node_pos, { name = node_name, param1 = node_param1, param2 = node_param2 })
 	end
@@ -227,6 +234,7 @@ markers_get = function (pos)
 		pos_search = {x = search, y = pos.y, z = pos.z}
 		if(minetest.env:get_node(pos_search).name == "structures:io_marker") then
 			pos_markers.x = pos_search.x
+			break
 		end
 	end
 	-- search Y
@@ -234,6 +242,7 @@ markers_get = function (pos)
 		pos_search = {x = pos.x, y = search, z = pos.z}
 		if(minetest.env:get_node(pos_search).name == "structures:io_marker") then
 			pos_markers.y = pos_search.y
+			break
 		end
 	end
 	-- search Z
@@ -241,6 +250,7 @@ markers_get = function (pos)
 		pos_search = {x = pos.x, y = pos.y, z = search}
 		if(minetest.env:get_node(pos_search).name == "structures:io_marker") then
 			pos_markers.z = pos_search.z
+			break
 		end
 	end
 
