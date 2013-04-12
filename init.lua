@@ -8,16 +8,19 @@ local CONNECT_TIME = 1
 
 -- Local functions - Formspec
 
-local function make_formspec (file, angle, size, nodes)
-		local formspec="size[6,4]"..
+local function make_formspec (file, io_angle, area_size, area_nodes, mapgen_group)
+		local formspec="size[6,6]"..
 			"field[0,0;4,2;file;File;"..file.."]"..
 			"button_exit[4,0;2,1;unset;Remove markers]"..
-			"label[0,1;Size: X = "..size.x.." Y = "..size.y.." Z = "..size.z.." Nodes: "..nodes.."]"..
-			"field[4,1;2,2;angle;Import angle;"..angle.."]"..
-			"button[0,2;2,1;import;Import]"..
-			"button[2,2;2,1;export;Export]"..
-			"button[4,2;2,1;clear;Clear]"..
-			"button_exit[0,3;6,1;exit;OK]"
+			"label[0,1;Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes.."]"..
+			"field[4,1;2,2;io_angle;Import angle;"..io_angle.."]"..
+			"button[0,2;2,1;io_import;Import]"..
+			"button[2,2;2,1;io_export;Export]"..
+			"button[4,2;2,1;io_clear;Clear]"..
+			"field[0,4;2,2;mapgen_group;Mapgen group;"..mapgen_group.."]"..
+			"button[2,4;2,1;mapgen_add;Add file to mapgen]"..
+			"button[4,4;2,1;mapgen_remove;Remove file from mapgen]"..
+			"button_exit[0,5;6,1;exit;OK]"
 		return formspec
 end
 
@@ -147,25 +150,31 @@ minetest.register_node("structures:manager_enabled", {
 	on_construct = function(pos)
 		local meta = minetest.env:get_meta(pos)
 		meta:set_string("file", "structure.txt")
-		meta:set_float("angle", 0)
-		meta:set_string("formspec", make_formspec("structure.txt", 0, make_formspec_size(pos), make_formspec_nodes(pos)))
+		meta:set_float("io_angle", 0)
+		meta:set_float("mapgen_group", "structures")
+		meta:set_string("formspec", make_formspec("structure.txt", 0, make_formspec_size(pos), make_formspec_nodes(pos), "structures"))
 		meta:set_string("infotext", "I/O ready")
 	end,
 
 	on_receive_fields = function(pos, formname, fields, sender)
 		local meta = minetest.env:get_meta(pos)
 		meta:set_string("file", fields.file)
-		meta:set_float("angle", fields.angle)
-		meta:set_string("formspec", make_formspec(fields.file, fields.angle, make_formspec_size(pos), make_formspec_nodes(pos)))
+		meta:set_float("io_angle", fields.io_angle)
+		meta:set_float("mapgen_group", fields.mapgen_group)
+		meta:set_string("formspec", make_formspec(fields.file, fields.io_angle, make_formspec_size(pos), make_formspec_nodes(pos), fields.mapgen_group))
 
-		if (fields.export) then
+		if (fields.io_export) then
 			io_area_export(pos, fields.file)
-		elseif (fields.import) then
-			io_area_import(pos, tonumber(fields.angle), fields.file)
-		elseif (fields.clear) then
+		elseif (fields.io_import) then
+			io_area_import(pos, tonumber(fields.io_angle), fields.file)
+		elseif (fields.io_clear) then
 			io_area_clear(pos)
 		elseif (fields.unset) then
 			io_markers_remove(pos)
+		elseif (fields.mapgen_add) then
+			mapgen_add(fields.file, fields.mapgen_group)
+		elseif (fields.mapgen_remove) then
+			mapgen_remove(fields.file, fields.mapgen_group)
 		end
 	end
 })
@@ -201,3 +210,4 @@ minetest.register_abm({
 -- Other scripts
 
 dofile(minetest.get_modpath("structures").."/structures_io.lua")
+dofile(minetest.get_modpath("structures").."/structures_mapgen.lua")
