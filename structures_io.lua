@@ -32,11 +32,10 @@ end
 -- Global functions - Import / export
 
 -- clears marked area of any objects which aren't ignored
-function io_area_clear (pos)
-	local pos_markers = markers_get(pos)
-	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return end
-	local pos_start = { x = math.min(pos.x, pos_markers.x), y = math.min(pos.y, pos_markers.y), z = math.min(pos.z, pos_markers.z) }
-	local pos_end = { x = math.max(pos.x, pos_markers.x), y = math.max(pos.y, pos_markers.y), z = math.max(pos.z, pos_markers.z) }
+function io_area_clear (pos, ends)
+	if (ends == nil) then return end
+	local pos_start = { x = math.min(pos.x, ends.x), y = math.min(pos.y, ends.y), z = math.min(pos.z, ends.z) }
+	local pos_end = { x = math.max(pos.x, ends.x), y = math.max(pos.y, ends.y), z = math.max(pos.z, ends.z) }
 
 	-- erase each node in the marked area
 	for loop_x = pos_start.x, pos_end.x do
@@ -53,11 +52,10 @@ function io_area_clear (pos)
 end
 
 -- exports structure to a text file
-function io_area_export (pos, filename)
-	local pos_markers = markers_get(pos)
-	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return end
-	local pos_start = { x = math.min(pos.x, pos_markers.x), y = math.min(pos.y, pos_markers.y), z = math.min(pos.z, pos_markers.z) }
-	local pos_end = { x = math.max(pos.x, pos_markers.x), y = math.max(pos.y, pos_markers.y), z = math.max(pos.z, pos_markers.z) }
+function io_area_export (pos, ends, filename)
+	if (ends == nil) then return end
+	local pos_start = { x = math.min(pos.x, ends.x), y = math.min(pos.y, ends.y), z = math.min(pos.z, ends.z) }
+	local pos_end = { x = math.max(pos.x, ends.x), y = math.max(pos.y, ends.y), z = math.max(pos.z, ends.z) }
 
 	local path = minetest.get_modpath("structures").."/"..DIRECTORY_STRUCTURES.."/"..filename
 	local file = io.open(path, "w")
@@ -93,18 +91,17 @@ function io_area_export (pos, filename)
 end
 
 -- imports structure from a text file
-function io_area_import (pos, angle, filename)
-	local pos_markers = markers_get(pos)
-	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return end
-	local pos_start = { x = math.min(pos.x, pos_markers.x), y = math.min(pos.y, pos_markers.y), z = math.min(pos.z, pos_markers.z) }
-	local pos_end = { x = math.max(pos.x, pos_markers.x), y = math.max(pos.y, pos_markers.y), z = math.max(pos.z, pos_markers.z) }
+function io_area_import (pos, ends, angle, filename)
+	if (ends == nil) then return end
+	local pos_start = { x = math.min(pos.x, ends.x), y = math.min(pos.y, ends.y), z = math.min(pos.z, ends.z) }
+	local pos_end = { x = math.max(pos.x, ends.x), y = math.max(pos.y, ends.y), z = math.max(pos.z, ends.z) }
 
 	local path = minetest.get_modpath("structures").."/"..DIRECTORY_STRUCTURES.."/"..filename
 	local file = io.open(path, "r")
 	if (file == nil) then return end
 
 	-- clear the area before we get started
-	io_area_clear(pos)
+	io_area_clear(pos_start, pos_end)
 
 	for line in io.lines(path) do
 		local parameters = {}

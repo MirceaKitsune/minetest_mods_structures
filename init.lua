@@ -157,12 +157,12 @@ minetest.register_node("structures:manager_enabled", {
 		meta:set_string("file", "structure.txt")
 		meta:set_float("io_angle", 0)
 		meta:set_float("mapgen_group", "structures")
-		meta:set_float("mapgen_node", "default:dirt")
+		meta:set_float("mapgen_node", "default:dirt_with_grass")
 		meta:set_float("mapgen_probability", 1)
 		meta:set_float("mapgen_height_min", -50)
 		meta:set_float("mapgen_height_max", 50)
 		meta:set_float("mapgen_height_spacing", 10)
-		meta:set_string("formspec", make_formspec("structure.txt", 0, make_formspec_size(pos), make_formspec_nodes(pos), "structures", "default:dirt", 1, -50, 50, 10))
+		meta:set_string("formspec", make_formspec("structure.txt", 0, make_formspec_size(pos), make_formspec_nodes(pos), "structures", "default:dirt_with_grass", 1, -50, 50, 10))
 		meta:set_string("infotext", "I/O ready")
 	end,
 
@@ -174,11 +174,11 @@ minetest.register_node("structures:manager_enabled", {
 		meta:set_string("formspec", make_formspec(fields.file, fields.io_angle, make_formspec_size(pos), make_formspec_nodes(pos), fields.mapgen_group, fields.mapgen_node, fields.mapgen_probability, fields.mapgen_height_min, fields.mapgen_height_max, fields.mapgen_spacing))
 
 		if (fields.io_export) then
-			io_area_export(pos, fields.file)
+			io_area_export(pos, markers_get(pos), fields.file)
 		elseif (fields.io_import) then
-			io_area_import(pos, tonumber(fields.io_angle), fields.file)
+			io_area_import(pos, markers_get(pos), tonumber(fields.io_angle), fields.file)
 		elseif (fields.io_clear) then
-			io_area_clear(pos)
+			io_area_clear(pos, markers_get(pos))
 		elseif (fields.unset) then
 			io_markers_remove(pos)
 		elseif (fields.mapgen_add) then
