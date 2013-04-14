@@ -4,7 +4,8 @@
 -- Settings
 local MAPGEN_FILE = "mapgen.txt"
 local MAPGEN_PROBABILITY = 0.1
-local MAPGEN_RANGE = 80
+local MAPGEN_RANGE = 160
+local MAPGEN_AVOID_STEPS = 5
 
 -- Local functions - Table
 
@@ -81,6 +82,29 @@ local function spawn_structure (filename, pos, size, radius, node, avoid)
 	coords_x = pos.x + math.random(-MAPGEN_RANGE / 2, MAPGEN_RANGE / 2)
 	coords_z = pos.z + math.random(-MAPGEN_RANGE / 2, MAPGEN_RANGE / 2)
 
+	-- if too close to an avoid origin, move the location until we're far enough
+	for i, org in pairs(avoid) do
+		local dist = io_calculate_distance({ x = coords_x, y = 0, z = coords_z }, org)
+		while (dist.x < radius) do
+			coords_x = coords_x + MAPGEN_AVOID_STEPS
+			dist.x = dist.x + MAPGEN_AVOID_STEPS
+
+			-- check that the origin is still in bounds, and fail the attempt if not
+			if (coords_x < pos.x - MAPGEN_RANGE / 2) or (coords_x > pos.x + MAPGEN_RANGE / 2) then
+				return nil
+			end
+		end
+		while (dist.z < radius) do
+			coords_z = coords_z + MAPGEN_AVOID_STEPS
+			dist.z = dist.z + MAPGEN_AVOID_STEPS
+
+			-- check that the origin is still in bounds, and fail the attempt if not
+			if (coords_z < pos.z - MAPGEN_RANGE / 2) or (coords_z > pos.z + MAPGEN_RANGE / 2) then
+				return nil
+			end
+		end
+	end
+
 	-- now scan downward on these coordinates until we find a suitable spot
 	-- if we don't, this attempt to spawn the structure is lost
 	local target_y = pos.y - MAPGEN_RANGE
@@ -91,14 +115,6 @@ local function spawn_structure (filename, pos, size, radius, node, avoid)
 		local node_down = minetest.env:get_node(pos_down)
 
 		if (node_here.name == "air") and (node_down.name == node) then
-			-- check avoid origins and fail the spawn if too close to another building
-			for i, org in pairs(avoid) do
-				local dist = io_calculate_distance(pos_here, org)
-				if (dist.x < radius) or (dist.z < radius) then
-					return nil
-				end
-			end
-
 			pos1 = { x = pos_here.x - size.x / 2, y = pos_here.y, z = pos_here.z - size.z / 2 }
 			pos2 = { x = pos_here.x + size.x / 2, y = pos_here.y + size.y, z = pos_here.z + size.z / 2 }
 			io_area_import(pos1, pos2, 0 , filename)
