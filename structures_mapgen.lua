@@ -105,7 +105,7 @@ local function spawn_structure (filename, pos, size, radius, node, avoid)
 		end
 	end
 
-	-- now scan downward on these coordinates until we find a suitable spot
+	-- now scan downward until we find the specified node at surface level
 	-- if we don't, this attempt to spawn the structure is lost
 	local target_y = pos.y - MAPGEN_RANGE
 	for coords_y = pos.y, target_y, -1 do
@@ -115,10 +115,31 @@ local function spawn_structure (filename, pos, size, radius, node, avoid)
 		local node_down = minetest.env:get_node(pos_down)
 
 		if (node_here.name == "air") and (node_down.name == node) then
-			pos1 = { x = pos_here.x - size.x / 2, y = pos_here.y, z = pos_here.z - size.z / 2 }
-			pos2 = { x = pos_here.x + size.x / 2, y = pos_here.y + size.y, z = pos_here.z + size.z / 2 }
-			io_area_import(pos1, pos2, 0 , filename)
-			return pos_here
+			-- we found a suitable node, but what if it's the top of a peak?
+			-- to avoid parts of the building left floating, go down until all 4 corners touch the ground
+			-- if they don't, this attempt to spawn the structure is lost
+			for ground = pos_down.y, target_y, -1 do
+				local c1 = { x = pos.x, y = ground, z = pos.z }
+				local c2 = { x = pos.x + size.x, y = ground, z = pos.z }
+				local c3 = { x = pos.x, y = ground, z = pos.z + size.z }
+				local c4 = { x = pos.x + size.x, y = ground, z = pos.z + size.z }
+				local n1 = minetest.env:get_node(c1)
+				local n2 = minetest.env:get_node(c2)
+				local n3 = minetest.env:get_node(c3)
+				local n4 = minetest.env:get_node(c4)
+				pos_here.y = ground
+
+				if (n1.name ~= "air") and (n1.name ~= "ignore") and
+				(n2.name ~= "air") and (n2.name ~= "ignore") and
+				(n3.name ~= "air") and (n3.name ~= "ignore") and
+				(n4.name ~= "air") and (n4.name ~= "ignore") then
+					pos1 = { x = pos_here.x - size.x / 2, y = pos_here.y, z = pos_here.z - size.z / 2 }
+					pos2 = { x = pos_here.x + size.x / 2, y = pos_here.y + size.y, z = pos_here.z + size.z / 2 }
+					io_area_import(pos1, pos2, 0 , filename)
+					return pos_here
+				end
+			end
+			return nil
 		end
 	end
 
