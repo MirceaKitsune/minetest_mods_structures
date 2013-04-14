@@ -3,31 +3,8 @@
 
 -- Settings
 
-local EXPORT_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
-local DIRECTORY_STRUCTURES = "structures"
-
--- Global functions - Calculate
-
--- returns the distance between two origins
-function io_calculate_distance (pos1, pos2)
-	local size = { x = 0, y = 0, z = 0 }
-	if pos1.x < pos2.x then size.x = pos2.x - pos1.x else size.x = pos1.x - pos2.x end
-	if pos1.y < pos2.y then size.y = pos2.y - pos1.y else size.y = pos1.y - pos2.y end
-	if pos1.z < pos2.z then size.z = pos2.z - pos1.z else size.z = pos1.z - pos2.z end
-
-	return size
-end
-
--- checks if the node is in the ignore list
-function io_calculate_ignored (node)
-	for i, v in ipairs(EXPORT_IGNORE) do
-		if (node == v) then
-			return true
-		end
-	end
-
-	return false
-end
+IO_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
+local IO_DIRECTORY = "structures"
 
 -- Global functions - Import / export
 
@@ -43,7 +20,7 @@ function io_area_clear (pos, ends)
 			for loop_z = pos_start.z, pos_end.z do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 
-				if (io_calculate_ignored(minetest.env:get_node(pos_here).name) == false) then
+				if (calculate_ignored(minetest.env:get_node(pos_here).name) == false) then
 					minetest.env:remove_node(pos_here)
 				end
 			end
@@ -57,7 +34,7 @@ function io_area_export (pos, ends, filename)
 	local pos_start = { x = math.min(pos.x, ends.x), y = math.min(pos.y, ends.y), z = math.min(pos.z, ends.z) }
 	local pos_end = { x = math.max(pos.x, ends.x), y = math.max(pos.y, ends.y), z = math.max(pos.z, ends.z) }
 
-	local path = minetest.get_modpath("structures").."/"..DIRECTORY_STRUCTURES.."/"..filename
+	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
 	local file = io.open(path, "w")
 	if (file == nil) then return end
 
@@ -70,9 +47,9 @@ function io_area_export (pos, ends, filename)
 				local liquidtype = minetest.registered_nodes[node_name].liquidtype
 
 				-- don't export flowing liquid nodes, just sources
-				if (io_calculate_ignored(node_name) == false) and (liquidtype ~= "flowing") then
+				if (calculate_ignored(node_name) == false) and (liquidtype ~= "flowing") then
 					-- we want to save origins as distance from the main I/O node
-					local dist = io_calculate_distance(pos_start, pos_here)
+					local dist = calculate_distance(pos_start, pos_here)
 					-- param2 must be persisted
 					local node_param1 = minetest.env:get_node(pos_here).param1
 					local node_param2 = minetest.env:get_node(pos_here).param2
@@ -96,7 +73,7 @@ function io_area_import (pos, ends, angle, filename)
 	local pos_start = { x = math.min(pos.x, ends.x), y = math.min(pos.y, ends.y), z = math.min(pos.z, ends.z) }
 	local pos_end = { x = math.max(pos.x, ends.x), y = math.max(pos.y, ends.y), z = math.max(pos.z, ends.z) }
 
-	local path = minetest.get_modpath("structures").."/"..DIRECTORY_STRUCTURES.."/"..filename
+	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
 	local file = io.open(path, "r")
 	if (file == nil) then return end
 

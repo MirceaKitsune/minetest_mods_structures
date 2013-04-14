@@ -6,6 +6,29 @@
 local CONNECT_DISTANCE = 50
 local CONNECT_TIME = 1
 
+-- Global functions - Calculate
+
+-- returns the distance between two origins
+function calculate_distance (pos1, pos2)
+	local size = { x = 0, y = 0, z = 0 }
+	if pos1.x < pos2.x then size.x = pos2.x - pos1.x else size.x = pos1.x - pos2.x end
+	if pos1.y < pos2.y then size.y = pos2.y - pos1.y else size.y = pos1.y - pos2.y end
+	if pos1.z < pos2.z then size.z = pos2.z - pos1.z else size.z = pos1.z - pos2.z end
+
+	return size
+end
+
+-- checks if the node is in the ignore list
+function calculate_ignored (node)
+	for i, v in ipairs(IO_IGNORE) do
+		if (node == v) then
+			return true
+		end
+	end
+
+	return false
+end
+
 -- Local functions - Formspec
 
 local function make_formspec (file, io_angle, area_size, area_nodes, mapgen_group, mapgen_node, mapgen_probability, mapgen_height_min, mapgen_height_max, mapgen_spacing)
@@ -33,7 +56,7 @@ local function make_formspec_size (pos)
 	local pos_markers = markers_get(pos)
 	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return nil end
 
-	local size = io_calculate_distance(pos, pos_markers)
+	local size = calculate_distance(pos, pos_markers)
 	s = size.x..","..size.y..","..size.z.."\n"
 
 	return size
@@ -50,7 +73,7 @@ local function make_formspec_nodes (pos)
 			for loop_z = math.min(pos.z, pos_markers.z), math.max(pos.z, pos_markers.z) do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 
-				if (io_calculate_ignored(minetest.env:get_node(pos_here).name) == false) then
+				if (calculate_ignored(minetest.env:get_node(pos_here).name) == false) then
 					nodes = nodes + 1
 				end
 			end
