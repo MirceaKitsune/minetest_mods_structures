@@ -182,7 +182,7 @@ minetest.register_node("structures:manager_enabled", {
 		elseif (fields.unset) then
 			io_markers_remove(pos)
 		elseif (fields.mapgen_add) then
-			mapgen_add(fields.file, fields.mapgen_group, fields.mapgen_node, fields.mapgen_probability, fields.mapgen_height_min, fields.mapgen_height_max, fields.mapgen_spacing)
+			mapgen_add(pos, markers_get(pos), fields.file, fields.mapgen_group, fields.mapgen_node, fields.mapgen_probability, fields.mapgen_height_min, fields.mapgen_height_max, fields.mapgen_spacing)
 		elseif (fields.mapgen_remove) then
 			mapgen_remove(fields.file)
 		end

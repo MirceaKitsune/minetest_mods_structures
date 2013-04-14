@@ -3,7 +3,7 @@
 
 -- Settings
 local MAPGEN_FILE = "mapgen.txt"
-local MAPGEN_PROBABILITY = 1
+local MAPGEN_PROBABILITY = 0.1
 local MAPGEN_RANGE = 80
 
 -- Local functions - Table
@@ -18,14 +18,14 @@ local function update_groups ()
 	for i, v in ipairs(mapgen_table) do
 		local found = false
 		for ii, w in ipairs(mapgen_groups) do
-			if (v[2] == w) then
+			if (v[5] == w) then
 				found = true
 				break
 			end
 		end
 
 		if (found == false) then
-			table.insert(mapgen_groups, v[2])
+			table.insert(mapgen_groups, v[5])
 		end
 	end
 
@@ -76,27 +76,37 @@ end
 
 -- Local functions - Spawn
 
-local function spawn_structure (filename, pos, node)
+local function spawn_structure (filename, pos, size, radius, node, avoid)
 	-- randomize X and Z coordinates within range
-	pos.x = pos.x + math.random(-MAPGEN_RANGE, MAPGEN_RANGE)
-	pos.z = pos.z + math.random(-MAPGEN_RANGE, MAPGEN_RANGE)
+	coords_x = pos.x + math.random(-MAPGEN_RANGE / 2, MAPGEN_RANGE / 2)
+	coords_z = pos.z + math.random(-MAPGEN_RANGE / 2, MAPGEN_RANGE / 2)
 
 	-- now scan downward on these coordinates until we find a suitable spot
 	-- if we don't, this attempt to spawn the structure is lost
-	local target_y = pos.y - MAPGEN_RANGE * 2
-	for loop = pos.y, target_y, -1 do
-		local pos_here = { x = pos.x, y = loop, z = pos.z }
+	local target_y = pos.y - MAPGEN_RANGE
+	for coords_y = pos.y, target_y, -1 do
+		local pos_here = { x = coords_x, y = coords_y, z = coords_z }
 		local node_here = minetest.env:get_node(pos_here)
-		local pos_down = { x = pos.x, y = loop - 1, z = pos.z }
+		local pos_down = { x = coords_x, y = coords_y - 1, z = coords_z }
 		local node_down = minetest.env:get_node(pos_down)
 
 		if (node_here.name == "air") and (node_down.name == node) then
-			pos1 = { x = pos_here.x - 10, y = pos_here.y - 0, z = pos_here.z - 10 }
-			pos2 = { x = pos_here.x + 10, y = pos_here.y + 20, z = pos_here.z + 10 }
+			-- check avoid origins and fail the spawn if too close to another building
+			for i, org in pairs(avoid) do
+				local dist = io_calculate_distance(pos_here, org)
+				if (dist.x < radius) or (dist.z < radius) then
+					return nil
+				end
+			end
+
+			pos1 = { x = pos_here.x - size.x / 2, y = pos_here.y, z = pos_here.z - size.z / 2 }
+			pos2 = { x = pos_here.x + size.x / 2, y = pos_here.y + size.y, z = pos_here.z + size.z / 2 }
 			io_area_import(pos1, pos2, 0 , filename)
-			break
+			return pos_here
 		end
 	end
+
+	return nil
 end
 
 local function spawn_group (minp, maxp)
@@ -104,6 +114,9 @@ local function spawn_group (minp, maxp)
 
 	-- randomly choose a mapgen group
 	local group = math.random(1, table.getn(mapgen_groups))
+
+	-- Add the origin of each spawned building to the avoidance list
+	local avoid = {}
 
 	-- choose middle location on the X and Z axes, top on Y
 	local coords_x = minp.x + (maxp.x - minp.x) / 2
@@ -113,18 +126,26 @@ local function spawn_group (minp, maxp)
 
 	-- go through all entries in the mapgen table which belong to this group
 	for i, entry in pairs(mapgen_table) do
-		if (entry[2] == mapgen_groups[group]) then
+		if (entry[5] == mapgen_groups[group]) then
+			local size = { x = entry[1], y = entry[2], z = entry[3] }
+
 			-- account structure probability
 			-- if < 1 (eg: 0.5) use this as a chance
 			-- it > 1 (eg: 2.0) spawn it this many times
-			local probability = tonumber(entry[4])
+			local probability = tonumber(entry[7])
 			if (probability <= 1) then
 				if (probability >= math.random()) then
-					spawn_structure(entry[1], pos, entry[3])
+					local org = spawn_structure(entry[4], pos, size, tonumber(entry[10]), entry[6], avoid)
+					if (org ~= nil) then
+						table.insert(avoid, org)
+					end
 				end
 			else
 				for x = 1, probability, 1 do
-					spawn_structure(entry[1], pos, entry[3])
+					local org = spawn_structure(entry[4], pos, size, tonumber(entry[10]), entry[6], avoid)
+					if (org ~= nil) then
+						table.insert(avoid, org)
+					end
 				end
 			end
 		end
@@ -133,12 +154,15 @@ end
 
 -- Global functions - Add / remove to / from file
 
-function mapgen_add (filename, group, node, probability, height_min, height_max, spacing)
+function mapgen_add (pos, ends, filename, group, node, probability, height_min, height_max, spacing)
 	-- remove the existing entry
 	mapgen_remove (filename)
 
+	-- we need to store the size of the structure
+	local dist = io_calculate_distance(pos, ends)
+
 	-- add file to the mapgen table
-	entry = { filename, group, node, probability, height_min, height_max, spacing }
+	entry = {dist.x, dist.y, dist.z, filename, group, node, probability, height_min, height_max, spacing }
 	table.insert(mapgen_table, entry)
 
 	table_to_file()
@@ -146,7 +170,7 @@ end
 
 function mapgen_remove (filename)
 	for i, entry in pairs(mapgen_table) do
-		if (entry[1] == filename) then
+		if (entry[4] == filename) then
 			table.remove(mapgen_table, i)
 			break
 		end
