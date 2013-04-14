@@ -6,6 +6,7 @@ local MAPGEN_FILE = "mapgen.txt"
 local MAPGEN_PROBABILITY = 0.1
 local MAPGEN_RANGE = 2.5
 local MAPGEN_AVOID_STEPS = 5
+local MAPGEN_AVOID_LIMIT = 50
 local MAPGEN_FILL = 10
 
 -- Local functions - Table
@@ -78,6 +79,18 @@ end
 
 -- Local functions - Spawn
 
+-- Add the origin of each spawned building to the avoidance list
+local avoid = {}
+
+local function spawn_avoid (pos)
+	-- if the maximum amount of avoid origins was reached, delete the oldest one
+	if (table.getn(avoid) >= MAPGEN_AVOID_LIMIT) then
+		table.remove(avoid, 1)
+	end
+
+	table.insert(avoid, pos)
+end
+
 local function spawn_structure (filename, pos, angle, size, node)
 	-- create our structure
 	local pos1 = { x = pos.x - size.x / 2, y = pos.y, z = pos.z - size.z / 2 }
@@ -118,14 +131,11 @@ local function spawn_group (minp, maxp)
 	-- randomly choose a mapgen group
 	local group = math.random(1, table.getn(mapgen_groups))
 
-	-- Add the origin of each spawned building to the avoidance list
-	local avoid = {}
-
 	-- choose middle location on the X and Z axes, top on Y
-	local coords_x = minp.x + (maxp.x - minp.x) / 2
-	local coords_y = maxp.y
-	local coords_z = minp.z + (maxp.z - minp.z) / 2
-	local pos = { x = coords_x, y = coords_y, z = coords_z }
+	local pos = { }
+	pos.x = minp.x + (maxp.x - minp.x) / 2
+	pos.y = maxp.y
+	pos.z = minp.z + (maxp.z - minp.z) / 2
 
 	-- go through all entries in the mapgen table which belong to this group
 	for i, entry in ipairs(mapgen_table) do
@@ -154,35 +164,50 @@ local function spawn_group (minp, maxp)
 				coords.y = pos.y
 				coords.z = pos.z + math.random(-range / 2, range / 2)
 
-				-- randomly choose which direction to avoid in (see below)
+				-- avoid away from the center of the group (see below)
 				local avoid_step_x = MAPGEN_AVOID_STEPS
-				if (math.random() < 0.5) then
+				if (coords.x < pos.x) then
 					avoid_step_x = -avoid_step_x
 				end
 				local avoid_step_z = MAPGEN_AVOID_STEPS
-				if (math.random() < 0.5) then
+				if (coords.z < pos.z) then
 					avoid_step_z = -avoid_step_z
 				end
 
-				-- if too close to an avoid origin, move the location until we're far enough
-				local found_origin = true
-				for w, org in ipairs(avoid) do
-					local dist = calculate_distance(coords, org)
-					while (dist.x < distance) or (dist.z < distance) do
-						if (dist.x < distance) then
-							coords.x = coords.x + avoid_step_x
-						end
-						if (dist.z < distance) then
-							coords.z = coords.z + avoid_step_z
+				-- push away until we're far enough from all avoid origins
+				-- this loop executes until that happens or we're out of range
+				local found_origin = false
+				while (found_origin == false) do
+					found_origin = true
+
+					-- check that the origin is still in bounds, and fail the spawn attempt if not
+					if (coords.x < pos.x - range / 2) or (coords.x > pos.x + range / 2) or
+					(coords.y < pos.y - range / 2) or (coords.y > pos.y + range / 2) or
+					(coords.z < pos.z - range / 2) or (coords.z > pos.z + range / 2) then
+						found_origin = false
+						break
+					end
+
+					-- loop through the avoid origins table
+					for w, org in ipairs(avoid) do
+						-- if we are too close to this avoid origin, move away until we're clear of it
+						local dist = calculate_distance(coords, org)
+						while (dist.x < distance) and (dist.z < distance) do
+							if (dist.x < distance) then
+								coords.x = coords.x + avoid_step_x
+							end
+							if (dist.z < distance) then
+								coords.z = coords.z + avoid_step_z
+							end
+
+							dist = calculate_distance(coords, org)
+							found_origin = false
 						end
 
-						-- check that the origin is still in bounds, and fail the attempt if not
-						if (coords.x < coords.x - range / 2) or (coords.x > coords.x + range / 2) or
-						(coords.z < coords.z - range / 2) or (coords.z > coords.z + range / 2) then
-							found_origin = false
+						-- we had to avoid an origin, start the scan all over again
+						if (found_origin == false) then
 							break
 						end
-						dist = calculate_distance(coords, org)
 					end
 				end
 
@@ -192,7 +217,7 @@ local function spawn_group (minp, maxp)
 					local search_target = coords.y - range
 					for search = pos.y, search_target, -1 do
 						-- check if the position is within the structure's height range
-						if (search > height.minimum) or (search < height.maximum) then
+						if (search > height.minimum) and (search < height.maximum) then
 							coords.y = search
 							local node_here = minetest.env:get_node(coords)
 							local pos_down = { x = coords.x, y = coords.y - 1, z = coords.z }
@@ -200,7 +225,9 @@ local function spawn_group (minp, maxp)
 
 							if (node_here.name == "air") and (node_down.name == entry[6]) then
 								spawn_structure(entry[4], coords, angle, size, entry[6])
-								table.insert(avoid, coords)
+
+								-- add origin to avoid list
+								spawn_avoid(coords)
 							end
 						end
 					end
