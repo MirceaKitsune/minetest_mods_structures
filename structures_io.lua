@@ -3,8 +3,10 @@
 
 -- Settings
 
-IO_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
+-- directory in which structure files are stored (inside the mod's own directory)
 local IO_DIRECTORY = "structures"
+-- don't import the nodes listed here
+IO_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
 
 -- Global functions - Import / export
 

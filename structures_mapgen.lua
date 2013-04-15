@@ -2,12 +2,26 @@
 -- This file contains the mapgen functions used to place saved structures in the world at generation time
 
 -- Settings
+
+-- file which contains the mapgen entries
 local MAPGEN_FILE = "mapgen.txt"
-local MAPGEN_PROBABILITY = 0.1
-local MAPGEN_PROBABILITY_COMPENSATE = 0.5
-local MAPGEN_DENSITY = 2
-local MAPGEN_AVOID_STEPS = 5
-local MAPGEN_FILL = 25
+-- probability of a structure group to spawn, per piece of world being generated
+local MAPGEN_GROUP_PROBABILITY = 0.1
+-- amount by which structures inherit the probability of previously structures, to compensate for them taking up space
+-- must be balanced so that the probability of each structure tends to be respected despite spawn order in the file
+local MAPGEN_STRUCTURE_PROBABILITY_COMPENSATE = 0.5
+-- each structure is delayed by this many seconds in a probability loop
+-- high values cause structures to spawn more slowly, low values deal more stress to the CPU and encourage incomplete spawns
+local MAPGEN_STRUCTURE_DELAY = 1
+-- amount by which the the probability and separation of each structure from other structures influences spawn radius
+-- must be balanced so the higher probability and distance, the farther structures can spawn while maintaining their density
+local MAPGEN_STRUCTURE_DENSITY = 2
+-- number of steps (in nodes) by which structures avoid each other when searching for an origin
+-- high values mean less accuracy, low values mean longer costly loops
+local MAPGEN_STRUCTURE_AVOID_STEPS = 5
+-- create a floor under each structure by this many nodes to fill empty space
+-- high values cover longer areas which looks better, but also mean adding more nodes and doing more costly checks
+local MAPGEN_STRUCTURE_FILL = 20
 
 -- Local functions - Table
 
@@ -88,7 +102,7 @@ local function spawn_structure (filename, pos, angle, size, node)
 
 	-- we spawned the structure on a suitable node, but what if it was the top of a peak?
 	-- to avoid parts of the building left floating, cover everything until all 4 corners touch the ground
-	for cover_y = pos.y - 1, pos.y - MAPGEN_FILL, -1 do
+	for cover_y = pos.y - 1, pos.y - MAPGEN_STRUCTURE_FILL, -1 do
 		local c1 = { x = pos1.x, y = cover_y, z = pos1.z }
 		local c2 = { x = pos1.x, y = cover_y, z = pos2.z }
 		local c3 = { x = pos2.x, y = cover_y, z = pos1.z }
@@ -117,7 +131,7 @@ end
 -- finds a structure group to spawn and calculates each entry's properties
 local function spawn_group (minp, maxp)
 	-- overall probability for this piece of world
-	if(math.random() > MAPGEN_PROBABILITY) then return end
+	if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
 
 	-- store the origins of spawned buildings in order to avoid them in future buildings
 	local avoid = {}
@@ -141,11 +155,10 @@ local function spawn_group (minp, maxp)
 		if (entry[5] == mapgen_groups[group]) then
 
 			-- global settings for this structure
-			local probability = tonumber(entry[7])
+			local probability = tonumber(entry[7]) + probability_compensate
 			local height = { minimum = tonumber(entry[8]), maximum = tonumber(entry[9]) }
 			local distance = tonumber(entry[10])
-			local range = (probability + distance) * MAPGEN_DENSITY
-			probability = probability + probability_compensate
+			local range = (probability + distance) * MAPGEN_STRUCTURE_DENSITY
 
 			-- attempt to create this structure by the amount of probability it has
 			-- everything inside are parameters of each attempt to spawn this structure
@@ -165,23 +178,23 @@ local function spawn_group (minp, maxp)
 				if (coords.x < pos.x) and (coords.z < pos.z) then
 					angle = 270
 					size = { x = entry[3], y = entry[2], z = entry[1] }
-					avoid_step_x = -MAPGEN_AVOID_STEPS
-					avoid_step_z = -MAPGEN_AVOID_STEPS
+					avoid_step_x = -MAPGEN_STRUCTURE_AVOID_STEPS
+					avoid_step_z = -MAPGEN_STRUCTURE_AVOID_STEPS
 				elseif (coords.x < pos.x) then
 					angle = 90
 					size = { x = entry[3], y = entry[2], z = entry[1] }
-					avoid_step_x = -MAPGEN_AVOID_STEPS
-					avoid_step_z = MAPGEN_AVOID_STEPS
+					avoid_step_x = -MAPGEN_STRUCTURE_AVOID_STEPS
+					avoid_step_z = MAPGEN_STRUCTURE_AVOID_STEPS
 				elseif (coords.z < pos.z) then
 					angle = 180
 					size = { x = entry[1], y = entry[2], z = entry[3] }
-					avoid_step_x = MAPGEN_AVOID_STEPS
-					avoid_step_z = -MAPGEN_AVOID_STEPS
+					avoid_step_x = MAPGEN_STRUCTURE_AVOID_STEPS
+					avoid_step_z = -MAPGEN_STRUCTURE_AVOID_STEPS
 				else
 					angle = 0
 					size = { x = entry[1], y = entry[2], z = entry[3] }
-					avoid_step_x = MAPGEN_AVOID_STEPS
-					avoid_step_z = MAPGEN_AVOID_STEPS
+					avoid_step_x = MAPGEN_STRUCTURE_AVOID_STEPS
+					avoid_step_z = MAPGEN_STRUCTURE_AVOID_STEPS
 				end
 
 				-- scan avoid origins, and push away until we're far enough from all of them
@@ -235,9 +248,14 @@ local function spawn_group (minp, maxp)
 							local node_down = minetest.env:get_node(pos_down)
 
 							if (node_here.name == "air") and (node_down.name == entry[6]) then
-								spawn_structure(entry[4], coords, angle, size, entry[6])
+								-- schedule the building to spawn based on its position in the loop
+								delay = x * MAPGEN_STRUCTURE_DELAY
+								minetest.after(delay, function()
+									spawn_structure(entry[4], coords, angle, size, entry[6])
+								end)
+
 								table.insert(avoid, coords)
-								probability_compensate = probability_compensate + (probability * MAPGEN_PROBABILITY_COMPENSATE)
+								probability_compensate = probability_compensate + (probability * MAPGEN_STRUCTURE_PROBABILITY_COMPENSATE)
 								break
 							end
 						end
