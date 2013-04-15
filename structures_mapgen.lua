@@ -4,9 +4,10 @@
 -- Settings
 local MAPGEN_FILE = "mapgen.txt"
 local MAPGEN_PROBABILITY = 0.1
+local MAPGEN_PROBABILITY_COMPENSATE = 0.5
 local MAPGEN_DENSITY = 2
 local MAPGEN_AVOID_STEPS = 5
-local MAPGEN_FILL = 10
+local MAPGEN_FILL = 25
 
 -- Local functions - Table
 
@@ -78,8 +79,9 @@ end
 
 -- Local functions - Spawn
 
+-- naturally spawns a structure with the given parameters
 local function spawn_structure (filename, pos, angle, size, node)
-	-- create our structure
+	-- choose center on X and Z axes and bottom on Y
 	local pos1 = { x = pos.x - size.x / 2, y = pos.y, z = pos.z - size.z / 2 }
 	local pos2 = { x = pos.x + size.x / 2, y = pos.y + size.y, z = pos.z + size.z / 2 }
 	io_area_import(pos1, pos2, angle, filename)
@@ -112,59 +114,77 @@ local function spawn_structure (filename, pos, angle, size, node)
 	end
 end
 
+-- finds a structure group to spawn and calculates each entry's properties
 local function spawn_group (minp, maxp)
+	-- overall probability for this piece of world
 	if(math.random() > MAPGEN_PROBABILITY) then return end
 
-	-- Stores the origins of spawned buildings in order to avoid them
+	-- store the origins of spawned buildings in order to avoid them in future buildings
 	local avoid = {}
 
-	-- randomly choose a mapgen group
+	-- randomly choose a mapgen group to spawn here
 	local group = math.random(1, table.getn(mapgen_groups))
 
-	-- choose middle location on the X and Z axes, top on Y
+	-- whenever a building spawns, it takes up space and decreases the probability of future buildings
+	-- to compensate, add the probabilities of previous buildings to the current building
+	local probability_compensate = 0
+
+	-- choose center on the X and Z axes and top on Y
 	local pos = { }
 	pos.x = minp.x + (maxp.x - minp.x) / 2
 	pos.y = maxp.y
 	pos.z = minp.z + (maxp.z - minp.z) / 2
 
-	-- go through all entries in the mapgen table which belong to this group
+	-- go through all structures loaded in the mapgen table
 	for i, entry in ipairs(mapgen_table) do
+		-- only go further if this structure belongs to the chosen mapgen group
 		if (entry[5] == mapgen_groups[group]) then
+
 			-- global settings for this structure
 			local probability = tonumber(entry[7])
 			local height = { minimum = tonumber(entry[8]), maximum = tonumber(entry[9]) }
 			local distance = tonumber(entry[10])
 			local range = (probability + distance) * MAPGEN_DENSITY
+			probability = probability + probability_compensate
 
-			-- attempt creation of this structure by the amount of probability it has
-			-- everything inside are settings of each attempt
+			-- attempt to create this structure by the amount of probability it has
+			-- everything inside are parameters of each attempt to spawn this structure
 			for x = 1, probability do
-				-- choose a random angle (0, 90, 180, 270) and adjust the size to that
-				local size = { }
-				local angle = 90 * math.random(0, 3)
-				if (angle == 90) or (angle == 270) then
-					size = { x = entry[3], y = entry[2], z = entry[1] }
-				else
-					size = { x = entry[1], y = entry[2], z = entry[3] }
-				end
-
-				-- randomize X and Z coordinates within range
+				-- choose random X and Z coordinates within range
 				local coords = { }
 				coords.x = pos.x + math.random(-range / 2, range / 2)
 				coords.y = pos.y
 				coords.z = pos.z + math.random(-range / 2, range / 2)
 
-				-- avoid away from the center of the group (see below)
-				local avoid_step_x = MAPGEN_AVOID_STEPS
-				if (coords.x < pos.x) then
-					avoid_step_x = -avoid_step_x
-				end
-				local avoid_step_z = MAPGEN_AVOID_STEPS
-				if (coords.z < pos.z) then
-					avoid_step_z = -avoid_step_z
+				-- choose angle (0, 90, 180, 270) and avoidance direction (see below) based on distance from group center
+				-- it's hard to find an accurate formula here, but it still keeps buildings oriented uniformly
+				local angle = 0
+				local size = { }
+				local avoid_step_x = 0
+				local avoid_step_z = 0
+				if (coords.x < pos.x) and (coords.z < pos.z) then
+					angle = 270
+					size = { x = entry[3], y = entry[2], z = entry[1] }
+					avoid_step_x = -MAPGEN_AVOID_STEPS
+					avoid_step_z = -MAPGEN_AVOID_STEPS
+				elseif (coords.x < pos.x) then
+					angle = 90
+					size = { x = entry[3], y = entry[2], z = entry[1] }
+					avoid_step_x = -MAPGEN_AVOID_STEPS
+					avoid_step_z = MAPGEN_AVOID_STEPS
+				elseif (coords.z < pos.z) then
+					angle = 180
+					size = { x = entry[1], y = entry[2], z = entry[3] }
+					avoid_step_x = MAPGEN_AVOID_STEPS
+					avoid_step_z = -MAPGEN_AVOID_STEPS
+				else
+					angle = 0
+					size = { x = entry[1], y = entry[2], z = entry[3] }
+					avoid_step_x = MAPGEN_AVOID_STEPS
+					avoid_step_z = MAPGEN_AVOID_STEPS
 				end
 
-				-- push away until we're far enough from all avoid origins
+				-- scan avoid origins, and push away until we're far enough from all of them
 				-- this loop executes until that happens or we're out of range
 				local found_origin = false
 				while (found_origin == false) do
@@ -178,7 +198,7 @@ local function spawn_group (minp, maxp)
 						break
 					end
 
-					-- loop through the avoid origins table
+					-- loop through the all avoid origins in the table
 					for w, org in ipairs(avoid) do
 						-- if we are too close to this avoid origin, move away until we're clear of it
 						local dist = calculate_distance(coords, org)
@@ -194,19 +214,20 @@ local function spawn_group (minp, maxp)
 							found_origin = false
 						end
 
-						-- we had to avoid an origin, start the scan all over again
+						-- we had to avoid an origin, start the scan all over again to make sure we're avoiding everything
 						if (found_origin == false) then
 							break
 						end
 					end
 				end
 
+				-- if we get this far, we found X and Z coordinates we are happy with
+				-- now scan downward until we find the trigger node of this structure at surface level
+				-- if we don't, this attempt to spawn the structure is lost
 				if (found_origin == true) then
-					-- scan downward until we find the specified node at surface level
-					-- if we don't, this attempt to spawn the structure is lost
 					local search_target = coords.y - range
 					for search = pos.y, search_target, -1 do
-						-- check if the position is within the structure's height range
+						-- also check that the position is within the structure's height range
 						if (search > height.minimum) and (search < height.maximum) then
 							coords.y = search
 							local node_here = minetest.env:get_node(coords)
@@ -216,6 +237,8 @@ local function spawn_group (minp, maxp)
 							if (node_here.name == "air") and (node_down.name == entry[6]) then
 								spawn_structure(entry[4], coords, angle, size, entry[6])
 								table.insert(avoid, coords)
+								probability_compensate = probability_compensate + (probability * MAPGEN_PROBABILITY_COMPENSATE)
+								break
 							end
 						end
 					end

@@ -181,11 +181,11 @@ minetest.register_node("structures:manager_enabled", {
 		meta:set_float("io_angle", 0)
 		meta:set_float("mapgen_group", "structures")
 		meta:set_float("mapgen_node", "default:dirt_with_grass")
-		meta:set_float("mapgen_probability", 1)
+		meta:set_float("mapgen_probability", 10)
 		meta:set_float("mapgen_height_min", -50)
 		meta:set_float("mapgen_height_max", 50)
-		meta:set_float("mapgen_height_spacing", 10)
-		meta:set_string("formspec", make_formspec("structure.txt", 0, make_formspec_size(pos), make_formspec_nodes(pos), "structures", "default:dirt_with_grass", 1, -50, 50, 10))
+		meta:set_float("mapgen_height_spacing", 15)
+		meta:set_string("formspec", make_formspec("structure.txt", 0, make_formspec_size(pos), make_formspec_nodes(pos), "structures", "default:dirt_with_grass", 10, -50, 50, 15))
 		meta:set_string("infotext", "I/O ready")
 	end,
 
