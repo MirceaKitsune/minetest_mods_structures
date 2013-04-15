@@ -1,2 +1,4 @@
-14 14 13 default_house.txt structures default:dirt_with_grass 20 5 100 20
-9 14 9 default_tower.txt structures default:dirt_with_grass 15 25 150 30 
+14 8 14 default_house_small.txt structures default:dirt_with_grass 25 5 100 30 
+14 14 13 default_house_medium.txt structures default:dirt_with_grass 20 5 100 35 
+25 16 19 default_house_large.txt structures default:dirt_with_grass 15 5 100 40 
+9 14 9 default_tower.txt structures default:dirt_with_grass 15 25 150 35 
