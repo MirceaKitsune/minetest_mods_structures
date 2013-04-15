@@ -4,9 +4,8 @@
 -- Settings
 local MAPGEN_FILE = "mapgen.txt"
 local MAPGEN_PROBABILITY = 0.1
-local MAPGEN_RANGE = 2.5
+local MAPGEN_DENSITY = 2
 local MAPGEN_AVOID_STEPS = 5
-local MAPGEN_AVOID_LIMIT = 50
 local MAPGEN_FILL = 10
 
 -- Local functions - Table
@@ -79,18 +78,6 @@ end
 
 -- Local functions - Spawn
 
--- Add the origin of each spawned building to the avoidance list
-local avoid = {}
-
-local function spawn_avoid (pos)
-	-- if the maximum amount of avoid origins was reached, delete the oldest one
-	if (table.getn(avoid) >= MAPGEN_AVOID_LIMIT) then
-		table.remove(avoid, 1)
-	end
-
-	table.insert(avoid, pos)
-end
-
 local function spawn_structure (filename, pos, angle, size, node)
 	-- create our structure
 	local pos1 = { x = pos.x - size.x / 2, y = pos.y, z = pos.z - size.z / 2 }
@@ -128,6 +115,9 @@ end
 local function spawn_group (minp, maxp)
 	if(math.random() > MAPGEN_PROBABILITY) then return end
 
+	-- Stores the origins of spawned buildings in order to avoid them
+	local avoid = {}
+
 	-- randomly choose a mapgen group
 	local group = math.random(1, table.getn(mapgen_groups))
 
@@ -144,7 +134,7 @@ local function spawn_group (minp, maxp)
 			local probability = tonumber(entry[7])
 			local height = { minimum = tonumber(entry[8]), maximum = tonumber(entry[9]) }
 			local distance = tonumber(entry[10])
-			local range = (probability + distance) * MAPGEN_RANGE
+			local range = (probability + distance) * MAPGEN_DENSITY
 
 			-- attempt creation of this structure by the amount of probability it has
 			-- everything inside are settings of each attempt
@@ -225,9 +215,7 @@ local function spawn_group (minp, maxp)
 
 							if (node_here.name == "air") and (node_down.name == entry[6]) then
 								spawn_structure(entry[4], coords, angle, size, entry[6])
-
-								-- add origin to avoid list
-								spawn_avoid(coords)
+								table.insert(avoid, coords)
 							end
 						end
 					end
