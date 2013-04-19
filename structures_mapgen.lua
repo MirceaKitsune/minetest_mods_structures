@@ -13,15 +13,12 @@ local MAPGEN_GROUP_DISTANCE = 200
 -- amount of origins to maintain in the group avoidance list
 -- low values increase the risk of groups being ignored from distance calculations, high values store more data
 local MAPGEN_GROUP_DISTANCE_COUNT = 10
--- amount by which structures inherit the probability of previously structures, to compensate for them taking up space
--- must be balanced so that the probability of each structure tends to be respected despite spawn order in the file
-local MAPGEN_STRUCTURE_PROBABILITY_COMPENSATE = 0.5
 -- each structure is delayed by this many seconds in a probability loop
 -- high values cause structures to spawn more slowly, low values deal more stress to the CPU and encourage incomplete spawns
 local MAPGEN_STRUCTURE_DELAY = 1
 -- amount by which the the probability and separation of each structure from other structures influences spawn radius
 -- must be balanced so the higher probability and distance, the farther structures can spawn while maintaining their density
-local MAPGEN_STRUCTURE_DENSITY = 1
+local MAPGEN_STRUCTURE_DENSITY = 3
 -- number of steps (in nodes) by which structures avoid each other when searching for an origin
 -- high values mean less accuracy, low values mean longer costly loops
 local MAPGEN_STRUCTURE_AVOID_STEPS = 5
@@ -29,14 +26,19 @@ local MAPGEN_STRUCTURE_AVOID_STEPS = 5
 -- high values cover longer areas which looks better, but also mean adding more nodes and doing more costly checks
 local MAPGEN_STRUCTURE_FILL = 20
 
--- Local functions - Table
+-- Local values - Groups and mapgen
+
+-- store the origin of each group in the group avoidance list
+local groups_avoid = {}
 
 -- the mapgen table and groups table
 local mapgen_table = {}
 local mapgen_groups = {}
 
+-- Local functions - Groups
+
 -- updates the groups table with all mapgen groups
-local function update_groups ()
+local function groups_update ()
 	mapgen_groups = {}
 	for i, v in ipairs(mapgen_table) do
 		local found = false
@@ -55,8 +57,32 @@ local function update_groups ()
 	return false
 end
 
+-- adds entries to the group avoidance list
+local function groups_avoid_add (pos)
+	-- if the maximum amount of group avoid origins was reached, delete the oldest one
+	if (table.getn(groups_avoid) >= MAPGEN_GROUP_DISTANCE_COUNT) then
+		table.remove(groups_avoid, 1)
+	end
+
+	table.insert(groups_avoid, pos)
+end
+
+-- checks if a given distance is far enough from all group avoidance origins
+local function groups_avoid_check (pos)
+	for i, org in ipairs(groups_avoid) do
+		local dist = calculate_distance(pos, org)
+		if (dist.x < MAPGEN_GROUP_DISTANCE) and (dist.y < MAPGEN_GROUP_DISTANCE) and (dist.z < MAPGEN_GROUP_DISTANCE) then
+			return false
+		end
+	end
+
+	return true
+end
+
+-- Local functions - Mapgen
+
 -- writes the mapgen file into the mapgen table
-local function file_to_table ()
+local function mapgen_to_table ()
 	local path = minetest.get_modpath("structures").."/"..MAPGEN_FILE
 	local file = io.open(path, "r")
 	if (file == nil) then return end
@@ -73,11 +99,11 @@ local function file_to_table ()
 	end
 
 	file:close()
-	update_groups()
+	groups_update()
 end
 
 -- writes the mapgen table into the mapgen file
-local function table_to_file ()
+local function mapgen_to_file ()
 	local path = minetest.get_modpath("structures").."/"..MAPGEN_FILE
 	local file = io.open(path, "w")
 	if (file == nil) then return end
@@ -94,35 +120,24 @@ local function table_to_file ()
 	end
 
 	file:close()
-	update_groups()
+	groups_update()
+end
+
+-- randomizes entries in the mapgen table
+local function mapgen_shuffle ()
+	for i in ipairs(mapgen_table) do
+		-- obtain a random entry to swap this entry with
+		local size = table.getn(mapgen_table)
+		local rand = math.random(size)
+
+		-- swap the two entries
+		local old = mapgen_table[i]
+		mapgen_table[i] = mapgen_table[rand]
+		mapgen_table[rand] = old
+	end
 end
 
 -- Local functions - Spawn
-
--- store the origin of each group in the group avoidance list
-local group_avoid = {}
-
--- adds entries to the group avoidance list
-local function group_avoid_add (pos)
-	-- if the maximum amount of group avoid origins was reached, delete the oldest one
-	if (table.getn(group_avoid) >= MAPGEN_GROUP_DISTANCE_COUNT) then
-		table.remove(group_avoid, 1)
-	end
-
-	table.insert(group_avoid, pos)
-end
-
--- checks if a given distance is far enough from all group avoidance origins
-local function group_avoid_check (pos)
-	for i, org in ipairs(group_avoid) do
-		local dist = calculate_distance(pos, org)
-		if (dist.x < MAPGEN_GROUP_DISTANCE) and (dist.y < MAPGEN_GROUP_DISTANCE) and (dist.z < MAPGEN_GROUP_DISTANCE) then
-			return false
-		end
-	end
-
-	return true
-end
 
 -- naturally spawns a structure with the given parameters
 local function spawn_structure (filename, pos, angle, size, node)
@@ -171,29 +186,32 @@ local function spawn_group (minp, maxp)
 	pos.z = minp.z + (maxp.z - minp.z) / 2
 
 	-- if this group is too close to another group, stop here
-	if (group_avoid_check(pos) == false) then return end
+	if (groups_avoid_check(pos) == false) then return end
 
 	-- store the origin of this group instance so other groups won't be triggered too close
-	group_avoid_add(pos)
+	groups_avoid_add(pos)
 
 	-- randomly choose a mapgen group to spawn here
 	local group = math.random(1, table.getn(mapgen_groups))
 
-	-- whenever a building spawns, it takes up space and decreases the probability of future buildings
-	-- to compensate, add the probabilities of previous buildings to the current building
-	local probability_compensate = 0
+	-- each spawned structure takes up space within the group's radius, reducing the probability of future structures
+	-- to avoid favorizing structures at the top of the mapgen file, randomize the mapgen table before each group spawn
+	-- this means that whenever a group spawns, different buildings in it will have priority and be more frequent
+	mapgen_shuffle()
 
 	-- store the origin of each spawned building from this group instance, in order to avoid it for future buildings
 	local avoid = {}
 
 	-- go through all structures in the mapgen table
+	-- parameters: x size [1], y size [2], z size [3], structure [4], group [5], node [6], probability [7], min height [8], max height [9], distance [10]
 	for i, entry in ipairs(mapgen_table) do
 		-- only go further if this structure belongs to the chosen mapgen group
 		if (entry[5] == mapgen_groups[group]) then
 
 			-- global settings for this structure
-			local probability = tonumber(entry[7]) + probability_compensate
-			local height = { minimum = tonumber(entry[8]), maximum = tonumber(entry[9]) }
+			local probability = tonumber(entry[7])
+			local height_min = tonumber(entry[8])
+			local height_max = tonumber(entry[9])
 			local distance = tonumber(entry[10])
 			local range = (probability + distance) * MAPGEN_STRUCTURE_DENSITY
 
@@ -278,7 +296,7 @@ local function spawn_group (minp, maxp)
 					local search_target = coords.y - range
 					for search = pos.y, search_target, -1 do
 						-- also check that the position is within the structure's height range
-						if (search > height.minimum) and (search < height.maximum) then
+						if (search > height_min) and (search < height_max) then
 							coords.y = search
 							local node_here = minetest.env:get_node(coords)
 							local pos_down = { x = coords.x, y = coords.y - 1, z = coords.z }
@@ -292,7 +310,6 @@ local function spawn_group (minp, maxp)
 								end)
 
 								table.insert(avoid, coords)
-								probability_compensate = probability_compensate + (probability * MAPGEN_STRUCTURE_PROBABILITY_COMPENSATE)
 								break
 							end
 						end
@@ -316,7 +333,7 @@ function mapgen_add (pos, ends, filename, group, node, probability, height_min, 
 	entry = {dist.x, dist.y, dist.z, filename, group, node, probability, height_min, height_max, spacing }
 	table.insert(mapgen_table, entry)
 
-	table_to_file()
+	mapgen_to_file()
 end
 
 function mapgen_remove (filename)
@@ -327,13 +344,13 @@ function mapgen_remove (filename)
 		end
 	end
 
-	table_to_file()
+	mapgen_to_file()
 end
 
 -- Minetest functions
 
 -- cache the mapgen file at startup
-minetest.after(0, file_to_table)
+minetest.after(0, mapgen_to_table)
 
 minetest.register_on_generated(function(minp, maxp, seed)
 	spawn_group (minp, maxp)
