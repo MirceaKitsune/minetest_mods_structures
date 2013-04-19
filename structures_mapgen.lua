@@ -6,7 +6,13 @@
 -- file which contains the mapgen entries
 local MAPGEN_FILE = "mapgen.txt"
 -- probability of a structure group to spawn, per piece of world being generated
-local MAPGEN_GROUP_PROBABILITY = 0.1
+local MAPGEN_GROUP_PROBABILITY = 0.2
+-- distance that groups must have from each other in order to spawn
+-- high values decrease the risk of groups spawning into each other as well as mapgen stress, but means rarer structures
+local MAPGEN_GROUP_DISTANCE = 200
+-- amount of origins to maintain in the group avoidance list
+-- low values increase the risk of groups being ignored from distance calculations, high values store more data
+local MAPGEN_GROUP_DISTANCE_COUNT = 10
 -- amount by which structures inherit the probability of previously structures, to compensate for them taking up space
 -- must be balanced so that the probability of each structure tends to be respected despite spawn order in the file
 local MAPGEN_STRUCTURE_PROBABILITY_COMPENSATE = 0.5
@@ -15,7 +21,7 @@ local MAPGEN_STRUCTURE_PROBABILITY_COMPENSATE = 0.5
 local MAPGEN_STRUCTURE_DELAY = 1
 -- amount by which the the probability and separation of each structure from other structures influences spawn radius
 -- must be balanced so the higher probability and distance, the farther structures can spawn while maintaining their density
-local MAPGEN_STRUCTURE_DENSITY = 2
+local MAPGEN_STRUCTURE_DENSITY = 1
 -- number of steps (in nodes) by which structures avoid each other when searching for an origin
 -- high values mean less accuracy, low values mean longer costly loops
 local MAPGEN_STRUCTURE_AVOID_STEPS = 5
@@ -93,6 +99,31 @@ end
 
 -- Local functions - Spawn
 
+-- store the origin of each group in the group avoidance list
+local group_avoid = {}
+
+-- adds entries to the group avoidance list
+local function group_avoid_add (pos)
+	-- if the maximum amount of group avoid origins was reached, delete the oldest one
+	if (table.getn(group_avoid) >= MAPGEN_GROUP_DISTANCE_COUNT) then
+		table.remove(group_avoid, 1)
+	end
+
+	table.insert(group_avoid, pos)
+end
+
+-- checks if a given distance is far enough from all group avoidance origins
+local function group_avoid_check (pos)
+	for i, org in ipairs(group_avoid) do
+		local dist = calculate_distance(pos, org)
+		if (dist.x < MAPGEN_GROUP_DISTANCE) and (dist.y < MAPGEN_GROUP_DISTANCE) and (dist.z < MAPGEN_GROUP_DISTANCE) then
+			return false
+		end
+	end
+
+	return true
+end
+
 -- naturally spawns a structure with the given parameters
 local function spawn_structure (filename, pos, angle, size, node)
 	-- choose center on X and Z axes and bottom on Y
@@ -130,11 +161,20 @@ end
 
 -- finds a structure group to spawn and calculates each entry's properties
 local function spawn_group (minp, maxp)
-	-- overall probability for this piece of world
+	-- test group probability for this piece of world
 	if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
 
-	-- store the origins of spawned buildings in order to avoid them in future buildings
-	local avoid = {}
+	-- choose center on the X and Z axes and top on Y
+	local pos = { }
+	pos.x = minp.x + (maxp.x - minp.x) / 2
+	pos.y = maxp.y
+	pos.z = minp.z + (maxp.z - minp.z) / 2
+
+	-- if this group is too close to another group, stop here
+	if (group_avoid_check(pos) == false) then return end
+
+	-- store the origin of this group instance so other groups won't be triggered too close
+	group_avoid_add(pos)
 
 	-- randomly choose a mapgen group to spawn here
 	local group = math.random(1, table.getn(mapgen_groups))
@@ -143,13 +183,10 @@ local function spawn_group (minp, maxp)
 	-- to compensate, add the probabilities of previous buildings to the current building
 	local probability_compensate = 0
 
-	-- choose center on the X and Z axes and top on Y
-	local pos = { }
-	pos.x = minp.x + (maxp.x - minp.x) / 2
-	pos.y = maxp.y
-	pos.z = minp.z + (maxp.z - minp.z) / 2
+	-- store the origin of each spawned building from this group instance, in order to avoid it for future buildings
+	local avoid = {}
 
-	-- go through all structures loaded in the mapgen table
+	-- go through all structures in the mapgen table
 	for i, entry in ipairs(mapgen_table) do
 		-- only go further if this structure belongs to the chosen mapgen group
 		if (entry[5] == mapgen_groups[group]) then
