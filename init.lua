@@ -162,6 +162,11 @@ end
 
 -- Item definitions
 
+minetest.register_privilege("structures", {
+	description = "Import & Export structures",
+	give_to_singleplayer = true
+})
+
 minetest.register_node("structures:manager_disabled", {
 	description = "Structure Manager",
 	tiles = {"structure_io_disabled.png"},
@@ -194,6 +199,12 @@ minetest.register_node("structures:manager_enabled", {
 	end,
 
 	on_receive_fields = function(pos, formname, fields, sender)
+		local player = sender:get_player_name()
+		if not (minetest.check_player_privs(player, {structures=true})) then
+			minetest.chat_send_player(player, "Error: You need the \"structures\" privilege to use the structure manager", false)
+			return
+		end
+
 		local meta = minetest.env:get_meta(pos)
 		meta:set_string("file", fields.file)
 		meta:set_float("io_angle", fields.io_angle)
