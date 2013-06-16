@@ -79,9 +79,6 @@ function io_area_import (pos, ends, angle, filename)
 	local file = io.open(path, "r")
 	if (file == nil) then return end
 
-	-- clear the area before we get started
-	io_area_clear(pos_start, pos_end)
-
 	for line in io.lines(path) do
 		local parameters = {}
 		for item in string.gmatch(line, "%S+") do
@@ -100,8 +97,7 @@ function io_area_import (pos, ends, angle, filename)
 
 			-- clear and abort if a node is larger than the marked area
 			if (node_pos.x < pos_start.x) or (node_pos.y > pos_end.y) or (node_pos.z > pos_end.z) then
-				print("Structure I/O Error: Structure is larger than the marked area, clearing and aborting.")
-				io_area_clear(pos)
+				print("Structure I/O Error: Structure is larger than the marked area, aborting.")
 				return
 			end
 
@@ -125,8 +121,7 @@ function io_area_import (pos, ends, angle, filename)
 
 			-- clear and abort if a node is larger than the marked area
 			if (node_pos.x < pos_start.x) or (node_pos.y > pos_end.y) or (node_pos.z < pos_start.z) then
-				print("Structure I/O Error: Structure is larger than the marked area, clearing and aborting.")
-				io_area_clear(pos)
+				print("Structure I/O Error: Structure is larger than the marked area, aborting.")
 				return
 			end
 
@@ -150,8 +145,7 @@ function io_area_import (pos, ends, angle, filename)
 
 			-- clear and abort if a node is larger than the marked area
 			if (node_pos.x > pos_end.x) or (node_pos.y > pos_end.y) or (node_pos.z < pos_start.z) then
-				print("Structure I/O Error: Structure is larger than the marked area, clearing and aborting.")
-				io_area_clear(pos)
+				print("Structure I/O Error: Structure is larger than the marked area, aborting.")
 				return
 			end
 
@@ -175,12 +169,11 @@ function io_area_import (pos, ends, angle, filename)
 
 			-- clear and abort if a node is larger than the marked area
 			if (node_pos.x > pos_end.x) or (node_pos.y > pos_end.y) or (node_pos.z > pos_end.z) then
-				print("Structure I/O Error: Structure is larger than the marked area, clearing and aborting.")
-				io_area_clear(pos)
+				print("Structure I/O Error: Structure is larger than the marked area, aborting.")
 				return
 			end
 		end
-		minetest.env:add_node(node_pos, { name = node_name, param1 = node_param1, param2 = node_param2 })
+		minetest.env:set_node(node_pos, { name = node_name, param1 = node_param1, param2 = node_param2 })
 	end
 
 	file:close()

@@ -22,6 +22,8 @@ local MAPGEN_STRUCTURE_DENSITY = 3
 -- number of steps (in nodes) by which structures avoid each other when searching for an origin
 -- high values mean less accuracy, low values mean longer costly loops
 local MAPGEN_STRUCTURE_AVOID_STEPS = 5
+-- add this many nodes to each side when cutting and adding the floor
+local MAPGEN_STRUCTURE_BORDER = 2
 -- create a floor under each structure by this many nodes to fill empty space
 -- high values cover longer areas which looks better, but also mean adding more nodes and doing more costly checks
 local MAPGEN_STRUCTURE_FILL = 20
@@ -141,30 +143,35 @@ end
 
 -- naturally spawns a structure with the given parameters
 local function spawn_structure (filename, pos, angle, size, node)
+
 	-- choose center on X and Z axes and bottom on Y
 	local pos1 = { x = pos.x - size.x / 2, y = pos.y, z = pos.z - size.z / 2 }
 	local pos2 = { x = pos.x + size.x / 2, y = pos.y + size.y, z = pos.z + size.z / 2 }
+	local pos1_frame = { x = pos1.x - MAPGEN_STRUCTURE_BORDER, y = pos1.y, z = pos1.z - MAPGEN_STRUCTURE_BORDER }
+	local pos2_frame = { x = pos2.x + MAPGEN_STRUCTURE_BORDER, y = pos2.y, z = pos2.z + MAPGEN_STRUCTURE_BORDER }
+
+	io_area_clear(pos1_frame, pos2_frame)
 	io_area_import(pos1, pos2, angle, filename)
 
 	-- we spawned the structure on a suitable node, but what if it was the top of a peak?
 	-- to avoid parts of the building left floating, cover everything until all 4 corners touch the ground
 	for cover_y = pos.y - 1, pos.y - MAPGEN_STRUCTURE_FILL, -1 do
-		local c1 = { x = pos1.x, y = cover_y, z = pos1.z }
-		local c2 = { x = pos1.x, y = cover_y, z = pos2.z }
-		local c3 = { x = pos2.x, y = cover_y, z = pos1.z }
-		local c4 = { x = pos2.x, y = cover_y, z = pos2.z }
+		local c1 = { x = pos1_frame.x, y = cover_y, z = pos1_frame.z }
+		local c2 = { x = pos1_frame.x, y = cover_y, z = pos2_frame.z }
+		local c3 = { x = pos2_frame.x, y = cover_y, z = pos1_frame.z }
+		local c4 = { x = pos2_frame.x, y = cover_y, z = pos2_frame.z }
 		local n1 = minetest.env:get_node(c1)
 		local n2 = minetest.env:get_node(c2)
 		local n3 = minetest.env:get_node(c3)
 		local n4 = minetest.env:get_node(c4)
 
 		if (n1.name == "air") or (n2.name == "air") or (n3.name == "air") or (n4.name == "air") then
-			for cover_x = pos1.x, pos2.x do
-				for cover_z = pos1.z, pos2.z do
+			for cover_x = pos1_frame.x, pos2_frame.x do
+				for cover_z = pos1_frame.z, pos2_frame.z do
 					pos_fill = { x = cover_x, y = cover_y, z = cover_z }
 					node_fill = minetest.env:get_node(pos_fill)
 					if (node_fill.name ~= node) then
-						minetest.env:add_node(pos_fill, { name = node })
+						minetest.env:set_node(pos_fill, { name = node })
 					end
 				end
 			end
@@ -212,7 +219,7 @@ local function spawn_group (minp, maxp)
 			local probability = tonumber(entry[7])
 			local height_min = tonumber(entry[8])
 			local height_max = tonumber(entry[9])
-			local distance = tonumber(entry[10])
+			local distance = tonumber(entry[10]) + MAPGEN_STRUCTURE_BORDER 
 			local range = (probability + distance) * MAPGEN_STRUCTURE_DENSITY
 
 			-- attempt to create this structure by the amount of probability it has
