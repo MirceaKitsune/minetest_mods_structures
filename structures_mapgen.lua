@@ -313,22 +313,27 @@ local function spawn_group (minp, maxp)
 					local search_target = coords.y - range
 					for search = pos.y, search_target, -1 do
 						-- also check that the position is within the structure's height range
-						if (search > height_min) and (search < height_max) then
+						if (search > height_min) and (search < height_max + 1) then
 							coords.y = search
 							local node_here = minetest.env:get_node(coords)
 							local pos_down = { x = coords.x, y = coords.y - 1, z = coords.z }
 							local node_down = minetest.env:get_node(pos_down)
 
-							if (node_here.name == "air") and (node_down.name == entry[6]) then
-								-- schedule the building to spawn based on its position in the loop
-								delay = x * MAPGEN_STRUCTURE_DELAY
-								minetest.after(delay, function()
-									spawn_structure(entry[4], coords, angle, size, entry[6])
-								end)
+							if (node_down.name ~= "air") and (node_here.name == "air") then
+								if (node_down.name == entry[6]) then
+									-- schedule the building to spawn based on its position in the loop
+									delay = x * MAPGEN_STRUCTURE_DELAY
+									minetest.after(delay, function()
+										spawn_structure(entry[4], coords, angle, size, entry[6])
+									end)
 
-								avoid_add = { x = coords.x, y = coords.y, z = coords.z, sx = size.x, sz = size.z }
-								table.insert(avoid, avoid_add)
-								break
+									avoid_add = { x = coords.x, y = coords.y, z = coords.z, sx = size.x, sz = size.z }
+									table.insert(avoid, avoid_add)
+									break
+								else
+									-- the node at the surface is not the one we wanted, don't keep going
+									break
+								end
 							end
 						end
 					end
