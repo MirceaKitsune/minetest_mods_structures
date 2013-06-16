@@ -44,10 +44,10 @@ local function make_formspec (file, io_angle, area_size, area_nodes, mapgen_grou
 			"button[0,3;2,1;io_import;Import]"..
 			"button[2,3;2,1;io_export;Export]"..
 			"button[4,3;2,1;io_clear;Clear]"..
-			"field[0,5;2,1;mapgen_node;Node type;"..mapgen_node.."]"..
-			"field[2,5;1,1;mapgen_probability;Probability;"..mapgen_probability.."]"..
-			"field[3,5;1,1;mapgen_height_min;Minimum height;"..mapgen_height_min.."]"..
-			"field[4,5;1,1;mapgen_height_max;Maximum height;"..mapgen_height_max.."]"..
+			"field[0,5;2,1;mapgen_node;Trigger node;"..mapgen_node.."]"..
+			"field[2,5;1,1;mapgen_height_min;Minimum height;"..mapgen_height_min.."]"..
+			"field[3,5;1,1;mapgen_height_max;Maximum height;"..mapgen_height_max.."]"..
+			"field[4,5;1,1;mapgen_probability;Probability;"..mapgen_probability.."]"..
 			"field[5,5;1,1;mapgen_spacing;Spacing;"..mapgen_spacing.."]"..
 			"field[0,6;2,1;mapgen_group;Mapgen group;"..mapgen_group.."]"..
 			"button[2,6;2,1;mapgen_add;Add file to mapgen]"..
