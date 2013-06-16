@@ -165,7 +165,9 @@ local function spawn_structure (filename, pos, angle, size, node)
 		local n3 = minetest.env:get_node(c3)
 		local n4 = minetest.env:get_node(c4)
 
-		if (n1.name == "air") or (n2.name == "air") or (n3.name == "air") or (n4.name == "air") then
+		-- surest way is to check that all corners match the structure's trigger node, else the floor can end on tree tops for instance
+		-- if this never happens it will fill down to the loop limit, which sucks but is the best method so far
+		if (n1.name ~= node) or (n2.name ~= node) or (n3.name ~= node) or (n4.name ~= node) then
 			for cover_x = pos1_frame.x, pos2_frame.x do
 				for cover_z = pos1_frame.z, pos2_frame.z do
 					pos_fill = { x = cover_x, y = cover_y, z = cover_z }
