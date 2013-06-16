@@ -18,10 +18,10 @@ local MAPGEN_GROUP_DISTANCE_COUNT = 10
 local MAPGEN_STRUCTURE_DELAY = 1
 -- amount by which the the probability and separation of each structure from other structures influences spawn radius
 -- must be balanced so the higher probability and distance, the farther structures can spawn while maintaining their density
-local MAPGEN_STRUCTURE_DENSITY = 3
+local MAPGEN_STRUCTURE_DENSITY = 5
 -- number of steps (in nodes) by which structures avoid each other when searching for an origin
 -- high values mean less accuracy, low values mean longer costly loops
-local MAPGEN_STRUCTURE_AVOID_STEPS = 5
+local MAPGEN_STRUCTURE_AVOID_STEPS = 3
 -- add this many nodes to each side when cutting and adding the floor
 local MAPGEN_STRUCTURE_BORDER = 2
 -- create a floor under each structure by this many nodes to fill empty space
@@ -210,15 +210,15 @@ local function spawn_group (minp, maxp)
 	local avoid = {}
 
 	-- go through all structures in the mapgen table
-	-- parameters: x size [1], y size [2], z size [3], structure [4], group [5], node [6], probability [7], min height [8], max height [9], distance [10]
+	-- parameters: x size [1], y size [2], z size [3], structure [4], group [5], node [6], min height [7], max height [8], probability [9], distance [10]
 	for i, entry in ipairs(mapgen_table) do
 		-- only go further if this structure belongs to the chosen mapgen group
 		if (entry[5] == mapgen_groups[group]) then
 
 			-- global settings for this structure
-			local probability = tonumber(entry[7])
-			local height_min = tonumber(entry[8])
-			local height_max = tonumber(entry[9])
+			local height_min = tonumber(entry[7])
+			local height_max = tonumber(entry[8])
+			local probability = tonumber(entry[9])
 			local distance = tonumber(entry[10])
 			local range = (probability + distance) * MAPGEN_STRUCTURE_DENSITY
 
@@ -345,7 +345,7 @@ end
 
 -- Global functions - Add / remove to / from file
 
-function mapgen_add (pos, ends, filename, group, node, probability, height_min, height_max, spacing)
+function mapgen_add (pos, ends, filename, group, node, height_min, height_max, probability, spacing)
 	-- remove the existing entry
 	mapgen_remove (filename)
 
@@ -353,7 +353,7 @@ function mapgen_add (pos, ends, filename, group, node, probability, height_min, 
 	local dist = calculate_distance(pos, ends)
 
 	-- add file to the mapgen table
-	entry = {dist.x, dist.y, dist.z, filename, group, node, probability, height_min, height_max, spacing }
+	entry = {dist.x, dist.y, dist.z, filename, group, node, height_min, height_max, probability, spacing }
 	table.insert(mapgen_table, entry)
 
 	mapgen_to_file()
