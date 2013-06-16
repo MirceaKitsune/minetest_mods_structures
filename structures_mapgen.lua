@@ -219,7 +219,9 @@ local function spawn_group (minp, maxp)
 			local probability = tonumber(entry[7])
 			local height_min = tonumber(entry[8])
 			local height_max = tonumber(entry[9])
-			local distance = tonumber(entry[10]) + MAPGEN_STRUCTURE_BORDER 
+			-- calculate distance, accounting largest size from center
+			local distance = tonumber(entry[10]) + math.ceil(math.max(tonumber(entry[1]), tonumber(entry[3])) / 2) + MAPGEN_STRUCTURE_BORDER
+			-- calculate range, accounting distance
 			local range = (probability + distance) * MAPGEN_STRUCTURE_DENSITY
 
 			-- attempt to create this structure by the amount of probability it has
