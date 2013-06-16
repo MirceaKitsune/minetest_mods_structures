@@ -219,9 +219,7 @@ local function spawn_group (minp, maxp)
 			local probability = tonumber(entry[7])
 			local height_min = tonumber(entry[8])
 			local height_max = tonumber(entry[9])
-			-- calculate distance, accounting largest size from center
-			local distance = tonumber(entry[10]) + math.ceil(math.max(tonumber(entry[1]), tonumber(entry[3])) / 2) + MAPGEN_STRUCTURE_BORDER
-			-- calculate range, accounting distance
+			local distance = tonumber(entry[10])
 			local range = (probability + distance) * MAPGEN_STRUCTURE_DENSITY
 
 			-- attempt to create this structure by the amount of probability it has
@@ -276,18 +274,28 @@ local function spawn_group (minp, maxp)
 					end
 
 					-- loop through the all avoid origins in the table
-					for w, org in ipairs(avoid) do
+					for w, spot in ipairs(avoid) do
+
+						-- calculate avoid distance, accounting largest size from center of structures
+						local avoid_distance = { }
+						-- add the distance of our structure
+						avoid_distance.x = distance + math.ceil(size.x / 2) + MAPGEN_STRUCTURE_BORDER
+						avoid_distance.z = distance + math.ceil(size.z / 2) + MAPGEN_STRUCTURE_BORDER
+						-- add the distance of the structure we're avoiding
+						avoid_distance.x = avoid_distance.x + math.ceil(spot.sx / 2) + MAPGEN_STRUCTURE_BORDER;
+						avoid_distance.z = avoid_distance.z + math.ceil(spot.sz / 2) + MAPGEN_STRUCTURE_BORDER;
+
 						-- if we are too close to this avoid origin, move away until we're clear of it
-						local dist = calculate_distance(coords, org)
-						while (dist.x < distance) and (dist.z < distance) do
-							if (dist.x < distance) then
+						local dist = calculate_distance(coords, spot)
+						while (dist.x < avoid_distance.x) and (dist.z < avoid_distance.z) do
+							if (dist.x < avoid_distance.x) then
 								coords.x = coords.x + avoid_step_x
 							end
-							if (dist.z < distance) then
+							if (dist.z < avoid_distance.z) then
 								coords.z = coords.z + avoid_step_z
 							end
 
-							dist = calculate_distance(coords, org)
+							dist = calculate_distance(coords, spot)
 							found_origin = false
 						end
 
@@ -318,7 +326,8 @@ local function spawn_group (minp, maxp)
 									spawn_structure(entry[4], coords, angle, size, entry[6])
 								end)
 
-								table.insert(avoid, coords)
+								avoid_add = { x = coords.x, y = coords.y, z = coords.z, sx = size.x, sz = size.z }
+								table.insert(avoid, avoid_add)
 								break
 							end
 						end
