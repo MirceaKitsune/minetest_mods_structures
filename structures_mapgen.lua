@@ -15,7 +15,7 @@ local MAPGEN_GROUP_DISTANCE = 200
 local MAPGEN_GROUP_DISTANCE_COUNT = 10
 -- only spawn if the height of each corner is within this distance against the ground (top is air and bottom is not)
 -- low values reduce spawns on extreme terrain, but also decrease probability
-local MAPGEN_STRUCTURE_LEVEL = 10
+local MAPGEN_STRUCTURE_LEVEL = 20
 -- each structure is delayed by this many seconds in a probability loop
 -- high values cause structures to spawn more slowly, low values deal more stress to the CPU and encourage incomplete spawns
 local MAPGEN_STRUCTURE_DELAY = 1
@@ -144,7 +144,7 @@ end
 -- Local functions - Spawn
 
 -- naturally spawns a structure with the given parameters
-local function spawn_structure (filename, pos, angle, size, node)
+local function spawn_structure (filename, pos, angle, size, trigger)
 
 	-- choose center on X and Z axes and bottom on Y
 	local pos1 = { x = pos.x - size.x / 2, y = pos.y, z = pos.z - size.z / 2 }
@@ -160,7 +160,7 @@ local function spawn_structure (filename, pos, angle, size, node)
 	table.insert(corners, { x = pos1_frame.x, z = pos2_frame.z } )
 	table.insert(corners, { x = pos2_frame.x, z = pos1_frame.z } )
 	table.insert(corners, { x = pos2_frame.x, z = pos2_frame.z } )
-	-- to determine if each corner is close enough to the surface, check if there's air above center and solid below
+	-- to know if each corner is close enough to the surface, check if there's air above center and solid below
 	for i, v in ipairs(corners) do
 		local found_air = false
 		local found_solid = false
@@ -199,7 +199,7 @@ local function spawn_structure (filename, pos, angle, size, node)
 					pos_fill = { x = cover_x, y = cover_y, z = cover_z }
 					node_fill = minetest.env:get_node(pos_fill)
 					if (node_fill.name ~= node) then
-						minetest.env:set_node(pos_fill, { name = node })
+						minetest.env:set_node(pos_fill, { name = trigger })
 					end
 				end
 			end
@@ -349,21 +349,16 @@ local function spawn_group (minp, maxp)
 							local pos_down = { x = coords.x, y = coords.y - 1, z = coords.z }
 							local node_down = minetest.env:get_node(pos_down)
 
-							if (node_down.name ~= "air") and (node_here.name == "air") then
-								if (node_down.name == entry[6]) then
-									-- schedule the building to spawn based on its position in the loop
-									delay = x * MAPGEN_STRUCTURE_DELAY
-									minetest.after(delay, function()
-										spawn_structure(entry[4], coords, angle, size, entry[6])
-									end)
+							if (node_down.name == entry[6]) and (node_here.name == "air") then
+								-- schedule the building to spawn based on its position in the loop
+								delay = x * MAPGEN_STRUCTURE_DELAY
+								minetest.after(delay, function()
+									spawn_structure(entry[4], coords, angle, size, entry[6])
+								end)
 
-									avoid_add = { x = coords.x, y = coords.y, z = coords.z, sx = size.x, sz = size.z }
-									table.insert(avoid, avoid_add)
-									break
-								else
-									-- the node at the surface is not the one we wanted, don't keep going
-									break
-								end
+								avoid_add = { x = coords.x, y = coords.y, z = coords.z, sx = size.x, sz = size.z }
+								table.insert(avoid, avoid_add)
+								break
 							end
 						end
 					end
