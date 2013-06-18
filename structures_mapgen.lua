@@ -154,42 +154,45 @@ local function spawn_structure (filename, pos, angle, size, node)
 	-- terrain leveling amount to check for in each direction
 	local level = math.ceil(MAPGEN_STRUCTURE_LEVEL / 2)
 
-	-- determine how leveled the terrain is at each corner, and abort if it's too rough
+	-- determine how leveled the terrain is at each corner and abort if it's too rough
 	local corners = { }
 	table.insert(corners, { x = pos1_frame.x, z = pos1_frame.z } )
 	table.insert(corners, { x = pos1_frame.x, z = pos2_frame.z } )
 	table.insert(corners, { x = pos2_frame.x, z = pos1_frame.z } )
 	table.insert(corners, { x = pos2_frame.x, z = pos2_frame.z } )
-	-- for each corner, search upward for air and downward for solid, and abort spawning if a search fails
+	-- to determine if each corner is close enough to the surface, check if there's air above center and solid below
 	for i, v in ipairs(corners) do
-		-- up for air
-		local found = false
-		for search = pos.y, pos.y + level, 1 do
-			local pos = { x = v.x, y = search, z = v.z }
-			local node = minetest.env:get_node(pos)
-			if (node.name == "air") then
-				found = true
-				break
+		local found_air = false
+		local found_solid = false
+		for search = pos.y - 1 + level, pos.y - level, -1 do
+			-- search air
+			if (search >= pos.y) and (found_air == false) then
+				local pos = { x = v.x, y = search, z = v.z }
+				local node = minetest.env:get_node(pos)
+				if (node.name == "air") then
+					found_air = true
+				end
 			end
-		end
-		if not(found) then return end
-		-- down for solid
-		found = false
-		for search = pos.y - 1, pos.y - 1 - level, -1 do
-			local pos = { x = v.x, y = search, z = v.z }
-			local node = minetest.env:get_node(pos)
-			if (node.name ~= "air") then
-				found = true
-				break
+			-- search solid
+			if (search < pos.y) and (found_solid == false) then
+				if (found_air == false) then break end -- we didn't find air so don't waste time here
+				local pos = { x = v.x, y = search, z = v.z }
+				local node = minetest.env:get_node(pos)
+				if (node.name ~= "air") then
+					found_solid = true
+				end
 			end
+			-- don't continue the loop if we found both
+			if (found_air == true) and (found_solid == true) then break end
 		end
-		if not(found) then return end
+		-- this corner isn't suitable, abort spawning the structure
+		if (found_air == false) or (found_solid == false) then return end
 	end
 
 	-- we'll spawn the structure in a suitable spot, but what if it's the top of a peak?
 	-- to avoid parts of the building left floating, cover everything until all 4 corners touch the ground
 	if (MAPGEN_STRUCTURE_FILL) then
-		for cover_y = pos.y - 1, pos.y - 1 - level, -1 do
+		for cover_y = pos.y - 1, pos.y - level, -1 do
 			-- fill up this layer
 			for cover_x = pos1_frame.x, pos2_frame.x do
 				for cover_z = pos1_frame.z, pos2_frame.z do
