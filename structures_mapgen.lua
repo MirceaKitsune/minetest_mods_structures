@@ -155,26 +155,36 @@ local function spawn_structure (filename, pos, angle, size, node)
 	local level = math.ceil(MAPGEN_STRUCTURE_LEVEL / 2)
 
 	-- determine how leveled the terrain is at each corner, and abort if it's too rough
-	local c1_up = { x = pos1_frame.x, y = pos.y + level, z = pos1_frame.z }
-	local c2_up = { x = pos1_frame.x, y = pos.y + level, z = pos2_frame.z }
-	local c3_up = { x = pos2_frame.x, y = pos.y + level, z = pos1_frame.z }
-	local c4_up = { x = pos2_frame.x, y = pos.y + level, z = pos2_frame.z }
-	local c1_down = { x = pos1_frame.x, y = pos.y - 1 - level, z = pos1_frame.z }
-	local c2_down = { x = pos1_frame.x, y = pos.y - 1 - level, z = pos2_frame.z }
-	local c3_down = { x = pos2_frame.x, y = pos.y - 1 - level, z = pos1_frame.z }
-	local c4_down = { x = pos2_frame.x, y = pos.y - 1 - level, z = pos2_frame.z }
-	local n1_up = minetest.env:get_node(c1_up)
-	local n2_up = minetest.env:get_node(c2_up)
-	local n3_up = minetest.env:get_node(c3_up)
-	local n4_up = minetest.env:get_node(c4_up)
-	local n1_down = minetest.env:get_node(c1_down)
-	local n2_down = minetest.env:get_node(c2_down)
-	local n3_down = minetest.env:get_node(c3_down)
-	local n4_down = minetest.env:get_node(c4_down)
-	if (n1_up.name ~= "air") or (n1_down.name == "air") then return end
-	if (n2_up.name ~= "air") or (n2_down.name == "air") then return end
-	if (n3_up.name ~= "air") or (n3_down.name == "air") then return end
-	if (n4_up.name ~= "air") or (n4_down.name == "air") then return end
+	local corners = { }
+	table.insert(corners, { x = pos1_frame.x, z = pos1_frame.z } )
+	table.insert(corners, { x = pos1_frame.x, z = pos2_frame.z } )
+	table.insert(corners, { x = pos2_frame.x, z = pos1_frame.z } )
+	table.insert(corners, { x = pos2_frame.x, z = pos2_frame.z } )
+	-- for each corner, search upward for air and downward for solid, and abort spawning if a search fails
+	for i, v in ipairs(corners) do
+		-- up for air
+		local found = false
+		for search = pos.y, pos.y + level, 1 do
+			local pos = { x = v.x, y = search, z = v.z }
+			local node = minetest.env:get_node(pos)
+			if (node.name == "air") then
+				found = true
+				break
+			end
+		end
+		if not(found) then return end
+		-- down for solid
+		found = false
+		for search = pos.y - 1, pos.y - 1 - level, -1 do
+			local pos = { x = v.x, y = search, z = v.z }
+			local node = minetest.env:get_node(pos)
+			if (node.name ~= "air") then
+				found = true
+				break
+			end
+		end
+		if not(found) then return end
+	end
 
 	-- we'll spawn the structure in a suitable spot, but what if it's the top of a peak?
 	-- to avoid parts of the building left floating, cover everything until all 4 corners touch the ground
