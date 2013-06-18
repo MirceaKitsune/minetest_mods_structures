@@ -13,6 +13,9 @@ local MAPGEN_GROUP_DISTANCE = 200
 -- amount of origins to maintain in the group avoidance list
 -- low values increase the risk of groups being ignored from distance calculations, high values store more data
 local MAPGEN_GROUP_DISTANCE_COUNT = 10
+-- only spawn if the height of each corner is within this distance against the ground (top is air and bottom is not)
+-- low values reduce spawns on extreme terrain, but also decrease probability
+local MAPGEN_STRUCTURE_LEVEL = 10
 -- each structure is delayed by this many seconds in a probability loop
 -- high values cause structures to spawn more slowly, low values deal more stress to the CPU and encourage incomplete spawns
 local MAPGEN_STRUCTURE_DELAY = 1
@@ -24,9 +27,8 @@ local MAPGEN_STRUCTURE_DENSITY = 5
 local MAPGEN_STRUCTURE_AVOID_STEPS = 3
 -- add this many nodes to each side when cutting and adding the floor
 local MAPGEN_STRUCTURE_BORDER = 2
--- create a floor under each structure by this many nodes to fill empty space
--- high values cover longer areas which looks better, but also mean adding more nodes and doing more costly checks
-local MAPGEN_STRUCTURE_FILL = 20
+-- if true, create a floor under each structure by this many nodes to fill empty space
+local MAPGEN_STRUCTURE_FILL = true
 
 -- Local values - Groups and mapgen
 
@@ -149,25 +151,36 @@ local function spawn_structure (filename, pos, angle, size, node)
 	local pos2 = { x = pos.x + size.x / 2, y = pos.y + size.y, z = pos.z + size.z / 2 }
 	local pos1_frame = { x = pos1.x - MAPGEN_STRUCTURE_BORDER, y = pos1.y, z = pos1.z - MAPGEN_STRUCTURE_BORDER }
 	local pos2_frame = { x = pos2.x + MAPGEN_STRUCTURE_BORDER, y = pos2.y, z = pos2.z + MAPGEN_STRUCTURE_BORDER }
+	-- terrain leveling amount to check for in each direction
+	local level = math.ceil(MAPGEN_STRUCTURE_LEVEL / 2)
 
-	io_area_clear(pos1_frame, pos2_frame)
-	io_area_import(pos1, pos2, angle, filename)
+	-- determine how leveled the terrain is at each corner, and abort if it's too rough
+	local c1_up = { x = pos1_frame.x, y = pos.y + level, z = pos1_frame.z }
+	local c2_up = { x = pos1_frame.x, y = pos.y + level, z = pos2_frame.z }
+	local c3_up = { x = pos2_frame.x, y = pos.y + level, z = pos1_frame.z }
+	local c4_up = { x = pos2_frame.x, y = pos.y + level, z = pos2_frame.z }
+	local c1_down = { x = pos1_frame.x, y = pos.y - 1 - level, z = pos1_frame.z }
+	local c2_down = { x = pos1_frame.x, y = pos.y - 1 - level, z = pos2_frame.z }
+	local c3_down = { x = pos2_frame.x, y = pos.y - 1 - level, z = pos1_frame.z }
+	local c4_down = { x = pos2_frame.x, y = pos.y - 1 - level, z = pos2_frame.z }
+	local n1_up = minetest.env:get_node(c1_up)
+	local n2_up = minetest.env:get_node(c2_up)
+	local n3_up = minetest.env:get_node(c3_up)
+	local n4_up = minetest.env:get_node(c4_up)
+	local n1_down = minetest.env:get_node(c1_down)
+	local n2_down = minetest.env:get_node(c2_down)
+	local n3_down = minetest.env:get_node(c3_down)
+	local n4_down = minetest.env:get_node(c4_down)
+	if (n1_up.name ~= "air") or (n1_down.name == "air") then return end
+	if (n2_up.name ~= "air") or (n2_down.name == "air") then return end
+	if (n3_up.name ~= "air") or (n3_down.name == "air") then return end
+	if (n4_up.name ~= "air") or (n4_down.name == "air") then return end
 
-	-- we spawned the structure on a suitable node, but what if it was the top of a peak?
+	-- we'll spawn the structure in a suitable spot, but what if it's the top of a peak?
 	-- to avoid parts of the building left floating, cover everything until all 4 corners touch the ground
-	for cover_y = pos.y - 1, pos.y - MAPGEN_STRUCTURE_FILL, -1 do
-		local c1 = { x = pos1_frame.x, y = cover_y, z = pos1_frame.z }
-		local c2 = { x = pos1_frame.x, y = cover_y, z = pos2_frame.z }
-		local c3 = { x = pos2_frame.x, y = cover_y, z = pos1_frame.z }
-		local c4 = { x = pos2_frame.x, y = cover_y, z = pos2_frame.z }
-		local n1 = minetest.env:get_node(c1)
-		local n2 = minetest.env:get_node(c2)
-		local n3 = minetest.env:get_node(c3)
-		local n4 = minetest.env:get_node(c4)
-
-		-- surest way is to check that all corners match the structure's trigger node, else the floor can end on tree tops for instance
-		-- if this never happens it will fill down to the loop limit, which sucks but is the best method so far
-		if (n1.name ~= node) or (n2.name ~= node) or (n3.name ~= node) or (n4.name ~= node) then
+	if (MAPGEN_STRUCTURE_FILL) then
+		for cover_y = pos.y - 1, pos.y - 1 - level, -1 do
+			-- fill up this layer
 			for cover_x = pos1_frame.x, pos2_frame.x do
 				for cover_z = pos1_frame.z, pos2_frame.z do
 					pos_fill = { x = cover_x, y = cover_y, z = cover_z }
@@ -177,10 +190,12 @@ local function spawn_structure (filename, pos, angle, size, node)
 					end
 				end
 			end
-		else
-			break
 		end
 	end
+
+	-- at last, create the structure itself
+	io_area_clear(pos1_frame, pos2_frame)
+	io_area_import(pos1, pos2, angle, filename)
 end
 
 -- finds a structure group to spawn and calculates each entry's properties
