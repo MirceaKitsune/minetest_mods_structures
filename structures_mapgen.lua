@@ -153,6 +153,7 @@ local function spawn_structure (filename, pos, angle, size, trigger)
 	local pos2_frame = { x = pos2.x + MAPGEN_STRUCTURE_BORDER, y = pos2.y, z = pos2.z + MAPGEN_STRUCTURE_BORDER }
 	-- terrain leveling amount to check for in each direction
 	local level = math.ceil(MAPGEN_STRUCTURE_LEVEL / 2)
+	local bottom = pos.y - 1 -- initial value, modified later
 
 	-- determine how leveled the terrain is at each corner and abort if it's too rough
 	local corners = { }
@@ -180,6 +181,10 @@ local function spawn_structure (filename, pos, angle, size, trigger)
 				local node = minetest.env:get_node(pos)
 				if (node.name ~= "air") then
 					found_solid = true
+					-- also set bottom to the lowest solid position we detected
+					if (i < bottom) then
+						bottom = i
+					end
 				end
 			end
 			-- don't continue the loop if we found both
@@ -190,9 +195,9 @@ local function spawn_structure (filename, pos, angle, size, trigger)
 	end
 
 	-- we'll spawn the structure in a suitable spot, but what if it's the top of a peak?
-	-- to avoid parts of the building left floating, cover everything until all 4 corners touch the ground
+	-- to avoid parts of the building left floating, cover everything to the bottom
 	if (MAPGEN_STRUCTURE_FILL) then
-		for cover_y = pos.y - 1, pos.y - level, -1 do
+		for cover_y = pos.y - 1, bottom + 1, -1 do
 			-- fill up this layer
 			for cover_x = pos1_frame.x, pos2_frame.x do
 				for cover_z = pos1_frame.z, pos2_frame.z do
