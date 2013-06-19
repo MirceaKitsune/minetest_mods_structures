@@ -182,13 +182,12 @@ local function spawn_structure (filename, pos, angle, size, trigger)
 				if (node.name ~= "air") and (node.name ~= "ignore") and (minetest.registered_nodes[node.name].drawtype == "normal") then
 					found_solid = true
 					-- also set bottom to the lowest solid position we detected
-					if (i < bottom) then
-						bottom = i
+					if (search < bottom) then
+						bottom = search
 					end
+					break
 				end
 			end
-			-- don't continue the loop if we found both
-			if (found_air == true) and (found_solid == true) then break end
 		end
 		-- this corner isn't suitable, abort spawning the structure
 		if (found_air == false) or (found_solid == false) then return end
