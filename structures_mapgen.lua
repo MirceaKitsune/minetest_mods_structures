@@ -179,7 +179,7 @@ local function spawn_structure (filename, pos, angle, size, trigger)
 				if (found_air == false) then break end -- we didn't find air so don't waste time here
 				local pos = { x = v.x, y = search, z = v.z }
 				local node = minetest.env:get_node(pos)
-				if (node.name ~= "air") then
+				if (node.name ~= "air") and (node.name ~= "ignore") and (minetest.registered_nodes[node.name].drawtype == "normal") then
 					found_solid = true
 					-- also set bottom to the lowest solid position we detected
 					if (i < bottom) then
