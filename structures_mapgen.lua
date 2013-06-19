@@ -251,6 +251,8 @@ local function spawn_group (minp, maxp)
 			local probability = tonumber(entry[9])
 			local distance = tonumber(entry[10])
 			local range = (probability + distance) * MAPGEN_STRUCTURE_DENSITY
+			-- bound range to group distance, to make sure buildings from different groups can't collide with each other
+			range = math.min(range, MAPGEN_GROUP_DISTANCE)
 
 			-- attempt to create this structure by the amount of probability it has
 			-- everything inside are parameters of each attempt to spawn this structure
