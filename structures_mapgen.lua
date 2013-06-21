@@ -127,16 +127,21 @@ local function mapgen_to_file ()
 	groups_update()
 end
 
--- takes structures from the mapgen table and creates a shuffled pointer list
--- used to make sure all structures have equal changes and spawn randomly while maintaining their probability
-local function mapgen_getlist (group)
+-- Local functions - Spawn
+
+-- analyzes buildings in the mapgen group and returns various parameters needed for spawning
+local function mapgen_getparams (group)
 
 	local structures = { }
+
+	-- take structures from the mapgen table and creates a shuffled pointer list
+	-- used to make sure all structures have equal changes and spawn randomly while maintaining their probability
 
 	-- first, loop through the mapgen table and add each structure's index by as many times as its probability
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this structure belongs to the chosen mapgen group
 		if (entry[5] == mapgen_groups[group]) then
+			-- loop through all instances of the structure
 			for x = 1, entry[9] do
 				table.insert(structures, i)
 			end
@@ -157,8 +162,6 @@ local function mapgen_getlist (group)
 
 	return structures
 end
-
--- Local functions - Spawn
 
 -- naturally spawns a structure with the given parameters
 local function spawn_structure (filename, pos, angle, size, trigger)
@@ -257,8 +260,9 @@ local function spawn_group (minp, maxp)
 
 	-- go through the shuffled indexes of the structure list, and get the structure at that index from mapgen table
 	-- parameters: x size [1], y size [2], z size [3], structure [4], group [5], node [6], min height [7], max height [8], probability [9], distance [10]
-	local structures = mapgen_getlist(group)
-	for i, structure in ipairs(structures) do
+	local param_structures = mapgen_getparams(group)
+
+	for i, structure in ipairs(param_structures) do
 		local entry = mapgen_table[structure]
 
 		-- get structure settings
