@@ -14,9 +14,9 @@ local MAPGEN_GROUP_DISTANCE = 200
 -- low values increase the risk of groups being ignored from distance calculations, high values store more data
 local MAPGEN_GROUP_DISTANCE_COUNT = 10
 -- only spawn if the height of each corner is within this distance against the ground (top is air and bottom is not)
--- low values reduce spawns on extreme terrain, but also decrease probability
+-- low values reduce spawns on extreme terrain, but also decrease count
 local MAPGEN_STRUCTURE_LEVEL = 20
--- each structure is delayed by this many seconds in a probability loop
+-- each structure is delayed by this many seconds
 -- high values cause structures to spawn more slowly, low values deal more stress to the CPU and encourage incomplete spawns
 local MAPGEN_STRUCTURE_DELAY = 1
 -- add this many nodes to each side when cutting and adding the floor
@@ -125,7 +125,7 @@ end
 
 -- analyzes buildings in the mapgen group and returns them as a lists of parameters
 local function spawn_get (pos, height, group)
-	-- parameters: x size [1], y size [2], z size [3], structure [4], group [5], node [6], min height [7], max height [8], probability [9], distance [10]
+	-- parameters: x size [1], y size [2], z size [3], structure [4], group [5], node [6], min height [7], max height [8], count [9]
 	-- x = left & right, z = up & down
 
 	-- structure table which will be filled and returned by this function
@@ -156,7 +156,6 @@ local function spawn_get (pos, height, group)
 		-- only if this structure belongs to the chosen mapgen group
 		if (entry[5] == mapgen_groups[group]) then
 			-- get global options of this structure
-			local distance = tonumber(entry[10])
 			local limit_min = tonumber(entry[7])
 			local limit_max = tonumber(entry[8])
 
@@ -179,11 +178,11 @@ local function spawn_get (pos, height, group)
 					return structures
 				end
 
-				-- apply this structure's distance on Z axis and set initial locations
+				-- set initial location to work with
 				local location = { }
-				location.x = pos.x + distance
+				location.x = pos.x
 				location.y = pos.y
-				location.z = current_z + distance -- is maintained between loops
+				location.z = current_z -- is maintained between loops
 
 				-- choose angle (0, 90, 180, 270) based on distance from group center, and size based on angle
 				-- it's hard to find an accurate formula here, but it keeps buildings oriented uniformly
@@ -221,7 +220,7 @@ local function spawn_get (pos, height, group)
 				-- if we don't, this building may not spawn
 				for search = height.max, height.min, -1 do
 					-- also check that the location is within the structure's height limits
-					if (search > limit_min) and (search < limit_max + 1) then
+					if (search > limit_min) and (search <= limit_max) then
 						location.y = search
 						local node_here = minetest.env:get_node(location)
 						local pos_down = { x = location.x, y = location.y - 1, z = location.z }
@@ -290,11 +289,11 @@ local function spawn_get (pos, height, group)
 				-- after we're done with this structure, add its upper-right corner to the right point list
 				-- to account this structure's distance for the next structure, add it to the X location
 				upright = { }
-				upright.x = location.x + size.x + entry[10]
+				upright.x = location.x + size.x
 				upright.z = location.z
 				table.insert(points_right, upright)
 				-- lastly, push Z location so the next building in this row will try to spawn right under here
-				current_z = current_z + size.z + distance + 1
+				current_z = current_z + size.z + 1
 
 				-- increase the row count
 				row = row + 1
@@ -387,7 +386,7 @@ end
 
 -- Global functions - Add / remove to / from file
 
-function mapgen_add (pos, ends, filename, group, node, height_min, height_max, probability, spacing)
+function mapgen_add (pos, ends, filename, group, node, height_min, height_max, count)
 	-- remove the existing entry
 	mapgen_remove (filename)
 
@@ -395,7 +394,7 @@ function mapgen_add (pos, ends, filename, group, node, height_min, height_max, p
 	local dist = calculate_distance(pos, ends)
 
 	-- add file to the mapgen table
-	entry = {dist.x, dist.y, dist.z, filename, group, node, height_min, height_max, probability, spacing }
+	entry = {dist.x, dist.y, dist.z, filename, group, node, height_min, height_max, count }
 	table.insert(mapgen_table, entry)
 
 	mapgen_to_file()
