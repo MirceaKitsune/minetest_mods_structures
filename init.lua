@@ -24,7 +24,7 @@ end
 
 -- checks if the node is in the ignore list
 function calculate_ignored (node)
-	for i, v in ipairs(IO_IGNORE) do
+	for v in pairs(IO_IGNORE) do
 		if (node == v) then
 			return true
 		end
