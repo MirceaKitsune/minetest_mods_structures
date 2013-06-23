@@ -214,7 +214,7 @@ local function spawn_get (pos, height, group)
 		local edge = pos.x
 		for w, point in ipairs(points_left) do
 			-- check if the point intersects our structure
-			if (point.z <= current_z + MAPGEN_STRUCTURE_BORDER) and (point.z >= current_z - size.z - MAPGEN_STRUCTURE_BORDER) then
+			if (point.z >= current_z - size.z - MAPGEN_STRUCTURE_BORDER * 2) and (point.z <= current_z + size.z + MAPGEN_STRUCTURE_BORDER * 2) then
 				-- if this point is further to the right than the last one, bump the edge past its location
 				if (edge < point.x) then
 					edge = point.x
@@ -310,13 +310,12 @@ local function spawn_get (pos, height, group)
 
 		-- add this structure's upper-right corner to the right point list
 		upright = { }
-		upright.x = location.x + size.x + MAPGEN_STRUCTURE_BORDER * 2 + 1
+		upright.x = location.x + size.x + MAPGEN_STRUCTURE_BORDER * 2
 		upright.z = location.z
 		table.insert(points_right, upright)
 
 		-- lastly, push Z location so the next building in this row will try to spawn right under here
-		current_z = current_z - size.z - MAPGEN_STRUCTURE_BORDER * 2 - 1
-
+		current_z = current_z + size.z + MAPGEN_STRUCTURE_BORDER * 2 + 1
 		-- increase the row count
 		row = row + 1
 	end
