@@ -7,6 +7,9 @@
 local MAPGEN_FILE = "mapgen.txt"
 -- probability of a structure group to spawn, per piece of world being generated
 local MAPGEN_GROUP_PROBABILITY = 0.2
+-- if the area we're spawning in didn't finish loading / generating, retry this many seconds
+-- low values preform checks more frequently, higher values are recommended when the world is slow to load
+local MAPGEN_GROUP_RETRY = 3
 -- distance that groups must have from each other in order to spawn
 -- high values decrease the risk of groups spawning into each other as well as mapgen stress, but means rarer structures
 local MAPGEN_GROUP_DISTANCE = 200
@@ -148,6 +151,24 @@ local function spawn_generate (pos, height, group)
 	-- divide space by the square root of total buildings to get the proper row / column sizes
 	space = space / math.sqrt(table.getn(instances))
 
+	-- check if the corners of the group are all in a loaded area
+	-- if the area isn't loaded yet, return nil
+	local group_corners = { }
+	table.insert(group_corners, { x = pos.x, y = height.min, z = pos.z } )
+	table.insert(group_corners, { x = pos.x, y = height.min, z = pos.z + space } )
+	table.insert(group_corners, { x = pos.x + space, y = height.min, z = pos.z } )
+	table.insert(group_corners, { x = pos.x + space, y = height.min, z = pos.z + space } )
+	table.insert(group_corners, { x = pos.x, y = height.max, z = pos.z } )
+	table.insert(group_corners, { x = pos.x, y = height.max, z = pos.z + space } )
+	table.insert(group_corners, { x = pos.x + space, y = height.max, z = pos.z } )
+	table.insert(group_corners, { x = pos.x + space, y = height.max, z = pos.z + space } )
+	for i, v in ipairs(group_corners) do
+		local node = minetest.env:get_node(v)
+		if (node.name == "ignore") then
+			return nil
+		end
+	end
+
 	-- now randomize the table so structure instances won't be spawned in an uniform order
 	local size = table.getn(instances)
 	for i in ipairs(instances) do
@@ -287,7 +308,7 @@ local function spawn_generate (pos, height, group)
 						if (found_air == false) then break end -- we didn't find air so don't waste time here
 						local pos = { x = v.x, y = search, z = v.z }
 						local node = minetest.env:get_node(pos)
-						if (node.name ~= "air") and (node.name ~= "ignore") and (minetest.registered_nodes[node.name].drawtype == "normal") then
+						if (node.name ~= "air") and (minetest.registered_nodes[node.name].drawtype == "normal") then
 							found_solid = true
 							-- also set bottom to the lowest solid location we detected
 							if (search < bottom) then
@@ -360,15 +381,15 @@ local function spawn_structure (filename, pos, angle, size, bottom, trigger)
 end
 
 -- finds a structure group to spawn and calculates each entry's properties
-local function spawn_group (minp, maxp)
+local function spawn_group (minp, maxp, group)
 	-- test group probability for this piece of world
 	if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
 
-	-- choose center on the X and Z axes and top on Y
+	-- choose top-left on the X and Z axes since that's where we start from
 	local pos = { }
-	pos.x = minp.x + (maxp.x - minp.x) / 2
+	pos.x = minp.x
 	pos.y = 0
-	pos.z = minp.z + (maxp.z - minp.z) / 2
+	pos.z = minp.z
 
 	-- height to scan over
 	local height = { }
@@ -379,20 +400,30 @@ local function spawn_group (minp, maxp)
 	if (groups_avoid_check(pos) == false) then return end
 	groups_avoid_add(pos)
 
-	-- randomly choose a mapgen group to spawn here
-	local group = math.random(1, table.getn(mapgen_groups))
+	-- if this function was called without specifying a group, randomly choose a mapgen group to spawn here
+	if (group == nil) then
+		group = math.random(1, table.getn(mapgen_groups))
+	end
 
-	-- go through the structure list and schedule each entry for spawning
+	-- get the the structure list
 	local structures = spawn_generate(pos, height, group)
+
+	-- if the structure list is nil, we're trying to spawn in an unloaded area
+	-- re-run this function every second as we wait for the area to load
+	if (structures == nil) then
+		minetest.after(MAPGEN_GROUP_RETRY, function()
+			spawn_group(minp, maxp, group)
+		end)
+		return
+	end
 
 	for i, structure in ipairs(structures) do
 		-- schedule the building to spawn based on its position in the loop
-		delay = i * MAPGEN_STRUCTURE_DELAY
+		local delay = i * MAPGEN_STRUCTURE_DELAY
 		minetest.after(delay, function()
 			-- parameters: name [1], position [2], angle [3], size [4], node [5]
 			spawn_structure(structure[1], structure[2], structure[3], structure[4], structure[5], structure[6])
 		end)
-
 	end
 end
 
@@ -429,5 +460,5 @@ end
 minetest.after(0, mapgen_to_table)
 
 minetest.register_on_generated(function(minp, maxp, seed)
-	spawn_group (minp, maxp)
+	spawn_group (minp, maxp, nil)
 end)
