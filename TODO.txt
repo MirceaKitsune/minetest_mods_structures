@@ -1,8 +1,8 @@
+- Before we start spawning, make sure each corner has been generated and the chunk loaded
+
 - Add a system for nodes with inventories (chests, furnaces, etc) to randomly add items to them, each item with a given probability + count. Will allow chests and furnaces in buildings to have random stuff in them.
 
 - Add debug messages. When the preference is set to 1, only print normal messages and errors. When set to 2, print everything important the code is doing.
-
-- When spawning a group, don't determine columns and rows by the number of total buildings. Instead determine them by adding the maximum size of all buildings and extracting the square root, and have each building "cut" the size from the current row while the largest building cuts the size of the column space. This allows for example to have 4 large buildings on one row but 5 smaller ones on the next row.
 
 - Group avoidance radius should depend on the overall size the current group had (detected after spawning all structures), not be a fixed setting.
 
