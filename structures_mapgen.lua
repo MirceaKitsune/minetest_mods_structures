@@ -212,8 +212,6 @@ local function spawn_generate (pos, height, group)
 			return structures
 		end
 
-		-- used later to determine if the structure can spawn or not
-		local may_spawn = false
 		-- location will be gradually determined in each direction
 		local location = { x = 0, y = 0, z = 0 }
 		location.z = current_z -- we determined Z location
@@ -252,89 +250,68 @@ local function spawn_generate (pos, height, group)
 		end
 		location.x = edge -- we determined X location
 
-		-- scan downward until we find the trigger node of this structure at surface level
-		-- if we don't, this building may not spawn
+		-- add each of the structure's corners to a table
+		local corners = { }
+		table.insert(corners, { x = location.x, z = location.z } )
+		table.insert(corners, { x = location.x, z = location.z + structure_height } )
+		table.insert(corners, { x = location.x + structure_width, z = location.z } )
+		table.insert(corners, { x = location.x + structure_width, z = location.z + structure_height } )
+		-- minimum and maximum heights will be calculated further down
+		-- in order for the checks to work, initialize them in reverse
+		local corner_bottom = height.max
+		local corner_top = height.min
+		-- start scanning downward
 		for search = height.max, height.min, -1 do
 			-- we scan from top to bottom, so the search might start above the structure's maximum height limit
 			-- if however it gets below the minimum limit, there's no point to keep going
 			if (search <= tonumber(entry[7])) then
-				may_spawn = false
 				break
 			elseif (search <= tonumber(entry[8])) then
-				-- check if the node below is our trigger node
-				local pos_down = { x = location.x, y = search - 1, z = location.z }
-				local node_down = minetest.env:get_node(pos_down)
-				if (node_down.name == entry[6]) then
-					-- check if the node here is an air node
-					local pos_here = { x = location.x, y = search, z = location.z }
-					local node_here = minetest.env:get_node(pos_here)
-					if(node_here.name == "air") then
-						location.y = search -- we determined Y location
-						may_spawn = true
-						break
-					end
-				end
-			end
-		end
-
-		-- now check terrain roughness and decide if we can spawn the structure or not
-		local bottom = location.y - 1 -- initial value, modified later
-		if (may_spawn == true) then
-			-- terrain leveling amount to check for in each direction
-			local level = math.ceil(MAPGEN_STRUCTURE_LEVEL / 2)
-			-- determine the location of each corner
-			local corners = { }
-			table.insert(corners, { x = location.x, z = location.z } )
-			table.insert(corners, { x = location.x, z = location.z + structure_height } )
-			table.insert(corners, { x = location.x + structure_width, z = location.z } )
-			table.insert(corners, { x = location.x + structure_width, z = location.z + structure_height } )
-			-- to know if each corner is close enough to the surface, check if there's air above center and solid below
-			for i, v in ipairs(corners) do
-				local found_air = false
-				local found_solid = false
-				for search = location.y - 1 + level, location.y - level, -1 do
-					-- search for air
-					if (search >= location.y) and (found_air == false) then
-						local pos = { x = v.x, y = search, z = v.z }
-						local node = minetest.env:get_node(pos)
-						if (node.name == "air") then
-							found_air = true
-						end
-					end
-					-- search for solid
-					if (search < location.y) and (found_solid == false) then
-						if (found_air == false) then break end -- we didn't find air so don't waste time here
-						local pos = { x = v.x, y = search, z = v.z }
-						local node = minetest.env:get_node(pos)
-						if (node.name ~= "air") and (minetest.registered_nodes[node.name].drawtype == "normal") then
-							found_solid = true
-							-- also set bottom to the lowest solid location we detected
-							if (search < bottom) then
-								bottom = search
+				-- loop through each corner at this height
+				for i, v in pairs(corners) do
+					-- check if the node below is the trigger node
+					local pos_down = { x = v.x, y = search - 1, z = v.z }
+					local node_down = minetest.env:get_node(pos_down)
+					if (node_down.name == entry[6]) then
+						-- check if the node here is an air node or plant
+						local pos_here = { x = v.x, y = search, z = v.z }
+						local node_here = minetest.env:get_node(pos_here)
+						if (node_here.name == "air") or (minetest.registered_nodes[node_here.name].drawtype == "plantlike") then
+							-- this corner is touching our trigger node at surface level
+							-- check and apply minimum and maximum height
+							if (corner_bottom > pos_down.y) then
+								corner_bottom = pos_down.y
 							end
-							break
+							if (corner_top < pos_down.y) then
+								corner_top = pos_down.y
+							end
+							-- we checked everything we needed for this corner, it can be removed from the table
+							corners[i] = nil
 						end
 					end
 				end
-				-- this corner failed the check, don't spawn the building and leave
-				if (found_air == false) or (found_solid == false) then
-					may_spawn = false
-					break
-				end
+			end
+		end
+		-- each successful corner is removed from the table, so if there are any corners left it means something went wrong
+		if (table.getn(corners) == 0) then
+			-- calculate if terrain roughness is acceptable
+			if (corner_top - corner_bottom <= MAPGEN_STRUCTURE_LEVEL) then
+				-- set the average height
+				local height_average = math.ceil((corner_bottom + corner_top) / 2)
+				location.y = height_average -- we determined Y location
+
+				-- the structure may spawn, insert it into the structures table
+				-- parameters: name [1], position [2], angle [3], size [4], bottom [5], node [6]
+				table.insert(structures, { entry[4], location, angle, size, corner_bottom, entry[6] } )
 			end
 		end
 
-		-- if the structure may spawn, insert it into the table
-		if (may_spawn == true) then
-			-- parameters: name [1], position [2], angle [3], size [4], bottom [5], node [6]
-			table.insert(structures, { entry[4], location, angle, size, bottom, entry[6] } )
-		end
 		-- add this structure's upper-right corner to the right point list
 		upright = { }
 		upright.x = location.x + structure_width + 1
 		upright.z = location.z
 		table.insert(points_right, upright)
-		-- push Z location so the next building in this row will try to spawn right under here
+		-- push Z location so the next structure in this row will spawn right under this structure
 		current_z = current_z + structure_height + 1
 		-- update the largest X size of this row
 		if (structure_width > largest_x) then

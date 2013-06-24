@@ -1,3 +1,5 @@
+- Allow multiple trigger nodes to be specified for a structure, possibly as a comma separated string
+
 - Add a system for nodes with inventories (chests, furnaces, etc) to randomly add items to them, each item with a given probability + count. Will allow chests and furnaces in buildings to have random stuff in them.
 
 - Add debug messages. When the preference is set to 1, only print normal messages and errors. When set to 2, print everything important the code is doing.
