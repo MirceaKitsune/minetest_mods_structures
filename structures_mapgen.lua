@@ -283,13 +283,11 @@ local function spawn_generate (pos, height, group)
 			-- terrain leveling amount to check for in each direction
 			local level = math.ceil(MAPGEN_STRUCTURE_LEVEL / 2)
 			-- determine the location of each corner
-			local location1_frame = { x = location.x, z = location.z }
-			local location2_frame = { x = location.x + structure_width, z = location.z + structure_height }
 			local corners = { }
-			table.insert(corners, { x = location1_frame.x, z = location1_frame.z } )
-			table.insert(corners, { x = location1_frame.x, z = location2_frame.z } )
-			table.insert(corners, { x = location2_frame.x, z = location1_frame.z } )
-			table.insert(corners, { x = location2_frame.x, z = location2_frame.z } )
+			table.insert(corners, { x = location.x, z = location.z } )
+			table.insert(corners, { x = location.x, z = location.z + structure_height } )
+			table.insert(corners, { x = location.x + structure_width, z = location.z } )
+			table.insert(corners, { x = location.x + structure_width, z = location.z + structure_height } )
 			-- to know if each corner is close enough to the surface, check if there's air above center and solid below
 			for i, v in ipairs(corners) do
 				local found_air = false
@@ -333,7 +331,7 @@ local function spawn_generate (pos, height, group)
 		end
 		-- add this structure's upper-right corner to the right point list
 		upright = { }
-		upright.x = location.x + structure_width
+		upright.x = location.x + structure_width + 1
 		upright.z = location.z
 		table.insert(points_right, upright)
 		-- push Z location so the next building in this row will try to spawn right under here
@@ -353,10 +351,10 @@ end
 local function spawn_structure (filename, pos, angle, size, bottom, trigger)
 
 	-- determine the corners of the spawn cube
-	local pos1 = { x = pos.x, y = pos.y, z = pos.z }
-	local pos2 = { x = pos.x + size.x, y = pos.y + size.y, z = pos.z + size.z }
-	local pos1_frame = { x = pos1.x - MAPGEN_STRUCTURE_BORDER, y = pos1.y, z = pos1.z - MAPGEN_STRUCTURE_BORDER }
-	local pos2_frame = { x = pos2.x + MAPGEN_STRUCTURE_BORDER, y = pos2.y, z = pos2.z + MAPGEN_STRUCTURE_BORDER }
+	local pos1 = { x = pos.x + MAPGEN_STRUCTURE_BORDER, y = pos.y, z = pos.z + MAPGEN_STRUCTURE_BORDER }
+	local pos2 = { x = pos.x + size.x + MAPGEN_STRUCTURE_BORDER, y = pos.y + size.y, z = pos.z + size.z + MAPGEN_STRUCTURE_BORDER }
+	local pos1_frame = { x = pos.x, y = pos.y, z = pos.z }
+	local pos2_frame = { x = pos.x + size.x + MAPGEN_STRUCTURE_BORDER * 2, y = pos.y + size.y, z = pos.z + size.z + MAPGEN_STRUCTURE_BORDER * 2 }
 
 	-- we'll spawn the structure in a suitable spot, but what if it's the top of a peak?
 	-- to avoid parts of the building left floating, cover everything to the bottom
