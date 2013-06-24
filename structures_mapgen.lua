@@ -390,7 +390,6 @@ local function spawn_group (minp, maxp, group)
 	pos.x = minp.x
 	pos.y = 0
 	pos.z = minp.z
-
 	-- height to scan over
 	local height = { }
 	height.min = minp.y
@@ -398,7 +397,6 @@ local function spawn_group (minp, maxp, group)
 
 	-- if this group is too close to another group stop here, if not add it to the avoid list and move on
 	if (groups_avoid_check(pos) == false) then return end
-	groups_avoid_add(pos)
 
 	-- if this function was called without specifying a group, randomly choose a mapgen group to spawn here
 	if (group == nil) then
@@ -416,6 +414,12 @@ local function spawn_group (minp, maxp, group)
 		end)
 		return
 	end
+
+	-- no suitable structures exist, return
+	if (table.getn(structures) == 0) then return end
+
+	-- add this group to the group avoidance list
+	groups_avoid_add(pos)
 
 	for i, structure in ipairs(structures) do
 		-- schedule the building to spawn based on its position in the loop
