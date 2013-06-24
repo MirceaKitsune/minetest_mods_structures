@@ -1,9 +1,9 @@
-14 14 13 default_house_medium.txt structures default:dirt_with_grass 5 100 15 
-9 14 9 default_tower.txt structures default:dirt_with_grass 25 150 15 
-25 16 19 default_house_large.txt structures default:dirt_with_grass 5 100 10 
-8 6 8 default_fountain_small.txt structures default:dirt_with_grass 5 100 5 
 14 8 14 default_house_small.txt structures default:dirt_with_grass 5 100 20 
+14 14 13 default_house_medium.txt structures default:dirt_with_grass 5 100 15 
+25 16 19 default_house_large.txt structures default:dirt_with_grass 5 100 10 
+9 14 9 default_tower.txt structures default:dirt_with_grass 25 150 15 
+8 6 8 default_fountain_small.txt structures default:dirt_with_grass 5 100 5 
 15 10 15 default_fountain_large.txt structures default:dirt_with_grass 5 100 5 
 4 3 4 default_pole.txt structures default:dirt_with_grass 5 100 10 
-11 2 11 default_farm_small.txt structures default:dirt_with_grass 5 100 10 
-21 2 21 default_farm_large.txt structures default:dirt_with_grass 5 100 5 
+11 10 11 default_farm_small.txt structures default:dirt_with_grass 5 100 10 
+21 10 21 default_farm_large.txt structures default:dirt_with_grass 5 100 5 
