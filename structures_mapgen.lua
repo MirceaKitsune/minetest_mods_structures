@@ -165,12 +165,10 @@ local function spawn_get_scale (group)
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this structure belongs to the chosen mapgen group
 		if (entry[5] == mapgen_groups[group]) then
-			for x = 1, tonumber(entry[9]) do
-				-- add the estimated horizontal size of buildings to group space
-				scale = scale + (tonumber(entry[1]) + tonumber(entry[3])) / 2
-				-- increase the structure count
-				structures = structures + 1
-			end
+			-- add the estimated horizontal size of buildings to group space
+			scale = scale + math.ceil((tonumber(entry[1]) + tonumber(entry[3])) / 2) * tonumber(entry[9])
+			-- increase the structure count
+			structures = structures + tonumber(entry[9])
 		end
 	end
 	-- divide space by the square root of total buildings to get the proper row / column sizes
