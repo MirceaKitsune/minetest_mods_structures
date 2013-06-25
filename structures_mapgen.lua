@@ -56,29 +56,35 @@ local function groups_update ()
 end
 
 -- adds entries to the group avoidance list
-local function groups_avoid_add (pos, scale)
+local function groups_avoid_add (pos, scale_horizontal, scale_vertical)
 	-- if the maximum amount of entries was reached, delete the oldest one
 	if (table.getn(groups_avoid) >= MAPGEN_GROUP_TABLE_COUNT) then
 		table.remove(groups_avoid, 1)
 	end
 
-	table.insert(groups_avoid, { x = pos.x, y = pos.y, z = pos.z, size = scale } )
+	-- h = horizontal size, v = vertical size
+	table.insert(groups_avoid, { x = pos.x, y = pos.y, z = pos.z, h = scale_horizontal, v = scale_vertical } )
 end
 
 -- checks if a given distance is far enough from all group avoidance origins
-local function groups_avoid_check (pos, scale)
+local function groups_avoid_check (pos, scale_horizontal, scale_vertical)
 	for i, group in ipairs(groups_avoid) do
 		-- for each group, structures are spawned from the upper-left corner (up-down and left-right), so:
 		-- if this group is under / right of the other group, we check distance against that group's scale
 		-- if this group is above / left of the other group, we check distance against this group's scale
 		local target_horizontal = 0
 		if (pos.x < group.x) or (pos.z < group.z) then
-			target_horizontal = scale
+			target_horizontal = scale_horizontal
 		else
-			target_horizontal = group.size
+			target_horizontal = group.h
 		end
-		-- it's hard to obtain the height of a group accurately, so assume it's half of the average scale
-		local target_vertical = math.ceil((scale + group.size) / 4)
+		-- same story with height
+		local target_vertical = 0
+		if (pos.y < group.y) then
+			target_vertical = scale_vertical
+		else
+			target_vertical = group.v
+		end
 
 		-- check distance and height
 		local dist = calculate_distance(pos, group)
@@ -137,16 +143,16 @@ end
 -- Local functions - Spawn
 
 -- checks whether the area has finished loading or not
-local function spawn_get_loaded (pos, height, scale)
+local function spawn_get_loaded (pos, scale_horizontal, scale_vertical)
 	local corners = { }
-	table.insert(corners, { x = pos.x, y = height.min, z = pos.z } )
-	table.insert(corners, { x = pos.x, y = height.min, z = pos.z + scale } )
-	table.insert(corners, { x = pos.x + scale, y = height.min, z = pos.z } )
-	table.insert(corners, { x = pos.x + scale, y = height.min, z = pos.z + scale } )
-	table.insert(corners, { x = pos.x, y = height.max, z = pos.z } )
-	table.insert(corners, { x = pos.x, y = height.max, z = pos.z + scale } )
-	table.insert(corners, { x = pos.x + scale, y = height.max, z = pos.z } )
-	table.insert(corners, { x = pos.x + scale, y = height.max, z = pos.z + scale } )
+	table.insert(corners, { x = pos.x, y = pos.y, z = pos.z } )
+	table.insert(corners, { x = pos.x, y = pos.y, z = pos.z + scale_horizontal } )
+	table.insert(corners, { x = pos.x + scale_horizontal, y = pos.y, z = pos.z } )
+	table.insert(corners, { x = pos.x + scale_horizontal, y = pos.y, z = pos.z + scale_horizontal } )
+	table.insert(corners, { x = pos.x, y = pos.y + scale_vertical, z = pos.z } )
+	table.insert(corners, { x = pos.x, y = pos.y + scale_vertical, z = pos.z + scale_horizontal } )
+	table.insert(corners, { x = pos.x + scale_horizontal, y = pos.y + scale_vertical, z = pos.z } )
+	table.insert(corners, { x = pos.x + scale_horizontal, y = pos.y + scale_vertical, z = pos.z + scale_horizontal } )
 	for i, v in ipairs(corners) do
 		local node = minetest.env:get_node(v)
 		if (node.name == "ignore") then
@@ -178,7 +184,7 @@ local function spawn_get_scale (group)
 end
 
 -- analyzes buildings in the mapgen group and returns them as a lists of parameters
-local function spawn_get_structures (pos, height, scale, group)
+local function spawn_get_structures (pos, scale_horizontal, scale_vertical, group)
 	-- parameters: x size [1], y size [2], z size [3], structure [4], group [5], node [6], min height [7], max height [8], count [9]
 	-- x = left & right, z = up & down
 
@@ -225,7 +231,7 @@ local function spawn_get_structures (pos, height, scale, group)
 		entry = mapgen_table[instance]
 
 		-- if the current row was filled, jump to the next column
-		if (row > scale) then
+		if (row > scale_horizontal) then
 			row = 1
 			column = column + largest_x
 			-- start again from the top
@@ -235,7 +241,7 @@ local function spawn_get_structures (pos, height, scale, group)
 			points_right = { }
 		end
 		-- if the columns were filled, return the sturcute table and stop doing anything
-		if (column > scale) then
+		if (column > scale_horizontal) then
 			return structures
 		end
 
@@ -247,13 +253,13 @@ local function spawn_get_structures (pos, height, scale, group)
 		-- it's hard to find an accurate formula here, but it keeps buildings oriented uniformly
 		local angle = 0
 		local size = { }
-		if (row < scale / 2) and (column < scale / 2) then
+		if (row < scale_horizontal / 2) and (column < scale_horizontal / 2) then
 			angle = 180
 			size = { x = entry[1], y = entry[2], z = entry[3] }
-		elseif (row < scale / 2) then
+		elseif (row < scale_horizontal / 2) then
 			angle = 90
 			size = { x = entry[3], y = entry[2], z = entry[1] }
-		elseif (column < scale / 2) then
+		elseif (column < scale_horizontal / 2) then
 			angle = 270
 			size = { x = entry[3], y = entry[2], z = entry[1] }
 		else
@@ -280,15 +286,15 @@ local function spawn_get_structures (pos, height, scale, group)
 		-- add each of the structure's corners to a table
 		local corners = { }
 		table.insert(corners, { x = location.x, z = location.z } )
-		table.insert(corners, { x = location.x, z = location.z + structure_height } )
+		table.insert(corners, { x = location.x, z = location.z + structure_width } )
 		table.insert(corners, { x = location.x + structure_width, z = location.z } )
-		table.insert(corners, { x = location.x + structure_width, z = location.z + structure_height } )
+		table.insert(corners, { x = location.x + structure_width, z = location.z + structure_width } )
 		-- minimum and maximum heights will be calculated further down
 		-- in order for the checks to work, initialize them in reverse
-		local corner_bottom = height.max
-		local corner_top = height.min
+		local corner_bottom = pos.y + scale_vertical
+		local corner_top = pos.y
 		-- start scanning downward
-		for search = height.max, height.min, -1 do
+		for search = pos.y + scale_vertical, pos.y, -1 do
 			-- we scan from top to bottom, so the search might start above the structure's maximum height limit
 			-- if however it gets below the minimum limit, there's no point to keep going
 			if (search <= tonumber(entry[7])) then
@@ -392,24 +398,17 @@ local function spawn_group (minp, maxp, group)
 		group = math.random(1, table.getn(mapgen_groups))
 	end
 
-	-- choose top-left on the X and Z axes since that's where we start from
-	-- it's hard to find an accurate value for the Y axis since we don't know where the lowest structure goes, so choose the middle
-	local pos = { }
-	pos.x = minp.x
-	pos.y = math.ceil((minp.y + maxp.y) / 2)
-	pos.z = minp.z
-	-- the height which we'll be scanning over
-	local height = { }
-	height.min = minp.y
-	height.max = maxp.y
+	-- choose top-left on the X and Z axes since that's where we start from, and bottom on Y axis
+	local pos = { x = minp.x, y = minp.y, z = minp.z }
 	-- calculate the area this group will use up
-	scale = spawn_get_scale(group)
+	scale_horizontal = spawn_get_scale(group)
+	scale_vertical = maxp.y - minp.y
 
 	-- if this group is too close to another group stop here
-	if (groups_avoid_check(pos, scale) == false) then return end
+	if (groups_avoid_check(pos, scale_horizontal, scale_vertical) == false) then return end
 
 	-- if we're trying to spawn in an unloaded area, re-run this function as we wait for the area to load
-	loaded = spawn_get_loaded(pos, height, scale)
+	loaded = spawn_get_loaded(pos, scale_horizontal, scale_vertical)
 	if (loaded == false) then
 		minetest.after(MAPGEN_GROUP_RETRY, function()
 			spawn_group(minp, maxp, group)
@@ -418,13 +417,13 @@ local function spawn_group (minp, maxp, group)
 	end
 
 	-- get the the structure list
-	local structures = spawn_get_structures(pos, height, scale, group)
+	local structures = spawn_get_structures(pos, scale_horizontal, scale_vertical, group)
 
 	-- no suitable structures exist, return
 	if (table.getn(structures) == 0) then return end
 
 	-- add this group to the group avoidance list
-	groups_avoid_add(pos, scale)
+	groups_avoid_add(pos, scale_horizontal, scale_vertical)
 
 	for i, structure in ipairs(structures) do
 		-- schedule the building to spawn based on its position in the loop
