@@ -10,12 +10,9 @@ local MAPGEN_GROUP_PROBABILITY = 0.2
 -- if the area we're spawning in didn't finish loading / generating, retry this many seconds
 -- low values preform checks more frequently, higher values are recommended when the world is slow to load
 local MAPGEN_GROUP_RETRY = 3
--- distance that groups must have from each other in order to spawn
--- high values decrease the risk of groups spawning into each other as well as mapgen stress, but means rarer structures
-local MAPGEN_GROUP_DISTANCE = 200
 -- amount of origins to maintain in the group avoidance list
 -- low values increase the risk of groups being ignored from distance calculations, high values store more data
-local MAPGEN_GROUP_DISTANCE_COUNT = 10
+local MAPGEN_GROUP_TABLE_COUNT = 10
 -- only spawn if the height of each corner is within this distance against the ground (top is air and bottom is not)
 -- low values reduce spawns on extreme terrain, but also decrease count
 local MAPGEN_STRUCTURE_LEVEL = 20
@@ -59,20 +56,33 @@ local function groups_update ()
 end
 
 -- adds entries to the group avoidance list
-local function groups_avoid_add (pos)
-	-- if the maximum amount of group avoid origins was reached, delete the oldest one
-	if (table.getn(groups_avoid) >= MAPGEN_GROUP_DISTANCE_COUNT) then
+local function groups_avoid_add (pos, scale)
+	-- if the maximum amount of entries was reached, delete the oldest one
+	if (table.getn(groups_avoid) >= MAPGEN_GROUP_TABLE_COUNT) then
 		table.remove(groups_avoid, 1)
 	end
 
-	table.insert(groups_avoid, pos)
+	table.insert(groups_avoid, { x = pos.x, y = pos.y, z = pos.z, size = scale } )
 end
 
 -- checks if a given distance is far enough from all group avoidance origins
-local function groups_avoid_check (pos)
-	for i, org in ipairs(groups_avoid) do
-		local dist = calculate_distance(pos, org)
-		if (dist.x < MAPGEN_GROUP_DISTANCE) and (dist.y < MAPGEN_GROUP_DISTANCE) and (dist.z < MAPGEN_GROUP_DISTANCE) then
+local function groups_avoid_check (pos, scale)
+	for i, group in ipairs(groups_avoid) do
+		-- for each group, structures are spawned from the upper-left corner (up-down and left-right), so:
+		-- if this group is under / right of the other group, we check distance against that group's scale
+		-- if this group is above / left of the other group, we check distance against this group's scale
+		local target_horizontal = 0
+		if (pos.x < group.x) or (pos.z < group.z) then
+			target_horizontal = scale
+		else
+			target_horizontal = group.size
+		end
+		-- it's hard to obtain the height of a group accurately, so assume it's half of the average scale
+		local target_vertical = math.ceil((scale + group.size) / 4)
+
+		-- check distance and height
+		local dist = calculate_distance(pos, group)
+		if (dist.x < target_horizontal) and (dist.y < target_vertical) and (dist.z < target_horizontal) then
 			return false
 		end
 	end
@@ -126,15 +136,56 @@ end
 
 -- Local functions - Spawn
 
+-- checks whether the area has finished loading or not
+local function spawn_get_loaded (pos, height, scale)
+	local corners = { }
+	table.insert(corners, { x = pos.x, y = height.min, z = pos.z } )
+	table.insert(corners, { x = pos.x, y = height.min, z = pos.z + scale } )
+	table.insert(corners, { x = pos.x + scale, y = height.min, z = pos.z } )
+	table.insert(corners, { x = pos.x + scale, y = height.min, z = pos.z + scale } )
+	table.insert(corners, { x = pos.x, y = height.max, z = pos.z } )
+	table.insert(corners, { x = pos.x, y = height.max, z = pos.z + scale } )
+	table.insert(corners, { x = pos.x + scale, y = height.max, z = pos.z } )
+	table.insert(corners, { x = pos.x + scale, y = height.max, z = pos.z + scale } )
+	for i, v in ipairs(corners) do
+		local node = minetest.env:get_node(v)
+		if (node.name == "ignore") then
+			return false
+		end
+	end
+
+	return true
+end
+
+-- returns the size of this group in nodes
+local function spawn_get_scale (group)
+	local scale = 0
+	local structures = 0
+	-- loop through the mapgen table
+	for i, entry in ipairs(mapgen_table) do
+		-- only if this structure belongs to the chosen mapgen group
+		if (entry[5] == mapgen_groups[group]) then
+			for x = 1, tonumber(entry[9]) do
+				-- add the estimated horizontal size of buildings to group space
+				scale = scale + (tonumber(entry[1]) + tonumber(entry[3])) / 2
+				-- increase the structure count
+				structures = structures + 1
+			end
+		end
+	end
+	-- divide space by the square root of total buildings to get the proper row / column sizes
+	scale = math.ceil(scale / math.sqrt(structures))
+
+	return scale
+end
+
 -- analyzes buildings in the mapgen group and returns them as a lists of parameters
-local function spawn_generate (pos, height, group)
+local function spawn_get_structures (pos, height, scale, group)
 	-- parameters: x size [1], y size [2], z size [3], structure [4], group [5], node [6], min height [7], max height [8], count [9]
 	-- x = left & right, z = up & down
 
 	-- structure table which will be filled and returned by this function
 	local structures = { }
-	-- overall size of the group in nodes
-	local space = 0
 
 	-- first generate a list of indexes for all structures, containing an entry for each time it will be spawned
 	local instances = { }
@@ -143,29 +194,7 @@ local function spawn_generate (pos, height, group)
 		if (entry[5] == mapgen_groups[group]) then
 			for x = 1, tonumber(entry[9]) do
 				table.insert(instances, i)
-				-- add the estimated horizontal size of buildings to group space
-				space = space + (tonumber(entry[1]) + tonumber(entry[3])) / 2
 			end
-		end
-	end
-	-- divide space by the square root of total buildings to get the proper row / column sizes
-	space = space / math.sqrt(table.getn(instances))
-
-	-- check if the corners of the group are all in a loaded area
-	-- if the area isn't loaded yet, return nil
-	local group_corners = { }
-	table.insert(group_corners, { x = pos.x, y = height.min, z = pos.z } )
-	table.insert(group_corners, { x = pos.x, y = height.min, z = pos.z + space } )
-	table.insert(group_corners, { x = pos.x + space, y = height.min, z = pos.z } )
-	table.insert(group_corners, { x = pos.x + space, y = height.min, z = pos.z + space } )
-	table.insert(group_corners, { x = pos.x, y = height.max, z = pos.z } )
-	table.insert(group_corners, { x = pos.x, y = height.max, z = pos.z + space } )
-	table.insert(group_corners, { x = pos.x + space, y = height.max, z = pos.z } )
-	table.insert(group_corners, { x = pos.x + space, y = height.max, z = pos.z + space } )
-	for i, v in ipairs(group_corners) do
-		local node = minetest.env:get_node(v)
-		if (node.name == "ignore") then
-			return nil
 		end
 	end
 
@@ -198,7 +227,7 @@ local function spawn_generate (pos, height, group)
 		entry = mapgen_table[instance]
 
 		-- if the current row was filled, jump to the next column
-		if (row > space) then
+		if (row > scale) then
 			row = 1
 			column = column + largest_x
 			-- start again from the top
@@ -208,7 +237,7 @@ local function spawn_generate (pos, height, group)
 			points_right = { }
 		end
 		-- if the columns were filled, return the sturcute table and stop doing anything
-		if (column > space) then
+		if (column > scale) then
 			return structures
 		end
 
@@ -220,13 +249,13 @@ local function spawn_generate (pos, height, group)
 		-- it's hard to find an accurate formula here, but it keeps buildings oriented uniformly
 		local angle = 0
 		local size = { }
-		if (row < space / 2) and (column < space / 2) then
+		if (row < scale / 2) and (column < scale / 2) then
 			angle = 180
 			size = { x = entry[1], y = entry[2], z = entry[3] }
-		elseif (row < space / 2) then
+		elseif (row < scale / 2) then
 			angle = 90
 			size = { x = entry[3], y = entry[2], z = entry[1] }
-		elseif (column < space / 2) then
+		elseif (column < scale / 2) then
 			angle = 270
 			size = { x = entry[3], y = entry[2], z = entry[1] }
 		else
@@ -360,41 +389,44 @@ local function spawn_group (minp, maxp, group)
 	-- test group probability for this piece of world
 	if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
 
-	-- choose top-left on the X and Z axes since that's where we start from
-	local pos = { }
-	pos.x = minp.x
-	pos.y = 0
-	pos.z = minp.z
-	-- height to scan over
-	local height = { }
-	height.min = minp.y
-	height.max = maxp.y
-
-	-- if this group is too close to another group stop here, if not add it to the avoid list and move on
-	if (groups_avoid_check(pos) == false) then return end
-
-	-- if this function was called without specifying a group, randomly choose a mapgen group to spawn here
+	-- if this function was called without specifying a mapgen group, randomly choose one
 	if (group == nil) then
 		group = math.random(1, table.getn(mapgen_groups))
 	end
 
-	-- get the the structure list
-	local structures = spawn_generate(pos, height, group)
+	-- choose top-left on the X and Z axes since that's where we start from
+	-- it's hard to find an accurate value for the Y axis since we don't know where the lowest structure goes, so choose the middle
+	local pos = { }
+	pos.x = minp.x
+	pos.y = math.ceil((minp.y + maxp.y) / 2)
+	pos.z = minp.z
+	-- the height which we'll be scanning over
+	local height = { }
+	height.min = minp.y
+	height.max = maxp.y
+	-- calculate the area this group will use up
+	scale = spawn_get_scale(group)
 
-	-- if the structure list is nil, we're trying to spawn in an unloaded area
-	-- re-run this function every second as we wait for the area to load
-	if (structures == nil) then
+	-- if this group is too close to another group stop here
+	if (groups_avoid_check(pos, scale) == false) then return end
+
+	-- if we're trying to spawn in an unloaded area, re-run this function as we wait for the area to load
+	loaded = spawn_get_loaded(pos, height, scale)
+	if (loaded == false) then
 		minetest.after(MAPGEN_GROUP_RETRY, function()
 			spawn_group(minp, maxp, group)
 		end)
 		return
 	end
 
+	-- get the the structure list
+	local structures = spawn_get_structures(pos, height, scale, group)
+
 	-- no suitable structures exist, return
 	if (table.getn(structures) == 0) then return end
 
 	-- add this group to the group avoidance list
-	groups_avoid_add(pos)
+	groups_avoid_add(pos, scale)
 
 	for i, structure in ipairs(structures) do
 		-- schedule the building to spawn based on its position in the loop
@@ -438,6 +470,7 @@ end
 -- cache the mapgen file at startup
 minetest.after(0, mapgen_to_table)
 
+-- register the group spawn function to run on each piece of world being generated
 minetest.register_on_generated(function(minp, maxp, seed)
 	spawn_group (minp, maxp, nil)
 end)
