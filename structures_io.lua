@@ -9,11 +9,70 @@ local IO_DIRECTORY = "structures"
 IO_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
 -- use schematics instead of text files, currently incomplete and broken for the following reasons:
 -- * schematic creation doesn't support angles, so the angle parameter can't be used
--- * we can't detect if the position of a schematic goes out of bounds (the area marked by the markers)
 -- * furnaces cause schematic importing to crash Minetest due to the fuel parameter
 IO_SCHEMATICS = false
 
 -- Global functions - Import / export
+
+-- gets the size of a structure file
+function io_get_size (angle, filename)
+	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
+
+	local size = { x = 0, y = 0, z = 0 }
+
+	-- whether to use text files or schematics
+	if (IO_SCHEMATICS == true) then
+		path = path..".mts"
+
+		-- thanks to sfan5 for this advanced code that reads the size from schematic files
+		local read_s16 = function(file)
+			return string.byte(file:read(1)) * 256 + string.byte(file:read(1))
+		end
+		local function get_schematic_size(f)
+			-- make sure those are the first 4 characters, otherwise this might be a corrupt file
+			if f:read(4) ~= "MTSM" then return nil end
+			-- advance 2 more characters
+			f:read(2)
+			-- the next characters here are our size, read them
+			return read_s16(f), read_s16(f), read_s16(f)
+		end
+		fi = io.open(path, 'rb')
+		size.x, size.y, size.z = get_schematic_size(fi)
+		fi.close(fi)
+	else
+		path = path..".txt"
+		local file = io.open(path, "r")
+		if (file == nil) then return nil end
+
+		-- we must read the parameters of each node from the structure file
+		for line in io.lines(path) do
+			local parameters = {}
+			for item in string.gmatch(line, "%S+") do
+				table.insert(parameters, item)
+			end
+
+			-- the furthest node in any direction determines the overall size of the structure
+			if (size.x < tonumber(parameters[1]) + 1) then
+				size.x = tonumber(parameters[1]) + 1
+			end
+			if (size.y < tonumber(parameters[2]) + 1) then
+				size.y = tonumber(parameters[2]) + 1
+			end
+			if (size.z < tonumber(parameters[3]) + 1) then
+				size.z = tonumber(parameters[3]) + 1
+			end
+		end
+		file:close()
+	end
+
+	-- rotate box size with angle
+	if (angle == 90) or (angle == 270) then
+		local size_rotate = { x = size.z, y = size.y, z = size.x }
+		size = size_rotate
+	end
+
+	return size
+end
 
 -- clears marked area of any objects which aren't ignored
 function io_area_clear (pos, ends)
@@ -105,8 +164,16 @@ function io_area_import (pos, ends, angle, filename)
 	if (ends == nil) then return end
 	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
 	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
-
+	local size = io_get_size(angle, filename)
+	if (size == nil) then return end
+print(size.x..","..size.y..","..size.z)
 	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
+
+	-- abort if a node is larger than the marked area
+	if (pos_start.x + size.x - 1 > pos_end.x) or (pos_start.y + size.y - 1 > pos_end.y) or (pos_start.z + size.z - 1 > pos_end.z) then
+		print("Structure I/O Error: Structure is larger than the marked area, aborting.")
+		return
+	end
 
 	-- whether to use text files or schematics
 	if (IO_SCHEMATICS == true) then
@@ -136,12 +203,6 @@ function io_area_import (pos, ends, angle, filename)
 			if (angle == 90) or (angle == -270) then
 				node_pos = { x = pos_end.x - tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[1]) }
 
-				-- clear and abort if a node is larger than the marked area
-				if (node_pos.x < pos_start.x) or (node_pos.y > pos_end.y) or (node_pos.z > pos_end.z) then
-					print("Structure I/O Error: Structure is larger than the marked area, aborting.")
-					return
-				end
-
 				-- if param2 is facedir, rotate it accordingly
 				-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
 				if (node_paramtype2 == "facedir") then
@@ -159,12 +220,6 @@ function io_area_import (pos, ends, angle, filename)
 				end
 			elseif (angle == 180) then
 				node_pos = { x = pos_end.x - tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[3]) }
-
-				-- clear and abort if a node is larger than the marked area
-				if (node_pos.x < pos_start.x) or (node_pos.y > pos_end.y) or (node_pos.z < pos_start.z) then
-					print("Structure I/O Error: Structure is larger than the marked area, aborting.")
-					return
-				end
 
 				-- if param2 is facedir, rotate it accordingly
 				-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
@@ -184,12 +239,6 @@ function io_area_import (pos, ends, angle, filename)
 			elseif (angle == 270) or (angle == -90) then
 				node_pos = { x = pos_start.x + tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[1]) }
 
-				-- clear and abort if a node is larger than the marked area
-				if (node_pos.x > pos_end.x) or (node_pos.y > pos_end.y) or (node_pos.z < pos_start.z) then
-					print("Structure I/O Error: Structure is larger than the marked area, aborting.")
-					return
-				end
-
 				-- if param2 is facedir, rotate it accordingly
 				-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
 				if (node_paramtype2 == "facedir") then
@@ -207,12 +256,6 @@ function io_area_import (pos, ends, angle, filename)
 				end
 			else -- 0 degrees
 				node_pos = { x = pos_start.x + tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[3]) }
-
-				-- clear and abort if a node is larger than the marked area
-				if (node_pos.x > pos_end.x) or (node_pos.y > pos_end.y) or (node_pos.z > pos_end.z) then
-					print("Structure I/O Error: Structure is larger than the marked area, aborting.")
-					return
-				end
 			end
 			minetest.env:set_node(node_pos, { name = node_name, param1 = node_param1, param2 = node_param2 })
 		end
