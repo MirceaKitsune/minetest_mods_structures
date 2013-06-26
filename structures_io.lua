@@ -10,7 +10,6 @@ IO_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled",
 -- use schematics instead of text files, currently incomplete and broken for the following reasons:
 -- * schematic creation doesn't support angles, so the angle parameter can't be used
 -- * we can't detect if the position of a schematic goes out of bounds (the area marked by the markers)
--- * we can't ignore specific nodes
 -- * furnaces cause schematic importing to crash Minetest due to the fuel parameter
 IO_SCHEMATICS = false
 
@@ -48,7 +47,23 @@ function io_area_export (pos, ends, filename)
 	if (IO_SCHEMATICS == true) then
 		-- export to a schematic file
 		path = path..".mts"
-		minetest.create_schematic(pos_start, pos_end, nil, path)
+
+		-- add ignored nodes with 0 probability
+		local ignore = { }
+		for loop_x = pos_start.x, pos_end.x do
+			for loop_y = pos_start.y, pos_end.y do
+				for loop_z = pos_start.z, pos_end.z do
+					local pos_here = {x = loop_x, y = loop_y, z = loop_z}
+					local node_here = minetest.env:get_node(pos_here).name
+					local liquidtype = minetest.registered_nodes[node_here].liquidtype
+					if (calculate_ignored(node_here) == true) or (liquidtype == "flowing") then
+						table.insert(ignore, { pos = { x = loop_x, y = loop_y, z = loop_z }, prob = -1 } )
+					end
+				end
+			end
+		end
+
+		minetest.create_schematic(pos_start, pos_end, ignore, path)
 	else
 		-- export to a text file
 		path = path..".txt"
@@ -60,11 +75,11 @@ function io_area_export (pos, ends, filename)
 			for loop_y = pos_start.y, pos_end.y do
 				for loop_z = pos_start.z, pos_end.z do
 					local pos_here = {x = loop_x, y = loop_y, z = loop_z}
-					local node_name = minetest.env:get_node(pos_here).name
-					local liquidtype = minetest.registered_nodes[node_name].liquidtype
+					local node_here = minetest.env:get_node(pos_here).name
+					local liquidtype = minetest.registered_nodes[node_here].liquidtype
 
 					-- don't export flowing liquid nodes, just sources
-					if (calculate_ignored(node_name) == false) and (liquidtype ~= "flowing") then
+					if (calculate_ignored(node_here) == false) and (liquidtype ~= "flowing") then
 						-- we want to save origins as distance from the main I/O node
 						local dist = calculate_distance(pos_start, pos_here)
 						-- param2 must be persisted
@@ -97,6 +112,7 @@ function io_area_import (pos, ends, angle, filename)
 	if (IO_SCHEMATICS == true) then
 		-- import from a schematic file
 		path = path..".mts"
+
 		minetest.place_schematic(pos_start, path)
 	else
 		-- import from a text file
