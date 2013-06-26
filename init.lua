@@ -60,6 +60,10 @@ local function make_formspec_size (pos)
 	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return nil end
 
 	local size = calculate_distance(pos, pos_markers)
+	-- remove edge from calculation
+	size.x = size.x - 1
+	size.y = size.y - 1
+	size.z = size.z - 1
 	s = size.x..","..size.y..","..size.z.."\n"
 
 	return size
@@ -71,9 +75,9 @@ local function make_formspec_nodes (pos)
 	
 	local nodes = 0
 
-	for loop_x = math.min(pos.x, pos_markers.x), math.max(pos.x, pos_markers.x) do
-		for loop_y = math.min(pos.y, pos_markers.y), math.max(pos.y, pos_markers.y) do
-			for loop_z = math.min(pos.z, pos_markers.z), math.max(pos.z, pos_markers.z) do
+	for loop_x = math.min(pos.x, pos_markers.x) + 1, math.max(pos.x, pos_markers.x) - 1 do
+		for loop_y = math.min(pos.y, pos_markers.y) + 1, math.max(pos.y, pos_markers.y) - 1 do
+			for loop_z = math.min(pos.z, pos_markers.z) + 1, math.max(pos.z, pos_markers.z) - 1 do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 
 				if (calculate_ignored(minetest.env:get_node(pos_here).name) == false) then

@@ -18,8 +18,8 @@ IO_SCHEMATICS = false
 -- clears marked area of any objects which aren't ignored
 function io_area_clear (pos, ends)
 	if (ends == nil) then return end
-	local pos_start = { x = math.min(pos.x, ends.x), y = math.min(pos.y, ends.y), z = math.min(pos.z, ends.z) }
-	local pos_end = { x = math.max(pos.x, ends.x), y = math.max(pos.y, ends.y), z = math.max(pos.z, ends.z) }
+	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
+	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
 
 	-- erase each node in the marked area
 	for loop_x = pos_start.x, pos_end.x do
@@ -38,8 +38,8 @@ end
 -- exports structure to a text file
 function io_area_export (pos, ends, filename)
 	if (ends == nil) then return end
-	local pos_start = { x = math.min(pos.x, ends.x), y = math.min(pos.y, ends.y), z = math.min(pos.z, ends.z) }
-	local pos_end = { x = math.max(pos.x, ends.x), y = math.max(pos.y, ends.y), z = math.max(pos.z, ends.z) }
+	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
+	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
 
 	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
 
@@ -103,8 +103,8 @@ end
 -- imports structure from a text file
 function io_area_import (pos, ends, angle, filename)
 	if (ends == nil) then return end
-	local pos_start = { x = math.min(pos.x, ends.x), y = math.min(pos.y, ends.y), z = math.min(pos.z, ends.z) }
-	local pos_end = { x = math.max(pos.x, ends.x), y = math.max(pos.y, ends.y), z = math.max(pos.z, ends.z) }
+	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
+	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
 
 	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
 
