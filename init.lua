@@ -24,7 +24,7 @@ end
 
 -- checks if the node is in the ignore list
 function calculate_ignored (node)
-	for v in pairs(IO_IGNORE) do
+	for i, v in ipairs(IO_IGNORE) do
 		if (node == v) then
 			return true
 		end
@@ -185,14 +185,14 @@ minetest.register_node("structures:manager_enabled", {
 
 	on_construct = function(pos)
 		local meta = minetest.env:get_meta(pos)
-		meta:set_string("file", "structure.txt")
+		meta:set_string("file", "structure")
 		meta:set_float("io_angle", 0)
 		meta:set_float("mapgen_group", "structures")
 		meta:set_float("mapgen_node", "default:dirt_with_grass")
 		meta:set_float("mapgen_count", 10)
 		meta:set_float("mapgen_height_min", -50)
 		meta:set_float("mapgen_height_max", 50)
-		meta:set_string("formspec", make_formspec("structure.txt", 0, make_formspec_size(pos), make_formspec_nodes(pos), "structures", "default:dirt_with_grass", -50, 50, 10))
+		meta:set_string("formspec", make_formspec("structure", 0, make_formspec_size(pos), make_formspec_nodes(pos), "structures", "default:dirt_with_grass", -50, 50, 10))
 		meta:set_string("infotext", "I/O ready")
 	end,
 
