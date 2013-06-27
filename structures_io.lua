@@ -160,20 +160,24 @@ function io_area_export (pos, ends, filename)
 end
 
 -- imports structure from a text file
-function io_area_import (pos, ends, angle, filename)
+function io_area_import (pos, ends, angle, filename, check_bounds)
 	if (ends == nil) then return end
 	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
 	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
-	local size = io_get_size(angle, filename)
-	if (size == nil) then return end
+
+	-- check if the structure fits between the start and end positions if necessary
+	if (check_bounds == true) then
+		local size = io_get_size(angle, filename)
+		if (size == nil) then return end
+
+		-- abort if a node is larger than the marked area
+		if (pos_start.x + size.x - 1 > pos_end.x) or (pos_start.y + size.y - 1 > pos_end.y) or (pos_start.z + size.z - 1 > pos_end.z) then
+			print("Structure I/O Error: Structure is larger than the marked area, aborting.")
+			return
+		end
+	end
 
 	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
-
-	-- abort if a node is larger than the marked area
-	if (pos_start.x + size.x - 1 > pos_end.x) or (pos_start.y + size.y - 1 > pos_end.y) or (pos_start.z + size.z - 1 > pos_end.z) then
-		print("Structure I/O Error: Structure is larger than the marked area, aborting.")
-		return
-	end
 
 	-- whether to use text files or schematics
 	if (IO_SCHEMATICS == true) then

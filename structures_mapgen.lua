@@ -381,7 +381,7 @@ local function spawn_structure (filename, pos, angle, size, bottom, trigger)
 
 	-- at last, create the structure itself
 	io_area_clear(pos1_frame, pos2_frame)
-	io_area_import(pos1, pos2, angle, filename)
+	io_area_import(pos1, pos2, angle, filename, false)
 end
 
 -- finds a structure group to spawn and calculates each entry's properties
