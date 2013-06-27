@@ -1,3 +1,5 @@
+- Switch the default buildings from text files to Minetest schematics, when the schematic architecture can be defaulted
+
 - Allow multiple trigger nodes to be specified for a structure, possibly as a comma separated string
 
 - Add a system for nodes with inventories (chests, furnaces, etc) to randomly add items to them, each item with a given probability + count. Will allow chests and furnaces in buildings to have random stuff in them.

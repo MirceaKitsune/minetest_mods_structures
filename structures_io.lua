@@ -166,7 +166,7 @@ function io_area_import (pos, ends, angle, filename)
 	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
 	local size = io_get_size(angle, filename)
 	if (size == nil) then return end
-print(size.x..","..size.y..","..size.z)
+
 	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
 
 	-- abort if a node is larger than the marked area

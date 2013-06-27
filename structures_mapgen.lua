@@ -41,14 +41,14 @@ local function groups_update ()
 	for i, v in ipairs(mapgen_table) do
 		local found = false
 		for ii, w in ipairs(mapgen_groups) do
-			if (v[5] == w) then
+			if (v[2] == w) then
 				found = true
 				break
 			end
 		end
 
 		if (found == false) then
-			table.insert(mapgen_groups, v[5])
+			table.insert(mapgen_groups, v[2])
 		end
 	end
 
@@ -170,11 +170,12 @@ local function spawn_get_scale (group)
 	-- loop through the mapgen table
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this structure belongs to the chosen mapgen group
-		if (entry[5] == mapgen_groups[group]) then
+		if (entry[2] == mapgen_groups[group]) then
 			-- add the estimated horizontal size of buildings to group space
-			scale = scale + math.ceil((tonumber(entry[1]) + tonumber(entry[3])) / 2) * tonumber(entry[9])
+			local size = io_get_size(0, entry[1])
+			scale = scale + math.ceil((size.x + size.z) / 2) * tonumber(entry[6])
 			-- increase the structure count
-			structures = structures + tonumber(entry[9])
+			structures = structures + tonumber(entry[6])
 		end
 	end
 	-- divide space by the square root of total buildings to get the proper row / column sizes
@@ -185,7 +186,7 @@ end
 
 -- analyzes buildings in the mapgen group and returns them as a lists of parameters
 local function spawn_get_structures (pos, scale_horizontal, scale_vertical, group)
-	-- parameters: x size [1], y size [2], z size [3], structure [4], group [5], node [6], min height [7], max height [8], count [9]
+	-- parameters: structure [1], group [2], node [3], min height [4], max height [5], count [6]
 	-- x = left & right, z = up & down
 
 	-- structure table which will be filled and returned by this function
@@ -195,18 +196,18 @@ local function spawn_get_structures (pos, scale_horizontal, scale_vertical, grou
 	local instances = { }
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this structure belongs to the chosen mapgen group
-		if (entry[5] == mapgen_groups[group]) then
-			for x = 1, tonumber(entry[9]) do
+		if (entry[2] == mapgen_groups[group]) then
+			for x = 1, tonumber(entry[6]) do
 				table.insert(instances, i)
 			end
 		end
 	end
 
 	-- now randomize the table so structure instances won't be spawned in an uniform order
-	local size = table.getn(instances)
+	local structs = table.getn(instances)
 	for i in ipairs(instances) do
 		-- obtain a random entry to swap this entry with
-		local rand = math.random(size)
+		local rand = math.random(structs)
 
 		-- swap the two entries
 		local old = instances[i]
@@ -252,20 +253,14 @@ local function spawn_get_structures (pos, scale_horizontal, scale_vertical, grou
 		-- choose angle (0, 90, 180, 270) based on distance from center, and size based on angle
 		-- it's hard to find an accurate formula here, but it keeps buildings oriented uniformly
 		local angle = 0
-		local size = { }
 		if (row < scale_horizontal / 2) and (column < scale_horizontal / 2) then
 			angle = 180
-			size = { x = entry[1], y = entry[2], z = entry[3] }
 		elseif (row < scale_horizontal / 2) then
 			angle = 90
-			size = { x = entry[3], y = entry[2], z = entry[1] }
 		elseif (column < scale_horizontal / 2) then
 			angle = 270
-			size = { x = entry[3], y = entry[2], z = entry[1] }
-		else
-			angle = 0
-			size = { x = entry[1], y = entry[2], z = entry[3] }
 		end
+		local size = io_get_size(angle, entry[1])
 		-- actual space the structure will take up
 		local structure_width = size.x + MAPGEN_STRUCTURE_BORDER * 2
 		local structure_height = size.z + MAPGEN_STRUCTURE_BORDER * 2
@@ -297,15 +292,15 @@ local function spawn_get_structures (pos, scale_horizontal, scale_vertical, grou
 		for search = pos.y + scale_vertical, pos.y, -1 do
 			-- we scan from top to bottom, so the search might start above the structure's maximum height limit
 			-- if however it gets below the minimum limit, there's no point to keep going
-			if (search <= tonumber(entry[7])) then
+			if (search <= tonumber(entry[4])) then
 				break
-			elseif (search <= tonumber(entry[8])) then
+			elseif (search <= tonumber(entry[5])) then
 				-- loop through each corner at this height
 				for i, v in pairs(corners) do
 					-- check if the node below is the trigger node
 					local pos_down = { x = v.x, y = search - 1, z = v.z }
 					local node_down = minetest.env:get_node(pos_down)
-					if (node_down.name == entry[6]) then
+					if (node_down.name == entry[3]) then
 						-- check if the node here is an air node or plant
 						local pos_here = { x = v.x, y = search, z = v.z }
 						local node_here = minetest.env:get_node(pos_here)
@@ -335,7 +330,7 @@ local function spawn_get_structures (pos, scale_horizontal, scale_vertical, grou
 
 				-- the structure may spawn, insert it into the structures table
 				-- parameters: name [1], position [2], angle [3], size [4], bottom [5], node [6]
-				table.insert(structures, { entry[4], location, angle, size, corner_bottom, entry[6] } )
+				table.insert(structures, { entry[1], location, angle, size, corner_bottom, entry[3] } )
 			end
 		end
 
@@ -361,18 +356,19 @@ end
 local function spawn_structure (filename, pos, angle, size, bottom, trigger)
 
 	-- determine the corners of the spawn cube
-	local pos1 = { x = pos.x + MAPGEN_STRUCTURE_BORDER, y = pos.y, z = pos.z + MAPGEN_STRUCTURE_BORDER }
+	-- since the I/O function doesn't include the start and end values as valid locations (only the space between them), decrease start position by 1 to get the right spot
+	local pos1 = { x = pos.x + MAPGEN_STRUCTURE_BORDER - 1, y = pos.y - 1, z = pos.z + MAPGEN_STRUCTURE_BORDER - 1 }
 	local pos2 = { x = pos.x + size.x + MAPGEN_STRUCTURE_BORDER, y = pos.y + size.y, z = pos.z + size.z + MAPGEN_STRUCTURE_BORDER }
-	local pos1_frame = { x = pos.x, y = pos.y, z = pos.z }
-	local pos2_frame = { x = pos.x + size.x + MAPGEN_STRUCTURE_BORDER * 2, y = pos.y + size.y, z = pos.z + size.z + MAPGEN_STRUCTURE_BORDER * 2 }
+	local pos1_frame = { x = pos.x - 1, y = pos.y - 1, z = pos.z - 1 }
+	local pos2_frame = { x = pos.x + size.x + MAPGEN_STRUCTURE_BORDER * 2, y = pos.y + size.y, z = pos.z + size.z + MAPGEN_STRUCTURE_BORDER * 2}
 
 	-- we'll spawn the structure in a suitable spot, but what if it's the top of a peak?
 	-- to avoid parts of the building left floating, cover everything to the bottom
 	if (MAPGEN_STRUCTURE_FILL) then
 		for cover_y = pos.y - 1, bottom + 1, -1 do
 			-- fill up this layer
-			for cover_x = pos1_frame.x, pos2_frame.x do
-				for cover_z = pos1_frame.z, pos2_frame.z do
+			for cover_x = pos1_frame.x + 1, pos2_frame.x - 1 do
+				for cover_z = pos1_frame.z + 1, pos2_frame.z - 1 do
 					pos_fill = { x = cover_x, y = cover_y, z = cover_z }
 					node_fill = minetest.env:get_node(pos_fill)
 					if (node_fill.name ~= node) then
@@ -429,7 +425,7 @@ local function spawn_group (minp, maxp, group)
 		-- schedule the building to spawn based on its position in the loop
 		local delay = i * MAPGEN_STRUCTURE_DELAY
 		minetest.after(delay, function()
-			-- parameters: name [1], position [2], angle [3], size [4], node [5]
+			-- parameters: name [1], position [2], angle [3], size [4], bottom [5], node [6]
 			spawn_structure(structure[1], structure[2], structure[3], structure[4], structure[5], structure[6])
 		end)
 	end
@@ -437,15 +433,12 @@ end
 
 -- Global functions - Add / remove to / from file
 
-function mapgen_add (pos, ends, filename, group, node, height_min, height_max, count)
+function mapgen_add (filename, group, node, height_min, height_max, count)
 	-- remove the existing entry
 	mapgen_remove (filename)
 
-	-- we need to store the size of the structure
-	local dist = calculate_distance(pos, ends)
-
 	-- add file to the mapgen table
-	entry = {dist.x, dist.y, dist.z, filename, group, node, height_min, height_max, count }
+	entry = {filename, group, node, height_min, height_max, count }
 	table.insert(mapgen_table, entry)
 
 	mapgen_to_file()
@@ -453,7 +446,7 @@ end
 
 function mapgen_remove (filename)
 	for i, entry in ipairs(mapgen_table) do
-		if (entry[4] == filename) then
+		if (entry[1] == filename) then
 			table.remove(mapgen_table, i)
 			break
 		end
