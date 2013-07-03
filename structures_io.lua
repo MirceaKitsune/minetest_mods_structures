@@ -8,7 +8,7 @@ local IO_DIRECTORY = "structures"
 -- don't import the nodes listed here
 IO_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
 -- use schematics instead of text files, currently incomplete and broken for the following reasons:
--- * schematic creation doesn't support angles, so the angle parameter can't be used
+-- * importing at angles other than 0 is buggy for torches and doors due to incorrect facedir
 -- * furnaces cause schematic importing to crash Minetest due to the fuel parameter
 IO_SCHEMATICS = false
 
@@ -23,10 +23,12 @@ function io_get_size (angle, filename)
 	-- whether to use text files or schematics
 	if (IO_SCHEMATICS == true) then
 		path = path..".mts"
+		local file = io.open(path, "r")
+		if (file == nil) then return nil end
 
 		-- thanks to sfan5 for this advanced code that reads the size from schematic files
-		local read_s16 = function(file)
-			return string.byte(file:read(1)) * 256 + string.byte(file:read(1))
+		local read_s16 = function(fi)
+			return string.byte(fi:read(1)) * 256 + string.byte(fi:read(1))
 		end
 		local function get_schematic_size(f)
 			-- make sure those are the first 4 characters, otherwise this might be a corrupt file
@@ -36,9 +38,9 @@ function io_get_size (angle, filename)
 			-- the next characters here are our size, read them
 			return read_s16(f), read_s16(f), read_s16(f)
 		end
-		fi = io.open(path, 'rb')
-		size.x, size.y, size.z = get_schematic_size(fi)
-		fi.close(fi)
+
+		size.x, size.y, size.z = get_schematic_size(file)
+		file.close(file)
 	else
 		path = path..".txt"
 		local file = io.open(path, "r")
@@ -184,7 +186,12 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 		-- import from a schematic file
 		path = path..".mts"
 
-		minetest.place_schematic(pos_start, path)
+		-- abort if file doesn't exist
+		local file = io.open(path, "r")
+		if (file == nil) then return end
+		file:close()
+
+		minetest.place_schematic(pos_start, path, angle)
 	else
 		-- import from a text file
 		path = path..".txt"
