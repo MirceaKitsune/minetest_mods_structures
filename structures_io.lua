@@ -7,9 +7,7 @@
 local IO_DIRECTORY = "structures"
 -- don't import the nodes listed here
 IO_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
--- use schematics instead of text files, currently incomplete and broken for the following reasons:
--- * importing at angles other than 0 is buggy for torches and doors due to incorrect facedir
--- * furnaces cause schematic importing to crash Minetest due to the fuel parameter
+-- use schematics instead of text files, faster and recommended
 IO_SCHEMATICS = false
 
 -- Global functions - Import / export
@@ -192,6 +190,19 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 		file:close()
 
 		minetest.place_schematic(pos_start, path, angle)
+
+		-- we need to call on_construct for each node that has one, otherwise some nodes won't work correctly and even crash
+		for search_x = pos_start.x, pos_end.x do
+			for search_y = pos_start.y, pos_end.y do
+				for search_z = pos_start.z, pos_end.z do
+					local pos = {x = search_x, y = search_y, z = search_z}
+					local node = minetest.get_node(pos).name
+					if minetest.registered_nodes[node] and minetest.registered_nodes[node].on_construct then
+						minetest.registered_nodes[node].on_construct(pos)
+					end
+				end
+			end
+		end
 	else
 		-- import from a text file
 		path = path..".txt"

@@ -386,11 +386,13 @@ end
 
 -- finds a structure group to spawn and calculates each entry's properties
 local function spawn_group (minp, maxp, group)
-	-- test group probability for this piece of world
-	if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
 
-	-- if this function was called without specifying a mapgen group, randomly choose one
+	-- this function was called without specifying a mapgen group
 	if (group == nil) then
+		-- test group probability for this piece of world
+		if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
+
+		-- randomly choose a mapgen group
 		group = math.random(1, table.getn(mapgen_groups))
 	end
 
