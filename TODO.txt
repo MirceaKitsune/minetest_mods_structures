@@ -1,4 +1,4 @@
-- Switch the default buildings from text files to Minetest schematics, when the schematic architecture can be defaulted
+- Add a bury option to the mapgen. When positive structures go in the ground by that many nodes, when negative they float by that many nodes. If not 0, don't check terrain roughness and don't make a floor or cut the border.
 
 - Allow multiple trigger nodes to be specified for a structure, possibly as a comma separated string
 

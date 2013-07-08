@@ -8,7 +8,7 @@ local IO_DIRECTORY = "structures"
 -- don't import the nodes listed here
 IO_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
 -- use schematics instead of text files, faster and recommended
-IO_SCHEMATICS = false
+IO_SCHEMATICS = true
 
 -- Global functions - Import / export
 
