@@ -74,24 +74,34 @@ function io_get_size (angle, filename)
 	return size
 end
 
--- clears marked area of any objects which aren't ignored
-function io_area_clear (pos, ends)
-	if (ends == nil) then return end
+-- fills the marked aream, ignored objects are not affected
+function io_area_fill (pos, ends, node)
 	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
 	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
 
-	-- erase each node in the marked area
-	for loop_x = pos_start.x, pos_end.x do
-		for loop_y = pos_start.y, pos_end.y do
-			for loop_z = pos_start.z, pos_end.z do
-				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
+	-- no node specified means we clear the area
+	if (node == nil) then
+		node = "air"
+	end
 
-				if (calculate_ignored(minetest.env:get_node(pos_here).name) == false) then
-					minetest.env:remove_node(pos_here)
-				end
+	-- erase each node in the marked area
+	local vm = VoxelManip()
+	local minp, maxp = vm:read_from_map(pos_start, pos_end)
+	local data = vm:get_data()
+	local va = VoxelArea:new{ MinEdge = minp, MaxEdge = maxp }
+	for x = pos_start.x, pos_end.x do
+		for y = pos_start.y, pos_end.y do
+			for z = pos_start.z, pos_end.z do
+				local i = va:index(x, y, z)
+				data[i] = minetest.get_content_id(node)
 			end
 		end
 	end
+	vm:set_data(data)
+	vm:write_to_map()
+	vm:update_map()
+	vm:calc_lighting()
+	vm:update_liquids()
 end
 
 -- exports structure to a text file

@@ -218,7 +218,7 @@ minetest.register_node("structures:manager_enabled", {
 		elseif (fields.io_import) then
 			io_area_import(pos, markers_get(pos), tonumber(fields.io_angle), fields.file, true)
 		elseif (fields.io_clear) then
-			io_area_clear(pos, markers_get(pos))
+			io_area_fill(pos, markers_get(pos), nil)
 		elseif (fields.unset) then
 			io_markers_remove(pos)
 		elseif (fields.mapgen_add) then

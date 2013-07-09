@@ -18,7 +18,7 @@ local MAPGEN_GROUP_TABLE_COUNT = 10
 local MAPGEN_STRUCTURE_LEVEL = 20
 -- each structure is delayed by this many seconds
 -- high values cause structures to spawn more slowly, low values deal more stress to the CPU and encourage incomplete spawns
-local MAPGEN_STRUCTURE_DELAY = 1
+local MAPGEN_STRUCTURE_DELAY = 0.5
 -- add this many nodes to each side when cutting and adding the floor
 local MAPGEN_STRUCTURE_BORDER = 2
 -- if true, create a floor under each structure by this many nodes to fill empty space
@@ -365,22 +365,13 @@ local function spawn_structure (filename, pos, angle, size, bottom, trigger)
 	-- we'll spawn the structure in a suitable spot, but what if it's the top of a peak?
 	-- to avoid parts of the building left floating, cover everything to the bottom
 	if (MAPGEN_STRUCTURE_FILL) then
-		for cover_y = pos.y - 1, bottom + 1, -1 do
-			-- fill up this layer
-			for cover_x = pos1_frame.x + 1, pos2_frame.x - 1 do
-				for cover_z = pos1_frame.z + 1, pos2_frame.z - 1 do
-					pos_fill = { x = cover_x, y = cover_y, z = cover_z }
-					node_fill = minetest.env:get_node(pos_fill)
-					if (node_fill.name ~= node) then
-						minetest.env:set_node(pos_fill, { name = trigger })
-					end
-				end
-			end
-		end
+		local floor1 = { x = pos1_frame.x, y = pos.y, z = pos1_frame.z }
+		local floor2 = { x = pos2_frame.x, y = bottom, z = pos2_frame.z }
+		io_area_fill(floor1, floor2, trigger)
 	end
 
 	-- at last, create the structure itself
-	io_area_clear(pos1_frame, pos2_frame)
+	io_area_fill(pos1_frame, pos2_frame, nil)
 	io_area_import(pos1, pos2, angle, filename, false)
 end
 
