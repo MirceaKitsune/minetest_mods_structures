@@ -281,9 +281,9 @@ local function spawn_get_structures (pos, scale_horizontal, scale_vertical, grou
 		-- add each of the structure's corners to a table
 		local corners = { }
 		table.insert(corners, { x = location.x, z = location.z } )
-		table.insert(corners, { x = location.x, z = location.z + structure_width } )
+		table.insert(corners, { x = location.x, z = location.z + structure_height } )
 		table.insert(corners, { x = location.x + structure_width, z = location.z } )
-		table.insert(corners, { x = location.x + structure_width, z = location.z + structure_width } )
+		table.insert(corners, { x = location.x + structure_width, z = location.z + structure_height } )
 		-- minimum and maximum heights will be calculated further down
 		-- in order for the checks to work, initialize them in reverse
 		local corner_bottom = pos.y + scale_vertical
@@ -336,11 +336,11 @@ local function spawn_get_structures (pos, scale_horizontal, scale_vertical, grou
 
 		-- add this structure's upper-right corner to the right point list
 		upright = { }
-		upright.x = location.x + structure_width + 1
+		upright.x = location.x + structure_width
 		upright.z = location.z
 		table.insert(points_right, upright)
 		-- push Z location so the next structure in this row will spawn right under this structure
-		current_z = current_z + structure_height + 1
+		current_z = current_z + structure_height
 		-- update the largest X size of this row
 		if (structure_width > largest_x) then
 			largest_x = structure_width
