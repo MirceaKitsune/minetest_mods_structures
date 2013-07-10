@@ -28,7 +28,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 	local instances = { }
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this building belongs to the chosen mapgen group
-		if (entry[2] == mapgen_groups[group]) then
+		if (entry[2] == group) then
 			for x = 1, tonumber(entry[6]) do
 				table.insert(instances, i)
 			end

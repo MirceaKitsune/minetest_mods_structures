@@ -20,30 +20,9 @@ local MAPGEN_GROUP_TABLE_COUNT = 10
 local groups_avoid = {}
 
 -- the mapgen table and groups table
-mapgen_groups = {}
 mapgen_table = {}
 
 -- Local functions - Groups
-
--- updates the groups table with all mapgen groups
-local function groups_update ()
-	mapgen_groups = {}
-	for i, v in ipairs(mapgen_table) do
-		local found = false
-		for ii, w in ipairs(mapgen_groups) do
-			if (v[2] == w) then
-				found = true
-				break
-			end
-		end
-
-		if (found == false) then
-			table.insert(mapgen_groups, v[2])
-		end
-	end
-
-	return false
-end
 
 -- adds entries to the group avoidance list
 local function groups_avoid_add (pos, scale_horizontal, scale_vertical)
@@ -86,6 +65,27 @@ local function groups_avoid_check (pos, scale_horizontal, scale_vertical)
 	return true
 end
 
+-- randomly choose a mapgen group accounting height limits
+local function groups_choose (height_min, height_max)
+	-- each acceptable group is added to this table
+	local group_list = {}
+
+	-- go through the mapgen table
+	for i, entry in ipairs(mapgen_table) do
+		-- if any of the structure's height limits are within this group's range, this group is an option
+		-- the more structure types are possible to spawn here, the higher the group's probability
+		if (height_max > tonumber(entry[4])) and (height_min < tonumber(entry[5])) then
+			table.insert(group_list, entry[2])
+		end
+	end
+
+	-- no suitable groups exist, return nil
+	if (table.getn(group_list) == 0) then return nil end
+	-- randomly choose an entry from the list of acceptable groups
+	local group_random = group_list[math.random(1, table.getn(group_list))]
+	return group_random
+end
+
 -- Local functions - Mapgen
 
 -- writes the mapgen file into the mapgen table
@@ -106,7 +106,6 @@ local function mapgen_to_table ()
 	end
 
 	file:close()
-	groups_update()
 end
 
 -- writes the mapgen table into the mapgen file
@@ -127,7 +126,6 @@ local function mapgen_to_file ()
 	end
 
 	file:close()
-	groups_update()
 end
 
 -- Local functions - Generate
@@ -160,7 +158,7 @@ local function generate_get_scale (group)
 	-- loop through the mapgen table
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this structure belongs to the chosen mapgen group
-		if (entry[2] == mapgen_groups[group]) then
+		if (entry[2] == group) then
 			-- add the estimated horizontal size of buildings to group space
 			local size = io_get_size(0, entry[1])
 			scale = scale + math.ceil((size.x + size.z) / 2) * tonumber(entry[6])
@@ -183,7 +181,8 @@ local function spawn_group (minp, maxp, group)
 		if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
 
 		-- randomly choose a mapgen group
-		group = math.random(1, table.getn(mapgen_groups))
+		group = groups_choose(minp.y, maxp.y)
+		if (group == nil) then return end
 	end
 
 	-- choose top-left on the X and Z axes since that's where we start from, and bottom on Y axis

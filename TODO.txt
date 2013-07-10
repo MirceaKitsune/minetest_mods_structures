@@ -1,7 +1,5 @@
 - Find a way to use schematic probabilities, to make some nodes only appear sometimes each spawn (eg: flowers in houses). For this we need a way to set them for specific nodes... perhaps when clicking them with an I/O Marker?
 
-- Get the smallest minimum height and biggest maximum height of structures in a mapgen group before deciding to spawn that group. If no building is within the min and max Y range, choose another random mapgen group.
-
 - Allow multiple trigger nodes to be specified for a structure, possibly as a comma separated string
 
 - Add a system for nodes with inventories (chests, furnaces, etc) to randomly add items to them, each item with a given probability + count. Will allow chests and furnaces in buildings to have random stuff in them.
