@@ -1,9 +1,9 @@
-default_house_small structures default:dirt_with_grass 5 100 20 
-default_house_medium structures default:dirt_with_grass 5 100 15 
-default_house_large structures default:dirt_with_grass 5 100 10 
-default_tower structures default:dirt_with_grass 25 150 15 
-default_fountain_small structures default:dirt_with_grass 5 100 5 
-default_fountain_large structures default:dirt_with_grass 5 100 5 
-default_pole structures default:dirt_with_grass 5 100 10 
-default_farm_small structures default:dirt_with_grass 5 100 10 
-default_farm_large structures default:dirt_with_grass 5 100 5 
+default_house_small structures default:dirt_with_grass 5 100 20 0 
+default_house_medium structures default:dirt_with_grass 5 100 15 0 
+default_house_large structures default:dirt_with_grass 5 100 10 0 
+default_tower structures default:dirt_with_grass 25 150 15 0 
+default_fountain_small structures default:dirt_with_grass 5 100 5 0 
+default_fountain_large structures default:dirt_with_grass 5 100 5 0 
+default_pole structures default:dirt_with_grass 5 100 10 0 
+default_farm_small structures default:dirt_with_grass 5 100 10 0 
+default_farm_large structures default:dirt_with_grass 5 100 5 0 

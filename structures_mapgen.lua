@@ -186,7 +186,7 @@ end
 
 -- analyzes buildings in the mapgen group and returns them as a lists of parameters
 local function spawn_get_structures (pos, scale_horizontal, scale_vertical, group)
-	-- parameters: structure [1], group [2], node [3], min height [4], max height [5], count [6]
+	-- parameters: structure [1], group [2], node [3], min height [4], max height [5], count [6], bury [7]
 	-- x = left & right, z = up & down
 
 	-- structure table which will be filled and returned by this function
@@ -329,8 +329,8 @@ local function spawn_get_structures (pos, scale_horizontal, scale_vertical, grou
 				location.y = height_average -- we determined Y location
 
 				-- the structure may spawn, insert it into the structures table
-				-- parameters: name [1], position [2], angle [3], size [4], bottom [5], node [6]
-				table.insert(structures, { entry[1], location, angle, size, corner_bottom, entry[3] } )
+				-- parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]
+				table.insert(structures, { entry[1], location, angle, size, corner_bottom, entry[7], entry[3] } )
 			end
 		end
 
@@ -353,7 +353,7 @@ local function spawn_get_structures (pos, scale_horizontal, scale_vertical, grou
 end
 
 -- naturally spawns a structure with the given parameters
-local function spawn_structure (filename, pos, angle, size, bottom, trigger)
+local function spawn_structure (filename, pos, angle, size, bottom, bury, trigger)
 
 	-- determine the corners of the spawn cube
 	-- since the I/O function doesn't include the start and end values as valid locations (only the space between them), decrease start position by 1 to get the right spot
@@ -369,9 +369,14 @@ local function spawn_structure (filename, pos, angle, size, bottom, trigger)
 		local floor2 = { x = pos2_frame.x, y = bottom, z = pos2_frame.z }
 		io_area_fill(floor1, floor2, trigger)
 	end
+	-- clear the area before spawning
+	io_area_fill(pos1_frame, pos2_frame, nil)
+
+	-- apply burying
+	pos1.y = pos1.y - bury
+	pos2.y = pos2.y - bury
 
 	-- at last, create the structure itself
-	io_area_fill(pos1_frame, pos2_frame, nil)
 	io_area_import(pos1, pos2, angle, filename, false)
 end
 
@@ -418,20 +423,20 @@ local function spawn_group (minp, maxp, group)
 		-- schedule the building to spawn based on its position in the loop
 		local delay = i * MAPGEN_STRUCTURE_DELAY
 		minetest.after(delay, function()
-			-- parameters: name [1], position [2], angle [3], size [4], bottom [5], node [6]
-			spawn_structure(structure[1], structure[2], structure[3], structure[4], structure[5], structure[6])
+			-- parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]
+			spawn_structure(structure[1], structure[2], structure[3], structure[4], structure[5], structure[6], structure[7])
 		end)
 	end
 end
 
 -- Global functions - Add / remove to / from file
 
-function mapgen_add (filename, group, node, height_min, height_max, count)
+function mapgen_add (filename, group, node, height_min, height_max, count, bury)
 	-- remove the existing entry
 	mapgen_remove (filename)
 
 	-- add file to the mapgen table
-	entry = {filename, group, node, height_min, height_max, count }
+	entry = {filename, group, node, height_min, height_max, count, bury }
 	table.insert(mapgen_table, entry)
 
 	mapgen_to_file()

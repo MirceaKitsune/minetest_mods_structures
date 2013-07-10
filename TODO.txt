@@ -1,5 +1,3 @@
-- Add a bury option to the mapgen. When positive structures go in the ground by that many nodes, when negative they float by that many nodes. If not 0, don't check terrain roughness and don't make a floor or cut the border.
-
 - Find a way to use schematic probabilities, to make some nodes only appear sometimes each spawn (eg: flowers in houses). For this we need a way to set them for specific nodes... perhaps when clicking them with an I/O Marker?
 
 - Get the smallest minimum height and biggest maximum height of structures in a mapgen group before deciding to spawn that group. If no building is within the min and max Y range, choose another random mapgen group.
