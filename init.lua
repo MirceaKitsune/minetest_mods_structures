@@ -22,10 +22,10 @@ function calculate_distance (pos1, pos2)
 	return size
 end
 
--- checks if the node is in the ignore list
-function calculate_ignored (node)
-	for i, v in ipairs(IO_IGNORE) do
-		if (node == v) then
+-- checks if the node is in the specified list
+function calculate_node_in_table (node, list)
+	for i, v in ipairs(list) do
+		if (node.name == v) then
 			return true
 		end
 	end
@@ -81,7 +81,7 @@ local function make_formspec_nodes (pos)
 			for loop_z = math.min(pos.z, pos_markers.z) + 1, math.max(pos.z, pos_markers.z) - 1 do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 
-				if (calculate_ignored(minetest.env:get_node(pos_here).name) == false) then
+				if (calculate_node_in_table(minetest.env:get_node(pos_here).name, IO_IGNORE) == false) then
 					nodes = nodes + 1
 				end
 			end

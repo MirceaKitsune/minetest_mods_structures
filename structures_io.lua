@@ -125,7 +125,7 @@ function io_area_export (pos, ends, filename)
 					local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 					local node_here = minetest.env:get_node(pos_here).name
 					local liquidtype = minetest.registered_nodes[node_here].liquidtype
-					if (calculate_ignored(node_here) == true) or (liquidtype == "flowing") then
+					if (calculate_node_in_table(node_here, IO_IGNORE) == true) or (liquidtype == "flowing") then
 						table.insert(ignore, { pos = { x = loop_x, y = loop_y, z = loop_z }, prob = -1 } )
 					end
 				end
@@ -148,7 +148,7 @@ function io_area_export (pos, ends, filename)
 					local liquidtype = minetest.registered_nodes[node_here].liquidtype
 
 					-- don't export flowing liquid nodes, just sources
-					if (calculate_ignored(node_here) == false) and (liquidtype ~= "flowing") then
+					if (calculate_node_in_table(node_here, IO_IGNORE) == false) and (liquidtype ~= "flowing") then
 						-- we want to save origins as distance from the main I/O node
 						local dist = calculate_distance(pos_start, pos_here)
 						-- param2 must be persisted

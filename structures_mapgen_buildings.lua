@@ -13,6 +13,8 @@ local MAPGEN_BUILDINGS_LEVEL = 20
 local MAPGEN_BUILDINGS_BORDER = 2
 -- if true, create a floor under each building by this many nodes to fill empty space
 local MAPGEN_BUILDINGS_FILL = true
+-- nodes that text can be assigned to for addresses (signs, screens, etc), leave empty to disable
+local MAPGEN_BUILDINGS_SIGNS = {"default:sign_wall"}
 
 -- Global functions - Buildings
 
@@ -79,7 +81,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		end
 
 		-- location will be gradually determined in each direction
-		local location = { x = 0, y = 0, z = 0 }
+		local location = { x = 0, y = 0, z = 0, number = 0 }
 		location.z = current_z -- we determined Z location
 
 		-- choose angle (0, 90, 180, 270) based on distance from center, and size based on angle
@@ -152,6 +154,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 				end
 			end
 		end
+
 		-- each successful corner is removed from the table, so if there are any corners left it means something went wrong
 		if (table.getn(corners) == 0) then
 			-- calculate if terrain roughness is acceptable
@@ -159,6 +162,9 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 				-- set the average height
 				local height_average = math.ceil((corner_bottom + corner_top) / 2)
 				location.y = height_average -- we determined Y location
+
+				-- add the loop iteration into the location table (used for address signs)
+				location.number = i
 
 				-- the building may spawn, insert it into the buildings table
 				-- parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]
@@ -185,7 +191,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 end
 
 -- naturally spawns a building with the given parameters
-function mapgen_buildings_spawn (filename, pos, angle, size, bottom, bury, trigger)
+function mapgen_buildings_spawn (name, pos, angle, size, bottom, bury, trigger)
 
 	-- determine the corners of the spawn cube
 	-- since the I/O function doesn't include the start and end values as valid locations (only the space between them), decrease start position by 1 to get the right spot
@@ -209,5 +215,24 @@ function mapgen_buildings_spawn (filename, pos, angle, size, bottom, bury, trigg
 	pos2.y = pos2.y - bury
 
 	-- at last, create the building itself
-	io_area_import(pos1, pos2, angle, filename, false)
+	io_area_import(pos1, pos2, angle, name, false)
+
+	-- changes to node metadata after the building has spawned are performed in this code
+	if (table.getn(MAPGEN_BUILDINGS_SIGNS) ~= 0) then
+		for search_x = pos1.x, pos2.x do
+			for search_y = pos1.y, pos2.y do
+				for search_z = pos1.z, pos2.z do
+					-- if the structure contains signs, set their text to the address of this building
+					local pos_here = { x = search_x, y = search_y, z = search_z }
+					local node_here = minetest.env:get_node(pos_here)
+					if (node_here.name ~= "air") and (calculate_node_in_table(node_here, MAPGEN_BUILDINGS_SIGNS) == true) then
+						local address = pos.number..", "..name
+						local meta = minetest.env:get_meta(pos_here)
+						meta:set_string("text", address)
+						meta:set_string("infotext", '"'..address..'"')
+					end
+				end
+			end
+		end
+	end
 end
