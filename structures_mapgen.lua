@@ -9,7 +9,9 @@ local MAPGEN_FILE = "mapgen.txt"
 local MAPGEN_GROUP_PROBABILITY = 0.2
 -- if the area we're spawning in didn't finish loading / generating, retry this many seconds
 -- low values preform checks more frequently, higher values are recommended when the world is slow to load
-local MAPGEN_GROUP_RETRY = 3
+local MAPGEN_GROUP_LOADED_RETRY = 3
+-- how many times to try spawning the group before giving up
+local MAPGEN_GROUP_LOADED_ATTEMPTS = 10
 -- amount of origins to maintain in the group avoidance list
 -- low values increase the risk of groups being ignored from distance calculations, high values store more data
 local MAPGEN_GROUP_TABLE_COUNT = 10
@@ -173,17 +175,9 @@ local function generate_get_scale (group)
 end
 
 -- finds a structure group to spawn and calculates each entry's properties
-local function spawn_group (minp, maxp, group)
-
-	-- this function was called without specifying a mapgen group
-	if (group == nil) then
-		-- test group probability for this piece of world
-		if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
-
-		-- randomly choose a mapgen group
-		group = groups_choose(minp.y, maxp.y)
-		if (group == nil) then return end
-	end
+local function spawn_group (minp, maxp, group, attempts)
+	-- if we're out of attempts give up
+	if (attempts <= 0) then return end
 
 	-- choose top-left on the X and Z axes since that's where we start from, and bottom on Y axis
 	local pos = { x = minp.x, y = minp.y, z = minp.z }
@@ -197,8 +191,8 @@ local function spawn_group (minp, maxp, group)
 	-- if we're trying to spawn in an unloaded area, re-run this function as we wait for the area to load
 	loaded = generate_get_loaded(pos, scale_horizontal, scale_vertical)
 	if (loaded == false) then
-		minetest.after(MAPGEN_GROUP_RETRY, function()
-			spawn_group(minp, maxp, group)
+		minetest.after(MAPGEN_GROUP_LOADED_RETRY, function()
+			spawn_group(minp, maxp, group, attempts - 1)
 		end)
 		return
 	end
@@ -253,5 +247,12 @@ minetest.after(0, mapgen_to_table)
 
 -- register the group spawn function to run on each piece of world being generated
 minetest.register_on_generated(function(minp, maxp, seed)
-	spawn_group (minp, maxp, nil)
+	-- test probability for this piece of world
+	if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
+
+	-- randomly choose a mapgen group
+	group = groups_choose(minp.y, maxp.y)
+	if (group == nil) then return end
+
+	spawn_group (minp, maxp, group, MAPGEN_GROUP_LOADED_ATTEMPTS)
 end)
