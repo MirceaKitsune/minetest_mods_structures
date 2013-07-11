@@ -54,10 +54,8 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 	local points_left = { }
 	local points_right = { }
 	-- the column and row we are currently in
-	local row = 1
-	local column = 1
-	-- current Z location, we start at group position
-	local current_z = pos.z
+	local row = 0
+	local column = 0
 	-- largest X size, used to calculate columns based on row width
 	local largest_x = 0
 
@@ -67,10 +65,10 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 
 		-- if the current row was filled, jump to the next column
 		if (row > scale_horizontal) then
-			row = 1
+			-- start again from the top at next column
+			row = 0
 			column = column + largest_x
-			-- start again from the top
-			current_z = pos.z
+			largest_x = 0
 			-- the list of next points becomes the list of current points
 			points_left = points_right
 			points_right = { }
@@ -82,7 +80,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 
 		-- location will be gradually determined in each direction
 		local location = { x = 0, y = 0, z = 0, number = 0 }
-		location.z = current_z -- we determined Z location
+		location.z = pos.z + row -- we determined Z location
 
 		-- choose angle (0, 90, 180, 270) based on distance from center, and size based on angle
 		-- it's hard to find an accurate formula here, but it keeps buildings oriented uniformly
@@ -103,7 +101,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		local edge = pos.x
 		for w, point in ipairs(points_left) do
 			-- check if the point intersects our building
-			if (point.z >= current_z - building_height) and (point.z <= current_z + building_height) then
+			if (point.z >= location.z - building_height) and (point.z <= location.z + building_height) then
 				-- if this point is further to the right than the last one, bump the edge past its location
 				if (edge < point.x) then
 					edge = point.x
@@ -148,6 +146,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 								corner_top = pos_down.y
 							end
 							-- we checked everything we needed for this corner, it can be removed from the table
+							-- TODO: One of the corners doesn't get checked because the line below seems to break loop iteration. To be fixed ASAP!
 							corners[i] = nil
 						end
 					end
@@ -177,14 +176,12 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		upright.x = location.x + building_width
 		upright.z = location.z
 		table.insert(points_right, upright)
-		-- push Z location so the next building in this row will spawn right under this building
-		current_z = current_z + building_height
+		-- push the row so the next building will spawn right under this one
+		row = row + building_height
 		-- update the largest X size of this row
 		if (building_width > largest_x) then
 			largest_x = building_width
 		end
-		-- increase the row size
-		row = row + building_height
 	end
 
 	return buildings
