@@ -116,6 +116,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		table.insert(corners, { x = location.x, z = location.z + building_height } )
 		table.insert(corners, { x = location.x + building_width, z = location.z } )
 		table.insert(corners, { x = location.x + building_width, z = location.z + building_height } )
+		local corners_total = table.getn(corners)
 		-- minimum and maximum heights will be calculated further down
 		-- in order for the checks to work, initialize them in reverse
 		local corner_bottom = pos.y + scale_vertical
@@ -146,8 +147,8 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 								corner_top = pos_down.y
 							end
 							-- we checked everything we needed for this corner, it can be removed from the table
-							-- TODO: One of the corners doesn't get checked because the line below seems to break loop iteration. To be fixed ASAP!
 							corners[i] = nil
+							corners_total = corners_total - 1
 						end
 					end
 				end
@@ -155,7 +156,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		end
 
 		-- each successful corner is removed from the table, so if there are any corners left it means something went wrong
-		if (table.getn(corners) == 0) then
+		if (corners_total <= 0) then
 			-- calculate if terrain roughness is acceptable
 			if (corner_top - corner_bottom <= MAPGEN_BUILDINGS_LEVEL) then
 				-- set the average height
