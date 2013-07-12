@@ -38,7 +38,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 	end
 
 	-- now randomize the table so building instances won't be spawned in an uniform order
-	local structs = table.getn(instances)
+	local structs = #instances
 	for i in ipairs(instances) do
 		-- obtain a random entry to swap this entry with
 		local rand = math.random(structs)
@@ -116,7 +116,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		table.insert(corners, { x = location.x, z = location.z + building_height } )
 		table.insert(corners, { x = location.x + building_width, z = location.z } )
 		table.insert(corners, { x = location.x + building_width, z = location.z + building_height } )
-		local corners_total = table.getn(corners)
+		local corners_total = #corners
 		-- minimum and maximum heights will be calculated further down
 		-- in order for the checks to work, initialize them in reverse
 		local corner_bottom = pos.y + scale_vertical
@@ -216,7 +216,7 @@ function mapgen_buildings_spawn (name, pos, angle, size, bottom, bury, trigger)
 	io_area_import(pos1, pos2, angle, name, false)
 
 	-- changes to node metadata after the building has spawned are performed in this code
-	if (table.getn(MAPGEN_BUILDINGS_SIGNS) ~= 0) then
+	if (#MAPGEN_BUILDINGS_SIGNS ~= 0) then
 		for search_x = pos1.x, pos2.x do
 			for search_y = pos1.y, pos2.y do
 				for search_z = pos1.z, pos2.z do

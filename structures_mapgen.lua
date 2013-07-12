@@ -29,7 +29,7 @@ mapgen_table = {}
 -- adds entries to the group avoidance list
 local function groups_avoid_add (pos, scale_horizontal, scale_vertical)
 	-- if the maximum amount of entries was reached, delete the oldest one
-	if (table.getn(groups_avoid) >= MAPGEN_GROUP_TABLE_COUNT) then
+	if (#groups_avoid >= MAPGEN_GROUP_TABLE_COUNT) then
 		table.remove(groups_avoid, 1)
 	end
 
@@ -82,9 +82,9 @@ local function groups_choose (height_min, height_max)
 	end
 
 	-- no suitable groups exist, return nil
-	if (table.getn(group_list) == 0) then return nil end
+	if (#group_list == 0) then return nil end
 	-- randomly choose an entry from the list of acceptable groups
-	local group_random = group_list[math.random(1, table.getn(group_list))]
+	local group_random = group_list[math.random(1, #group_list)]
 	return group_random
 end
 
@@ -201,7 +201,7 @@ local function spawn_group (minp, maxp, group, attempts)
 	local buildings = mapgen_buildings_get(pos, scale_horizontal, scale_vertical, group)
 
 	-- no suitable buildings exist, return
-	if (table.getn(buildings) == 0) then return end
+	if (#buildings == 0) then return end
 
 	-- add this group to the group avoidance list
 	groups_avoid_add(pos, scale_horizontal, scale_vertical)
