@@ -1,8 +1,10 @@
+- Consider replacing the metadata system with per-structure script files, ran after a structure has spawned naturally. Such scripts would be editable from the formspec, but must be limited to disallow griefing. See mesecons - luacontroller for example.
+
 - Find a way to use schematic probabilities, to make some nodes only appear sometimes each spawn (eg: flowers in houses). For this we need a way to set them for specific nodes... perhaps when clicking them with an I/O Marker?
 
 - Allow multiple trigger nodes to be specified for a structure, possibly as a comma separated string
 
-- Add a system for nodes with inventories (chests, furnaces, etc) to randomly add items to them, each item with a given probability + count. Will allow chests and furnaces in buildings to have random stuff in them.
+- Add a system for nodes with inventories (chests, furnaces, etc) to randomly add items to them, using the metadata system.
 
 - Add debug messages. When the preference is set to 1, only print normal messages and errors. When set to 2, print everything important the code is doing.
 

@@ -217,7 +217,7 @@ local function spawn_group (minp, maxp, group, attempts)
 		local delay = i * MAPGEN_BUILDINGS_DELAY
 		minetest.after(delay, function()
 			-- parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]
-			mapgen_buildings_spawn(building[1], building[2], building[3], building[4], building[5], building[6], building[7])
+			mapgen_buildings_spawn(building[1], building[2], building[3], building[4], building[5], building[6], building[7], group)
 		end)
 	end
 end

@@ -50,7 +50,7 @@ end
 -- Global functions - Metadata
 
 -- set metadata accordingly for everything in this area
-function metadata_set (minp, maxp, default)
+function metadata_set (minp, maxp, expressions)
 	-- randomize the metadata table first
 	-- parameters: name [1], field [2], value [3], probability [4]
 	table_shuffle()
@@ -70,10 +70,10 @@ function metadata_set (minp, maxp, default)
 						if (node.name == entry[1]) then
 							-- test the probability of this entry, if false keep going and maybe we'll find another entry later
 							if(math.random() <= tonumber(entry[4])) then
-								-- if the value is empty, apply the default value instead
 								local value = entry[3]
-								if ((value == nil) or (value == "\"\"")) and (default ~= nil) then
-									value = default
+								-- replace expressions with the appropriate values
+								for i, expression in ipairs(expressions) do
+									value = string.gsub(value, "$"..expression[1], expression[2])
 								end
 								-- finally, set the meta string of the item
 								local meta = minetest.env:get_meta(pos)

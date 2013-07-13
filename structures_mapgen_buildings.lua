@@ -187,7 +187,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 end
 
 -- naturally spawns a building with the given parameters
-function mapgen_buildings_spawn (name, pos, angle, size, bottom, bury, trigger)
+function mapgen_buildings_spawn (name, pos, angle, size, bottom, bury, trigger, group)
 
 	-- determine the corners of the spawn cube
 	-- since the I/O function doesn't include the start and end values as valid locations (only the space between them), decrease start position by 1 to get the right spot
@@ -213,7 +213,11 @@ function mapgen_buildings_spawn (name, pos, angle, size, bottom, bury, trigger)
 	-- at last, create the building itself
 	io_area_import(pos1, pos2, angle, name, false)
 
-	-- apply custom metadata, with address as the default field
-	local address = pos.number..", "..name
-	metadata_set(pos1, pos2, address)
+	-- apply metadata changes after spawning
+	local expressions = {
+		{ "POSITION_X", tostring(pos.x) }, { "POSITION_Y", tostring(pos.y) }, { "POSITION_Z", tostring(pos.z) },
+		{ "SIZE_X", tostring(size.x) }, { "SIZE_Y", tostring(size.y) }, { "SIZE_Z", tostring(size.z) },
+		{ "ANGLE", tostring(angle) }, { "NUMBER", tostring(pos.number) }, { "TRIGGER", trigger }, { "NAME", name }, { "GROUP", group }
+	}
+	metadata_set(pos1, pos2, expressions)
 end
