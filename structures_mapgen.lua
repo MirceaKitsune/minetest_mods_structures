@@ -99,12 +99,14 @@ local function mapgen_to_table ()
 	mapgen_table = {}
 	-- loop through each line
 	for line in io.lines(path) do
-		local parameters = {}
-		-- loop through each parameter in the line
-		for item in string.gmatch(line, "%S+") do
-			table.insert(parameters, item)
+		-- loop through each parameter in the line, ignore comments
+		if (string.sub(line, 1, 1) ~= "#") then
+			local parameters = {}
+			for item in line:gmatch("[^\t]+") do
+				table.insert(parameters, item)
+			end
+			table.insert(mapgen_table, parameters)
 		end
-		table.insert(mapgen_table, parameters)
 	end
 
 	file:close()
@@ -116,12 +118,16 @@ local function mapgen_to_file ()
 	local file = io.open(path, "w")
 	if (file == nil) then return end
 
+	-- default header comment
+	local h = "# parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]\n"
+	file:write(h)
+
 	-- loop through each entry
 	for i, entry1 in ipairs(mapgen_table) do
 		s = ""
 		-- loop through each parameter in the entry
 		for w, entry2 in ipairs(entry1) do
-			s = s..entry2.." "
+			s = s..entry2.."	"
 		end
 		s = s.."\n"
 		file:write(s)

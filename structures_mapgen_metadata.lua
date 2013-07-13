@@ -20,12 +20,14 @@ local function table_generate ()
 	metadata_table = {}
 	-- loop through each line
 	for line in io.lines(path) do
-		local parameters = {}
-		-- loop through each parameter in the line
-		for item in string.gmatch(line, "%S+") do
-			table.insert(parameters, item)
+		-- loop through each parameter in the line, ignore comments
+		if (string.sub(line, 1, 1) ~= "#") then
+			local parameters = {}
+			for item in line:gmatch("[^\t]+") do
+				table.insert(parameters, item)
+			end
+			table.insert(metadata_table, parameters)
 		end
-		table.insert(metadata_table, parameters)
 	end
 
 	file:close()
