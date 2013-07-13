@@ -1,4 +1,4 @@
-# parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]
+# name	position	angle	size	bottom	bury	node
 default_house_small	structures	default:dirt_with_grass	5	100	20	0	
 default_house_medium	structures	default:dirt_with_grass	5	100	15	0	
 default_house_large	structures	default:dirt_with_grass	5	100	10	0	

@@ -119,7 +119,7 @@ local function mapgen_to_file ()
 	if (file == nil) then return end
 
 	-- default header comment
-	local h = "# parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]\n"
+	local h = "# name	position	angle	size	bottom	bury	node\n"
 	file:write(h)
 
 	-- loop through each entry

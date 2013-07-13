@@ -70,7 +70,7 @@ function metadata_set (minp, maxp, default)
 						if (node.name == entry[1]) then
 							-- test the probability of this entry, if false keep going and maybe we'll find another entry later
 							if(math.random() <= tonumber(entry[4])) then
-								-- if the value is empty, apply the default field
+								-- if the value is empty, apply the default value instead
 								local value = entry[3]
 								if ((value == nil) or (value == "\"\"")) and (default ~= nil) then
 									value = default
@@ -78,8 +78,6 @@ function metadata_set (minp, maxp, default)
 								-- finally, set the meta string of the item
 								local meta = minetest.env:get_meta(pos)
 								meta:set_string(entry[2], value)
-
-								break
 							end
 						end
 					end
