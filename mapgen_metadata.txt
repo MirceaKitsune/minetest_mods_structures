@@ -1,0 +1,2 @@
+default:sign_wall text "" 1
+default:sign_wall infotext "" 1

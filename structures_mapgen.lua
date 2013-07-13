@@ -4,7 +4,7 @@
 -- Settings
 
 -- file which contains the mapgen entries
-local MAPGEN_FILE = "mapgen.txt"
+local MAPGEN_FILE = "mapgen_structures.txt"
 -- probability of a structure group to spawn, per piece of world being generated
 local MAPGEN_GROUP_PROBABILITY = 0.2
 -- if the area we're spawning in didn't finish loading / generating, retry this many seconds

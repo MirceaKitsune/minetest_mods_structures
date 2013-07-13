@@ -13,8 +13,6 @@ local MAPGEN_BUILDINGS_LEVEL = 20
 local MAPGEN_BUILDINGS_BORDER = 2
 -- if true, create a floor under each building by this many nodes to fill empty space
 local MAPGEN_BUILDINGS_FILL = true
--- nodes that text can be assigned to for addresses (signs, screens, etc), leave empty to disable
-local MAPGEN_BUILDINGS_SIGNS = {"default:sign_wall"}
 
 -- Global functions - Buildings
 
@@ -38,10 +36,10 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 	end
 
 	-- now randomize the table so building instances won't be spawned in an uniform order
-	local structs = #instances
+	local count = #instances
 	for i in ipairs(instances) do
 		-- obtain a random entry to swap this entry with
-		local rand = math.random(structs)
+		local rand = math.random(count)
 
 		-- swap the two entries
 		local old = instances[i]
@@ -215,22 +213,7 @@ function mapgen_buildings_spawn (name, pos, angle, size, bottom, bury, trigger)
 	-- at last, create the building itself
 	io_area_import(pos1, pos2, angle, name, false)
 
-	-- changes to node metadata after the building has spawned are performed in this code
-	if (#MAPGEN_BUILDINGS_SIGNS ~= 0) then
-		for search_x = pos1.x, pos2.x do
-			for search_y = pos1.y, pos2.y do
-				for search_z = pos1.z, pos2.z do
-					-- if the structure contains signs, set their text to the address of this building
-					local pos_here = { x = search_x, y = search_y, z = search_z }
-					local node_here = minetest.env:get_node(pos_here)
-					if (node_here.name ~= "air") and (calculate_node_in_table(node_here, MAPGEN_BUILDINGS_SIGNS) == true) then
-						local address = pos.number..", "..name
-						local meta = minetest.env:get_meta(pos_here)
-						meta:set_string("text", address)
-						meta:set_string("infotext", '"'..address..'"')
-					end
-				end
-			end
-		end
-	end
+	-- apply custom metadata, with address as the default field
+	local address = pos.number..", "..name
+	metadata_set(pos1, pos2, address)
 end
