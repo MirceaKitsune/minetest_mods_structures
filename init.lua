@@ -5,7 +5,7 @@
 
 -- number of nodes in which a structure manager searches for markers
 -- higher values allow for larger areas but cause a longer loop to execute
-local CONNECT_DISTANCE = 50
+local CONNECT_DISTANCE = 100
 -- how frequently a node manager detects if markers were added or removed in its range
 -- high values cause slower updates, low values cause the check to be preformed more often which might be costly
 local CONNECT_TIME = 1
