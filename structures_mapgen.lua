@@ -76,8 +76,8 @@ local function groups_choose (height_min, height_max)
 	for i, entry in ipairs(mapgen_table) do
 		-- if any of the structure's height limits are within this group's range, this group is an option
 		-- the more structure types are possible to spawn here, the higher the group's probability
-		if (height_max > tonumber(entry[4])) and (height_min < tonumber(entry[5])) then
-			table.insert(group_list, entry[2])
+		if (height_max > tonumber(entry[5])) and (height_min < tonumber(entry[6])) then
+			table.insert(group_list, entry[1])
 		end
 	end
 
@@ -166,12 +166,13 @@ local function generate_get_scale (group)
 	-- loop through the mapgen table
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this structure belongs to the chosen mapgen group
-		if (entry[2] == group) then
+		-- TODO: Add roads too
+		if (entry[1] == group) and (entry[2] == "building") then
 			-- add the estimated horizontal size of buildings to group space
-			local size = io_get_size(0, entry[1])
-			scale = scale + math.ceil((size.x + size.z) / 2) * tonumber(entry[6])
+			local size = io_get_size(0, entry[3])
+			scale = scale + math.ceil((size.x + size.z) / 2) * tonumber(entry[7])
 			-- increase the structure count
-			structures = structures + tonumber(entry[6])
+			structures = structures + tonumber(entry[7])
 		end
 	end
 	-- divide space by the square root of total buildings to get the proper row / column sizes
@@ -204,6 +205,7 @@ local function spawn_group (minp, maxp, group, attempts)
 	end
 
 	-- get the the building list
+	local roads = mapgen_roads_get(pos, scale_horizontal, group)
 	local buildings = mapgen_buildings_get(pos, scale_horizontal, scale_vertical, group)
 
 	-- no suitable buildings exist, return
@@ -211,6 +213,11 @@ local function spawn_group (minp, maxp, group, attempts)
 
 	-- add this group to the group avoidance list
 	groups_avoid_add(pos, scale_horizontal, scale_vertical)
+
+	-- ROADS TEST:
+	minetest.after(3, function()
+		mapgen_roads_spawn(roads, pos.y + scale_vertical)
+	end)
 
 	for i, building in ipairs(buildings) do
 		-- schedule the building to spawn based on its position in the loop
@@ -224,12 +231,12 @@ end
 
 -- Global functions - Add and remove to and from file
 
-function mapgen_add (filename, group, node, height_min, height_max, count, bury)
+function mapgen_add (filename, group, type, node, height_min, height_max, count, bury)
 	-- remove the existing entry
 	mapgen_remove (filename)
 
 	-- add file to the mapgen table
-	entry = {filename, group, node, height_min, height_max, count, bury }
+	entry = {filename, group, type, node, height_min, height_max, count, bury }
 	table.insert(mapgen_table, entry)
 
 	mapgen_to_file()
@@ -237,7 +244,7 @@ end
 
 function mapgen_remove (filename)
 	for i, entry in ipairs(mapgen_table) do
-		if (entry[1] == filename) then
+		if (entry[3] == filename) then
 			table.remove(mapgen_table, i)
 			break
 		end

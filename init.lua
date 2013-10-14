@@ -224,7 +224,7 @@ minetest.register_node("structures:manager_enabled", {
 		elseif (fields.unset) then
 			io_markers_remove(pos)
 		elseif (fields.mapgen_add) then
-			mapgen_add(fields.file, fields.mapgen_group, fields.mapgen_node, fields.mapgen_height_min, fields.mapgen_height_max, fields.mapgen_count, fields.bury)
+			mapgen_add(fields.file, fields.mapgen_group, "building", fields.mapgen_node, fields.mapgen_height_min, fields.mapgen_height_max, fields.mapgen_count, fields.bury)
 		elseif (fields.mapgen_remove) then
 			mapgen_remove(fields.file)
 		end
@@ -263,5 +263,6 @@ minetest.register_abm({
 
 dofile(minetest.get_modpath("structures").."/structures_io.lua")
 dofile(minetest.get_modpath("structures").."/structures_mapgen.lua")
+dofile(minetest.get_modpath("structures").."/structures_mapgen_roads.lua")
 dofile(minetest.get_modpath("structures").."/structures_mapgen_buildings.lua")
 dofile(minetest.get_modpath("structures").."/structures_mapgen_metadata.lua")

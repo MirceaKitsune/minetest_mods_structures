@@ -18,7 +18,7 @@ local MAPGEN_BUILDINGS_FILL = true
 
 -- analyzes buildings in the mapgen group and returns them as a lists of parameters
 function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
-	-- parameters: structure [1], group [2], node [3], min height [4], max height [5], count [6], bury [7]
+	-- parameters: group [1], type [2], structure [3], node [4], min height [5], max height [6], count [7], bury [8]
 	-- x = left & right, z = up & down
 
 	-- buildings table which will be filled and returned by this function
@@ -27,9 +27,9 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 	-- first generate a list of indexes for all buildings, containing an entry for each time it will be spawned
 	local instances = { }
 	for i, entry in ipairs(mapgen_table) do
-		-- only if this building belongs to the chosen mapgen group
-		if (entry[2] == group) then
-			for x = 1, tonumber(entry[6]) do
+		-- only if this is a building which belongs to the chosen mapgen group
+		if (entry[1] == group) and (entry[2] == "building") then
+			for x = 1, tonumber(entry[7]) do
 				table.insert(instances, i)
 			end
 		end
@@ -90,7 +90,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		elseif (column < scale_horizontal / 2) then
 			angle = 270
 		end
-		local size = io_get_size(angle, entry[1])
+		local size = io_get_size(angle, entry[3])
 		-- actual space the building will take up
 		local building_width = size.x + MAPGEN_BUILDINGS_BORDER * 2
 		local building_height = size.z + MAPGEN_BUILDINGS_BORDER * 2
@@ -123,15 +123,15 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		for search = pos.y + scale_vertical, pos.y, -1 do
 			-- we scan from top to bottom, so the search might start above the building's maximum height limit
 			-- if however it gets below the minimum limit, there's no point to keep going
-			if (search <= tonumber(entry[4])) then
+			if (search <= tonumber(entry[5])) then
 				break
-			elseif (search <= tonumber(entry[5])) then
+			elseif (search <= tonumber(entry[6])) then
 				-- loop through each corner at this height
 				for i, v in pairs(corners) do
 					-- check if the node below is the trigger node
 					local pos_down = { x = v.x, y = search - 1, z = v.z }
 					local node_down = minetest.env:get_node(pos_down)
-					if (node_down.name == entry[3]) then
+					if (node_down.name == entry[4]) then
 						-- check if the node here is an air node or plant
 						local pos_here = { x = v.x, y = search, z = v.z }
 						local node_here = minetest.env:get_node(pos_here)
@@ -166,7 +166,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 
 				-- the building may spawn, insert it into the buildings table
 				-- parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]
-				table.insert(buildings, { entry[1], location, angle, size, corner_bottom, entry[7], entry[3] } )
+				table.insert(buildings, { entry[3], location, angle, size, corner_bottom, entry[8], entry[4] } )
 			end
 		end
 

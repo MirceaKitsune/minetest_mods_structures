@@ -1,10 +1,13 @@
 # name	position	angle	size	bottom	bury	node
-default_house_small	structures	default:dirt_with_grass	5	100	20	0	
-default_house_medium	structures	default:dirt_with_grass	5	100	15	0	
-default_house_large	structures	default:dirt_with_grass	5	100	10	0	
-default_tower	structures	default:dirt_with_grass	15	150	15	0	
-default_fountain_small	structures	default:dirt_with_grass	5	100	5	0	
-default_fountain_large	structures	default:dirt_with_grass	5	100	5	0	
-default_pole	structures	default:dirt_with_grass	5	100	10	0	
-default_farm_small	structures	default:dirt_with_grass	5	100	10	0	
-default_farm_large	structures	default:dirt_with_grass	5	100	5	0	
+# buildings
+structures	building	default_house_small	default:dirt_with_grass	5	100	20	0	
+structures	building	default_house_medium	default:dirt_with_grass	5	100	15	0	
+structures	building	default_house_large	default:dirt_with_grass	5	100	10	0	
+structures	building	default_tower	default:dirt_with_grass	15	150	15	0	
+structures	building	default_fountain_small	default:dirt_with_grass	5	100	5	0	
+structures	building	default_fountain_large	default:dirt_with_grass	5	100	5	0	
+structures	building	default_pole	default:dirt_with_grass	5	100	10	0	
+structures	building	default_farm_small	default:dirt_with_grass	5	100	10	0	
+structures	building	default_farm_large	default:dirt_with_grass	5	100	5	0	
+# roads
+structures	road	default_road	default:dirt_with_grass	5	100	10	0
