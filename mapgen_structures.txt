@@ -1,13 +1,19 @@
 # name	position	angle	size	bottom	bury	node
+# medatada expressions: $POSITION_X, $POSITION_Y, $POSITION_Z, $SIZE_X, $SIZE_Y, $SIZE_Z, $ANGLE, $NUMBER, $TRIGGER, $NAME, $GROUP
+# settings
+structures	settings	default:dirt_with_grass	5	100	10
 # buildings
-structures	building	default_house_small	default:dirt_with_grass	5	100	20	0	
-structures	building	default_house_medium	default:dirt_with_grass	5	100	15	0	
-structures	building	default_house_large	default:dirt_with_grass	5	100	10	0	
-structures	building	default_tower	default:dirt_with_grass	15	150	15	0	
-structures	building	default_fountain_small	default:dirt_with_grass	5	100	5	0	
-structures	building	default_fountain_large	default:dirt_with_grass	5	100	5	0	
-structures	building	default_pole	default:dirt_with_grass	5	100	10	0	
-structures	building	default_farm_small	default:dirt_with_grass	5	100	10	0	
-structures	building	default_farm_large	default:dirt_with_grass	5	100	5	0	
+structures	building	default_house_small	20	0	
+structures	building	default_house_medium	15	0	
+structures	building	default_house_large	10	0	
+structures	building	default_tower	15	0	
+structures	building	default_fountain_small	5	0	
+structures	building	default_fountain_large	5	0	
+structures	building	default_pole	10	0	
+structures	building	default_farm_small	10	0	
+structures	building	default_farm_large	5	0	
 # roads
-structures	road	default_road	default:dirt_with_grass	5	100	10	0
+structures	road	default_road	10	0
+#metadata
+structures	metadata	default:sign_wall	text	$NUMBER, $NAME, $GROUP	string	1
+structures	metadata	default:sign_wall	infotext	$NUMBER, $NAME, $GROUP	string	1

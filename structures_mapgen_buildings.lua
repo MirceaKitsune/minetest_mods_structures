@@ -3,22 +3,14 @@
 
 -- Settings
 
--- each building is delayed by this many seconds
--- high values cause buildings to spawn more slowly, low values deal more stress to the CPU and encourage incomplete spawns
-MAPGEN_BUILDINGS_DELAY = 0.5
--- only spawn if the height of each corner is within this distance against the ground (top is air and bottom is not)
--- low values reduce spawns on extreme terrain, but also decrease count
-local MAPGEN_BUILDINGS_LEVEL = 20
 -- add this many nodes to each side when cutting and adding the floor
 local MAPGEN_BUILDINGS_BORDER = 2
--- if true, create a floor under each building by this many nodes to fill empty space
-local MAPGEN_BUILDINGS_FILL = true
 
 -- Global functions - Buildings
 
 -- analyzes buildings in the mapgen group and returns them as a lists of parameters
 function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
-	-- parameters: group [1], type [2], structure [3], node [4], min height [5], max height [6], count [7], bury [8]
+	-- parameters: group [1], type [2], structure [3], count [4], bury [5]
 	-- x = left & right, z = up & down
 
 	-- buildings table which will be filled and returned by this function
@@ -29,7 +21,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this is a building which belongs to the chosen mapgen group
 		if (entry[1] == group) and (entry[2] == "building") then
-			for x = 1, tonumber(entry[7]) do
+			for x = 1, tonumber(entry[4]) do
 				table.insert(instances, i)
 			end
 		end
@@ -77,7 +69,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		end
 
 		-- location will be gradually determined in each direction
-		local location = { x = 0, y = 0, z = 0, number = 0 }
+		local location = { x = 0, y = pos.y, z = 0, number = 0 }
 		location.z = pos.z + row -- we determined Z location
 
 		-- choose angle (0, 90, 180, 270) based on distance from center, and size based on angle
@@ -108,67 +100,12 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 		end
 		location.x = edge -- we determined X location
 
-		-- add each of the building's corners to a table
-		local corners = { }
-		table.insert(corners, { x = location.x, z = location.z } )
-		table.insert(corners, { x = location.x, z = location.z + building_height } )
-		table.insert(corners, { x = location.x + building_width, z = location.z } )
-		table.insert(corners, { x = location.x + building_width, z = location.z + building_height } )
-		local corners_total = #corners
-		-- minimum and maximum heights will be calculated further down
-		-- in order for the checks to work, initialize them in reverse
-		local corner_bottom = pos.y + scale_vertical
-		local corner_top = pos.y
-		-- start scanning downward
-		for search = pos.y + scale_vertical, pos.y, -1 do
-			-- we scan from top to bottom, so the search might start above the building's maximum height limit
-			-- if however it gets below the minimum limit, there's no point to keep going
-			if (search <= tonumber(entry[5])) then
-				break
-			elseif (search <= tonumber(entry[6])) then
-				-- loop through each corner at this height
-				for i, v in pairs(corners) do
-					-- check if the node below is the trigger node
-					local pos_down = { x = v.x, y = search - 1, z = v.z }
-					local node_down = minetest.env:get_node(pos_down)
-					if (node_down.name == entry[4]) then
-						-- check if the node here is an air node or plant
-						local pos_here = { x = v.x, y = search, z = v.z }
-						local node_here = minetest.env:get_node(pos_here)
-						if (node_here.name == "air") or (minetest.registered_nodes[node_here.name].drawtype == "plantlike") then
-							-- this corner is touching our trigger node at surface level
-							-- check and apply minimum and maximum height
-							if (corner_bottom > pos_down.y) then
-								corner_bottom = pos_down.y
-							end
-							if (corner_top < pos_down.y) then
-								corner_top = pos_down.y
-							end
-							-- we checked everything we needed for this corner, it can be removed from the table
-							corners[i] = nil
-							corners_total = corners_total - 1
-						end
-					end
-				end
-			end
-		end
+		-- add the loop iteration into the location table (used for address signs)
+		location.number = i
 
-		-- each successful corner is removed from the table, so if there are any corners left it means something went wrong
-		if (corners_total <= 0) then
-			-- calculate if terrain roughness is acceptable
-			if (corner_top - corner_bottom <= MAPGEN_BUILDINGS_LEVEL) then
-				-- set the average height
-				local height_average = math.ceil((corner_bottom + corner_top) / 2)
-				location.y = height_average -- we determined Y location
-
-				-- add the loop iteration into the location table (used for address signs)
-				location.number = i
-
-				-- the building may spawn, insert it into the buildings table
-				-- parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]
-				table.insert(buildings, { entry[3], location, angle, size, corner_bottom, entry[8], entry[4] } )
-			end
-		end
+		-- the building may spawn, insert it into the buildings table
+		-- parameters: name [1], position [2], angle [3], size [4], bury [5]
+		table.insert(buildings, { entry[3], location, angle, size, entry[5] } )
 
 		-- add this building's upper-right corner to the right point list
 		upright = { }
@@ -187,7 +124,7 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 end
 
 -- naturally spawns a building with the given parameters
-function mapgen_buildings_spawn (name, pos, angle, size, bottom, bury, trigger, group)
+function mapgen_buildings_spawn (name, pos, angle, size, bury, group)
 
 	-- determine the corners of the spawn cube
 	-- since the I/O function doesn't include the start and end values as valid locations (only the space between them), decrease start position by 1 to get the right spot
@@ -196,13 +133,6 @@ function mapgen_buildings_spawn (name, pos, angle, size, bottom, bury, trigger, 
 	local pos1_frame = { x = pos.x - 1, y = pos.y - 1, z = pos.z - 1 }
 	local pos2_frame = { x = pos.x + size.x + MAPGEN_BUILDINGS_BORDER * 2, y = pos.y + size.y, z = pos.z + size.z + MAPGEN_BUILDINGS_BORDER * 2}
 
-	-- we'll spawn the building in a suitable spot, but what if it's the top of a peak?
-	-- to avoid parts of the building left floating, cover everything to the bottom
-	if (MAPGEN_BUILDINGS_FILL) then
-		local floor1 = { x = pos1_frame.x, y = pos.y, z = pos1_frame.z }
-		local floor2 = { x = pos2_frame.x, y = bottom, z = pos2_frame.z }
-		io_area_fill(floor1, floor2, trigger)
-	end
 	-- clear the area before spawning
 	io_area_fill(pos1_frame, pos2_frame, nil)
 
@@ -217,7 +147,7 @@ function mapgen_buildings_spawn (name, pos, angle, size, bottom, bury, trigger, 
 	local expressions = {
 		{ "POSITION_X", tostring(pos.x) }, { "POSITION_Y", tostring(pos.y) }, { "POSITION_Z", tostring(pos.z) },
 		{ "SIZE_X", tostring(size.x) }, { "SIZE_Y", tostring(size.y) }, { "SIZE_Z", tostring(size.z) },
-		{ "ANGLE", tostring(angle) }, { "NUMBER", tostring(pos.number) }, { "TRIGGER", trigger }, { "NAME", name }, { "GROUP", group }
+		{ "ANGLE", tostring(angle) }, { "NUMBER", tostring(pos.number) }, { "NAME", name }, { "GROUP", group }
 	}
-	metadata_set(pos1, pos2, expressions)
+	metadata_set(pos1, pos2, expressions, group)
 end

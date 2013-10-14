@@ -6,12 +6,15 @@
 -- file which contains the mapgen entries
 local MAPGEN_FILE = "mapgen_structures.txt"
 -- probability of a structure group to spawn, per piece of world being generated
-local MAPGEN_GROUP_PROBABILITY = 0.2
+local MAPGEN_GROUP_PROBABILITY = 0.4
 -- if the area we're spawning in didn't finish loading / generating, retry this many seconds
 -- low values preform checks more frequently, higher values are recommended when the world is slow to load
 local MAPGEN_GROUP_LOADED_RETRY = 3
 -- how many times to try spawning the group before giving up
 local MAPGEN_GROUP_LOADED_ATTEMPTS = 10
+-- spawning is delayed by this many seconds
+-- high values cause structures to spawn later, giving more time for other operations to finish
+local MAPGEN_GROUP_DELAY = 5
 -- amount of origins to maintain in the group avoidance list
 -- low values increase the risk of groups being ignored from distance calculations, high values store more data
 local MAPGEN_GROUP_TABLE_COUNT = 10
@@ -67,25 +70,73 @@ local function groups_avoid_check (pos, scale_horizontal, scale_vertical)
 	return true
 end
 
--- randomly choose a mapgen group accounting height limits
-local function groups_choose (height_min, height_max)
+-- randomly choose a mapgen group accounting height limits, and return the necessary parameters for spawning this group
+local function groups_get (pos_min, pos_max)
 	-- each acceptable group is added to this table
-	local group_list = {}
+	local list_group = { }
 
-	-- go through the mapgen table
+	-- go through the mapgen table and read all group settings
+	-- settings: group [1], type [2], node [3], height_min [4], height_max [5], probability [6]
 	for i, entry in ipairs(mapgen_table) do
-		-- if any of the structure's height limits are within this group's range, this group is an option
-		-- the more structure types are possible to spawn here, the higher the group's probability
-		if (height_max > tonumber(entry[5])) and (height_min < tonumber(entry[6])) then
-			table.insert(group_list, entry[1])
+		if (entry[2] == "settings") then
+			-- actual highest and lowest areas to scan in
+			local down = math.max(tonumber(entry[4]), pos_min.y)
+			local up = math.min(tonumber(entry[5]), pos_max.y)
+
+			-- only advance if this group is within the area's height range
+			if (pos_max.y > down) and (pos_min.y < up) then
+				-- minimum and maximum ground height will be calculated further down
+				-- in order for the scan to work, they must be initialized in reverse
+				local corner_top = down
+				local corner_bottom = up
+
+				-- loop through all of the group's corners
+				local corners = { }
+				table.insert(corners, { x = pos_min.x, z = pos_min.z } )
+				table.insert(corners, { x = pos_min.x, z = pos_max.z } )
+				table.insert(corners, { x = pos_max.x, z = pos_min.z } )
+				table.insert(corners, { x = pos_max.x, z = pos_max.z } )
+				local corners_total = #corners
+				for i, v in pairs(corners) do
+					-- scan from the highest point to the lowest
+					for search = up, down, -1 do
+						local pos_here = { x = v.x, y = search, z = v.z }
+						local node_here = minetest.env:get_node(pos_here)
+
+						-- check that this node is the trigger node, and account it for terrain height if so
+						if (node_here.name == entry[3]) then
+							if (corner_bottom > search) then
+								corner_bottom = search
+							end
+							if (corner_top < search) then
+								corner_top = search
+							end
+
+							-- we checked everything we needed for this corner, it can be removed from the table
+							corners[i] = nil
+							corners_total = corners_total - 1
+							break
+						end
+					end
+				end
+
+				-- if terrain level was detected and the trigger node was found, this group may spawn
+				if (corners_total == 0) then
+					-- add this group by the amount of probability it has
+					for x = 1, tonumber(entry[6]) do
+						table.insert(list_group, { entry[1], { low = corner_bottom, high = corner_top }, entry[3] })
+					end
+				end
+
+			end
 		end
 	end
 
 	-- no suitable groups exist, return nil
-	if (#group_list == 0) then return nil end
+	if (#list_group == 0) then return nil end
 	-- randomly choose an entry from the list of acceptable groups
-	local group_random = group_list[math.random(1, #group_list)]
-	return group_random
+	local list_group_random = list_group[math.random(1, #list_group)]
+	return list_group_random[1], list_group_random[2], list_group_random[3]
 end
 
 -- Local functions - Mapgen
@@ -161,36 +212,61 @@ end
 
 -- returns the size of this group in nodes
 local function generate_get_scale (group)
-	local scale = 0
+	local scale_horizontal = 0
+	local scale_vertical = 0
 	local structures = 0
+
 	-- loop through the mapgen table
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this structure belongs to the chosen mapgen group
 		-- TODO: Add roads too
 		if (entry[1] == group) and (entry[2] == "building") then
-			-- add the estimated horizontal size of buildings to group space
 			local size = io_get_size(0, entry[3])
-			scale = scale + math.ceil((size.x + size.z) / 2) * tonumber(entry[7])
+
+			-- add the estimated horizontal size of buildings to group space
+			scale_horizontal = scale_horizontal + math.ceil((size.x + size.z) / 2) * tonumber(entry[4])
+
+			-- if this building is the tallest, use its vertical size minus bury value
+			local height = size.y - tonumber(entry[5])
+			if (height > scale_vertical) then
+				scale_vertical = height
+			end
+
 			-- increase the structure count
-			structures = structures + tonumber(entry[7])
+			structures = structures + tonumber(entry[4])
 		end
 	end
-	-- divide space by the square root of total buildings to get the proper row / column sizes
-	scale = math.ceil(scale / math.sqrt(structures))
+	-- divide horizontal space by the square root of total buildings to get the proper row / column sizes
+	scale_horizontal = math.ceil(scale_horizontal / math.sqrt(structures))
 
-	return scale
+	return scale_horizontal, scale_vertical
+end
+
+-- prepares the area for structures to be spawned in
+local function generate_prepare (pos, height, scale_horizontal, scale_vertical, node)
+	-- build the floor, down to the estimated bottom of the terrain
+	local pos_ground = { x = pos.x + scale_horizontal, y = height.low, z = pos.z + scale_horizontal }
+	io_area_fill(pos, pos_ground, node)
+
+	-- clear the volume of the group, or the area of terrain we estimate it would cut if it's taller
+	local highest = math.max(pos.y + scale_vertical, height.high)
+	local pos_clear = { x = pos.x + scale_horizontal, y = highest, z = pos.z + scale_horizontal }
+	pos.y = pos.y - 1
+	io_area_fill(pos, pos_clear, nil)
 end
 
 -- finds a structure group to spawn and calculates each entry's properties
-local function spawn_group (minp, maxp, group, attempts)
+local function spawn_group (start, height, group, node, attempts)
 	-- if we're out of attempts give up
 	if (attempts <= 0) then return end
+	attempts = attempts - 1
 
-	-- choose top-left on the X and Z axes since that's where we start from, and bottom on Y axis
-	local pos = { x = minp.x, y = minp.y, z = minp.z }
+	-- center height and choose the upper-left-bottom corner as the starting point
+	local pos_height = math.floor((height.low + height.high) / 2)
+	local pos = { x = start.x, y = pos_height, z = start.z }
+
 	-- calculate the area this group will use up
-	scale_horizontal = generate_get_scale(group)
-	scale_vertical = maxp.y - minp.y
+	local scale_horizontal, scale_vertical = generate_get_scale(group)
 
 	-- if this group is too close to another group stop here
 	if (groups_avoid_check(pos, scale_horizontal, scale_vertical) == false) then return end
@@ -199,58 +275,32 @@ local function spawn_group (minp, maxp, group, attempts)
 	loaded = generate_get_loaded(pos, scale_horizontal, scale_vertical)
 	if (loaded == false) then
 		minetest.after(MAPGEN_GROUP_LOADED_RETRY, function()
-			spawn_group(minp, maxp, group, attempts - 1)
+			spawn_group(start, height, group, node, attempts)
 		end)
 		return
 	end
 
-	-- get the the building list
+	-- get the the building and road lists
 	local roads = mapgen_roads_get(pos, scale_horizontal, group)
 	local buildings = mapgen_buildings_get(pos, scale_horizontal, scale_vertical, group)
 
-	-- no suitable buildings exist, return
-	if (#buildings == 0) then return end
+	-- stop here if there's nothing to spawn
+	if (#roads == 0) and (#buildings == 0) then return end
 
 	-- add this group to the group avoidance list
 	groups_avoid_add(pos, scale_horizontal, scale_vertical)
 
-	-- ROADS TEST:
-	minetest.after(3, function()
-		mapgen_roads_spawn(roads, pos.y + scale_vertical)
-	end)
+	-- schedule the buildings and roads for spawning
+	minetest.after(MAPGEN_GROUP_DELAY, function()
+		generate_prepare (pos, height, scale_horizontal, scale_vertical, node)
 
-	for i, building in ipairs(buildings) do
-		-- schedule the building to spawn based on its position in the loop
-		local delay = i * MAPGEN_BUILDINGS_DELAY
-		minetest.after(delay, function()
-			-- parameters: name [1], position [2], angle [3], size [4], bottom [5], bury [6], node [7]
-			mapgen_buildings_spawn(building[1], building[2], building[3], building[4], building[5], building[6], building[7], group)
-		end)
-	end
-end
+		--mapgen_roads_spawn(roads, pos.y)
 
--- Global functions - Add and remove to and from file
-
-function mapgen_add (filename, group, type, node, height_min, height_max, count, bury)
-	-- remove the existing entry
-	mapgen_remove (filename)
-
-	-- add file to the mapgen table
-	entry = {filename, group, type, node, height_min, height_max, count, bury }
-	table.insert(mapgen_table, entry)
-
-	mapgen_to_file()
-end
-
-function mapgen_remove (filename)
-	for i, entry in ipairs(mapgen_table) do
-		if (entry[3] == filename) then
-			table.remove(mapgen_table, i)
-			break
+		for i, building in ipairs(buildings) do
+			-- parameters: name [1], position [2], angle [3], size [4], bury [5]
+			mapgen_buildings_spawn(building[1], building[2], building[3], building[4], building[5], group)
 		end
-	end
-
-	mapgen_to_file()
+	end)
 end
 
 -- Minetest functions
@@ -264,8 +314,8 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	if(math.random() > MAPGEN_GROUP_PROBABILITY) then return end
 
 	-- randomly choose a mapgen group
-	group = groups_choose(minp.y, maxp.y)
+	local group, height, node = groups_get(minp, maxp)
 	if (group == nil) then return end
 
-	spawn_group (minp, maxp, group, MAPGEN_GROUP_LOADED_ATTEMPTS)
+	spawn_group (minp, height, group, node, MAPGEN_GROUP_LOADED_ATTEMPTS)
 end)

@@ -109,7 +109,7 @@ end
 
 -- once a point and its directions have been determined, this spawns the road segments
 function mapgen_roads_spawn (schemes, height)
-	-- scheme: start_point [1], end_points [2], name[3], size[4]
+	-- scheme: start_point [1], end_points [2], name [3], size [4]
 	for i, scheme in ipairs(schemes) do
 
 		local pos_start = { x = scheme[1].x, z = scheme[1].z }
@@ -159,7 +159,7 @@ end
 
 -- analyzes buildings in the mapgen group and returns them as a lists of parameters
 function mapgen_roads_get (pos, scale_horizontal, group)
-	-- parameters: group [1], type [2], structure [3], node [4], min height [5], max height [6], count [7], bury [8]
+	-- parameters: group [1], type [2], structure [3], count [4], bury [5]
 
 	local mins = {x = pos.x, z = pos.z}
 	local maxs = {x = pos.x + scale_horizontal, z = pos.z + scale_horizontal}
@@ -190,7 +190,7 @@ function mapgen_roads_get (pos, scale_horizontal, group)
 
 			if (size ~= nil) then
 				-- initialize the road network with a starting point
-				local instances = tonumber(entry[7]) - 1
+				local instances = tonumber(entry[4]) - 1
 				local points = { {x = math.random(mins.x, maxs.x), z = math.random(mins.z, maxs.z), paths = {true, true, true, true} } }
 
 				while (instances > 0) do

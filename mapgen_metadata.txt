@@ -1,4 +1,0 @@
-# $POSITION_X, $POSITION_Y, $POSITION_Z, $SIZE_X, $SIZE_Y, $SIZE_Z, $ANGLE, $NUMBER, $TRIGGER, $NAME, $GROUP
-# name	field	value	probability
-default:sign_wall	text	$NUMBER, $NAME, $GROUP	1
-default:sign_wall	infotext	$NUMBER, $NAME, $GROUP	1
