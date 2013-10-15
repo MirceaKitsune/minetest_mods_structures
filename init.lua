@@ -33,6 +33,22 @@ function calculate_node_in_table (node, list)
 	return false
 end
 
+-- shuffle the entries of a table
+function calculate_table_shuffle(list)
+	local count = #list
+	for i in ipairs(list) do
+		-- obtain a random entry to swap this entry with
+		local rand = math.random(count)
+
+		-- swap the two entries
+		local old = list[i]
+		list[i] = list[rand]
+		list[rand] = old
+	end
+
+	return list
+end
+
 -- Local functions - Formspec
 
 local function make_formspec (file, io_angle, area_size, area_nodes)

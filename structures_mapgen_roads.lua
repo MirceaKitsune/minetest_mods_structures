@@ -40,6 +40,7 @@ end
 local function branch (points, mins, maxs, name, size)
 
 	local new_points = { }
+	local new_rectangles = { }
 	local new_schemes = { }
 
 	-- loop through all points in the list
@@ -48,7 +49,6 @@ local function branch (points, mins, maxs, name, size)
 
 		-- loop through the directions of this point
 		for x, dir in ipairs(point.paths) do
-
 			-- each point may randomly branch in any direction except the one it came from
 			path_first = math.random(0, 1) == 1
 			path_second = math.random(0, 1) == 1
@@ -64,6 +64,9 @@ local function branch (points, mins, maxs, name, size)
 						local new_point = {x = point.x + distance, z = point.z, paths = {path_first, path_second, false, path_third} }
 						table.insert(new_points, new_point)
 						table.insert(new_points_this, new_point)
+
+						local new_rectangle = { start_x = new_point.x + 1, start_z = new_point.z + 1, end_x = point.x + size - 1, end_z = point.z + size - 1 }
+						table.insert(new_rectangles, new_rectangle)
 					end
 				elseif (x == 2) then
 					-- create a new point upward
@@ -72,6 +75,10 @@ local function branch (points, mins, maxs, name, size)
 						local new_point = {x = point.x, z = point.z + distance, paths = {path_first, path_second, path_third, false} }
 						table.insert(new_points, new_point)
 						table.insert(new_points_this, new_point)
+						z_highest = new_point.z
+
+						local new_rectangle = { start_x = point.x + 1, start_z = point.z + 1, end_x = new_point.x + size - 1, end_z = new_point.z + size - 1 }
+						table.insert(new_rectangles, new_rectangle)
 					end
 				elseif (x == 3) then
 					-- create a new point to the right
@@ -80,6 +87,9 @@ local function branch (points, mins, maxs, name, size)
 						local new_point = {x = point.x + distance, z = point.z, paths = {false, path_first, path_second, path_third} }
 						table.insert(new_points, new_point)
 						table.insert(new_points_this, new_point)
+
+						local new_rectangle = { start_x = point.x + size + 1, start_z = point.z + 1, end_x = new_point.x + size - 1, end_z = new_point.z + size - 1 }
+						table.insert(new_rectangles, new_rectangle)
 					end
 				elseif (x == 4) then
 					-- create a new point downward
@@ -88,6 +98,9 @@ local function branch (points, mins, maxs, name, size)
 						local new_point = {x = point.x, z = point.z + distance, paths = {path_first, false, path_second, path_third} }
 						table.insert(new_points, new_point)
 						table.insert(new_points_this, new_point)
+
+						local new_rectangle = { start_x = new_point.x + 1, start_z = new_point.z + 1, end_x = point.x + size - 1, end_z = point.z + size - 1 }
+						table.insert(new_rectangles, new_rectangle)
 					end
 				end
 			end
@@ -102,7 +115,7 @@ local function branch (points, mins, maxs, name, size)
 	end
 
 	-- return the new points that were generated, as well as the road scheme we got
-	return new_points, new_schemes
+	return new_points, new_rectangles, new_schemes
 end
 
 -- Global functions - Roads
@@ -165,6 +178,7 @@ function mapgen_roads_get (pos, scale_horizontal, group)
 	local maxs = {x = pos.x + scale_horizontal, z = pos.z + scale_horizontal}
 	-- roads table which will be filled and returned by this function
 	local schemes = { }
+	local rectangles = { }
 
 	for i, entry in ipairs(mapgen_table) do
 		-- only if this is a road which belongs to the chosen mapgen group
@@ -194,7 +208,7 @@ function mapgen_roads_get (pos, scale_horizontal, group)
 				local points = { {x = math.random(mins.x, maxs.x), z = math.random(mins.z, maxs.z), paths = {true, true, true, true} } }
 
 				while (instances > 0) do
-					local new_points, new_schemes = branch(points, mins, maxs, entry[3], size.x)
+					local new_points, new_rectangles, new_schemes = branch(points, mins, maxs, entry[3], size.x)
 					points = new_points
 
 					-- keep going as long as new points exist
@@ -204,9 +218,12 @@ function mapgen_roads_get (pos, scale_horizontal, group)
 						break
 					end
 
-					-- add the new schemes to the final schemes table
+					-- add the new schemes and rectangles to the final table
 					for _, v in ipairs(new_schemes) do
 						table.insert(schemes, v)
+					end
+					for _, v in ipairs(new_rectangles) do
+						table.insert(rectangles, v)
 					end
 				end
 			end
@@ -214,5 +231,5 @@ function mapgen_roads_get (pos, scale_horizontal, group)
 	end
 
 	-- return the scheme containing pieces of road designs, which will later be put together and generated
-	return schemes
+	return schemes, rectangles
 end

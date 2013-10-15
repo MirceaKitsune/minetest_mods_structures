@@ -9,7 +9,7 @@ local MAPGEN_BUILDINGS_BORDER = 2
 -- Global functions - Buildings
 
 -- analyzes buildings in the mapgen group and returns them as a lists of parameters
-function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
+function mapgen_buildings_get (pos, scale_horizontal, boxes, group)
 	-- parameters: group [1], type [2], structure [3], count [4], bury [5]
 	-- x = left & right, z = up & down
 
@@ -28,95 +28,93 @@ function mapgen_buildings_get (pos, scale_horizontal, scale_vertical, group)
 	end
 
 	-- now randomize the table so building instances won't be spawned in an uniform order
-	local count = #instances
-	for i in ipairs(instances) do
-		-- obtain a random entry to swap this entry with
-		local rand = math.random(count)
+	calculate_table_shuffle(instances)
 
-		-- swap the two entries
-		local old = instances[i]
-		instances[i] = instances[rand]
-		instances[rand] = old
-	end
+	-- stores the bounding boxes of areas to avoid, must contain start position
+	local rectangles = boxes
+	table.insert(rectangles, { start_x = pos.x, start_z = pos.z, end_x = pos.x, end_z = pos.z })
 
-	-- store the top-right corners of buildings in the left and right columns (compared to the current column)
-	-- in each colum, we check the left list and set the right one for later use, then right becomes left when we advance to the next colum
-	local points_left = { }
-	local points_right = { }
-	-- the column and row we are currently in
-	local row = 0
-	local column = 0
-	-- largest X size, used to calculate columns based on row width
-	local largest_x = 0
-
-	-- go through the mapgen table
+	-- go through the instances
 	for i, instance in ipairs(instances) do
 		entry = mapgen_table[instance]
 
-		-- if the current row was filled, jump to the next column
-		if (row > scale_horizontal) then
-			-- start again from the top at next column
-			row = 0
-			column = column + largest_x
-			largest_x = 0
-			-- the list of next points becomes the list of current points
-			points_left = points_right
-			points_right = { }
-		end
-		-- if the columns were filled, return the sturcute table and stop doing anything
-		if (column > scale_horizontal) then
-			return buildings
-		end
+		-- used later to check if a position was found
+		local found_pos = false
+		-- location will be fully determined later
+		local location = { x = pos.x, y = pos.y, z = pos.z, number = 0 }
 
-		-- location will be gradually determined in each direction
-		local location = { x = 0, y = pos.y, z = 0, number = 0 }
-		location.z = pos.z + row -- we determined Z location
-
-		-- choose angle (0, 90, 180, 270) based on distance from center, and size based on angle
-		-- it's hard to find an accurate formula here, but it keeps buildings oriented uniformly
-		local angle = 0
-		if (row < scale_horizontal / 2) and (column < scale_horizontal / 2) then
-			angle = 180
-		elseif (row < scale_horizontal / 2) then
-			angle = 90
-		elseif (column < scale_horizontal / 2) then
-			angle = 270
-		end
+		-- choose angle (0, 90, 180, 270)
+		-- TODO: Find a way to orient them uniformly, harder because position is determined later but we need to know angle + size for position
+		local angle = 90 * math.random(1, 4)
 		local size = io_get_size(angle, entry[3])
 		-- actual space the building will take up
 		local building_width = size.x + MAPGEN_BUILDINGS_BORDER * 2
 		local building_height = size.z + MAPGEN_BUILDINGS_BORDER * 2
 
-		-- determine which of the buildings in the left row have their top-right corners intersecting this building, and push this building to the right accordingly
-		local edge = pos.x
-		for w, point in ipairs(points_left) do
-			-- check if the point intersects our building
-			if (point.z >= location.z - building_height) and (point.z <= location.z + building_height) then
-				-- if this point is further to the right than the last one, bump the edge past its location
-				if (edge < point.x) then
-					edge = point.x
+		-- determine the X and Z position of this building
+		-- first shuffle the rectangles table, to avoid a fixed search order
+		calculate_table_shuffle(rectangles)
+		-- loop 1: go through the recrangles we want to place this building next to
+		for w, rectangle1 in ipairs(rectangles) do
+			-- there are two ways to attempt placing this building around the rectangle: under it or right of it
+			local pos_under = { x = rectangle1.start_x, z = rectangle1.end_z + 1 }
+			local pos_right = { x = rectangle1.end_x + 1, z = rectangle1.start_z }
+			local found_under = true
+			local found_right = true
+
+			-- loop 2: go through the recrangles that might intersect this building
+			for v, rectangle2 in ipairs(rectangles) do
+				-- only check if this rectangle intersects our range
+				if (v ~= w) and
+				((rectangle2.start_x >= rectangle1.start_x) or (rectangle2.end_x >= rectangle1.start_x)) and
+				((rectangle2.start_z >= rectangle1.start_z) or (rectangle2.end_z >= rectangle1.start_z)) then
+					-- check under
+					if (found_under == true) and
+					(pos_under.x + building_width >= rectangle2.start_x) and (pos_under.z + building_height >= rectangle2.start_z) then
+						found_under = false
+					end
+					-- check right
+					if (found_right == true) and
+					(pos_right.x + building_width >= rectangle2.start_x) and (pos_right.z + building_height >= rectangle2.start_z) then
+						found_right = false
+					end
+				end
+
+				-- if both options failed, there's no need to keep going
+				if (found_under == false) and (found_right == false) then
+					break
 				end
 			end
+
+			-- see which options succeeded if any (prefer under)
+			-- also make sure the building would still be within the group's bounds
+			if (found_under == true) and
+			(pos_under.x + building_width <= pos.x + scale_horizontal) and (pos_under.z + building_height <= pos.z + scale_horizontal) then
+				location.x = pos_under.x
+				location.z = pos_under.z
+				found_pos = true
+				break
+			elseif (found_right == true) and
+			(pos_right.x + building_width <= pos.x + scale_horizontal) and (pos_right.z + building_height <= pos.z + scale_horizontal) then
+				location.x = pos_right.x
+				location.z = pos_right.z
+				found_pos = true
+				break
+			end
 		end
-		location.x = edge -- we determined X location
 
-		-- add the loop iteration into the location table (used for address signs)
-		location.number = i
+		-- only if this building was found in the loop above
+		if (found_pos == true) then
+			-- add the loop iteration into the location table (used for address signs)
+			location.number = i
 
-		-- the building may spawn, insert it into the buildings table
-		-- parameters: name [1], position [2], angle [3], size [4], bury [5]
-		table.insert(buildings, { entry[3], location, angle, size, entry[5] } )
+			-- the building may spawn, insert it into the buildings table
+			-- parameters: name [1], position [2], angle [3], size [4], bury [5]
+			table.insert(buildings, { entry[3], location, angle, size, entry[5] } )
 
-		-- add this building's upper-right corner to the right point list
-		upright = { }
-		upright.x = location.x + building_width
-		upright.z = location.z
-		table.insert(points_right, upright)
-		-- push the row so the next building will spawn right under this one
-		row = row + building_height
-		-- update the largest X size of this row
-		if (building_width > largest_x) then
-			largest_x = building_width
+			-- add this building's corners to the rectangle list
+			local rectangle_new = { start_x = location.x, start_z = location.z, end_x = location.x + building_width - 1, end_z = location.z + building_height - 1 }
+			table.insert(rectangles, rectangle_new)
 		end
 	end
 

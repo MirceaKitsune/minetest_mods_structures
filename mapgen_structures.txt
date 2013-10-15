@@ -1,7 +1,7 @@
 # name	position	angle	size	bottom	bury	node
 # medatada expressions: $POSITION_X, $POSITION_Y, $POSITION_Z, $SIZE_X, $SIZE_Y, $SIZE_Z, $ANGLE, $NUMBER, $TRIGGER, $NAME, $GROUP
 # settings
-structures	settings	default:dirt_with_grass	5	100	10
+structures	settings	default:dirt_with_grass	0	100	10
 # buildings
 structures	building	default_house_small	20	0	
 structures	building	default_house_medium	15	0	

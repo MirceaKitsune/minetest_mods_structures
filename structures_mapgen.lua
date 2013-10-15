@@ -281,8 +281,8 @@ local function spawn_group (start, height, group, node, attempts)
 	end
 
 	-- get the the building and road lists
-	local roads = mapgen_roads_get(pos, scale_horizontal, group)
-	local buildings = mapgen_buildings_get(pos, scale_horizontal, scale_vertical, group)
+	local roads, road_rectangles = mapgen_roads_get(pos, scale_horizontal, group)
+	local buildings = mapgen_buildings_get(pos, scale_horizontal, road_rectangles, group)
 
 	-- stop here if there's nothing to spawn
 	if (#roads == 0) and (#buildings == 0) then return end
@@ -294,7 +294,7 @@ local function spawn_group (start, height, group, node, attempts)
 	minetest.after(MAPGEN_GROUP_DELAY, function()
 		generate_prepare (pos, height, scale_horizontal, scale_vertical, node)
 
-		--mapgen_roads_spawn(roads, pos.y)
+		mapgen_roads_spawn(roads, pos.y)
 
 		for i, building in ipairs(buildings) do
 			-- parameters: name [1], position [2], angle [3], size [4], bury [5]
