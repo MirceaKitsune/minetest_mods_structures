@@ -13,7 +13,7 @@ structures	building	default_pole	10	0
 structures	building	default_farm_small	10	0	
 structures	building	default_farm_large	5	0	
 # roads
-structures	road	default_road	10	0
+structures	road	default_road	15	0
 #metadata
 structures	metadata	default:sign_wall	text	$NUMBER, $NAME, $GROUP	string	1
 structures	metadata	default:sign_wall	infotext	$NUMBER, $NAME, $GROUP	string	1
