@@ -9,9 +9,9 @@ MAPGEN_ROADS_MIN = 3
 -- Local functions - Branch
 
 -- when a new point branches from an existing one, this determines its distance
-local function branch_size (current_pos, new_pos, size)
+local function branch_size (length_start, length_end, axis, size, rectangles)
 	local dist = 0
-	local dist_scan = math.abs(current_pos - new_pos) - size
+	local dist_scan = math.abs(length_start - length_end) - size
 	local size_min = size * MAPGEN_ROADS_MIN
 
 	-- if there's not enough room to fit one road segment, do nothing
@@ -24,12 +24,33 @@ local function branch_size (current_pos, new_pos, size)
 
 	-- now see how many road segments fit inside this distance
 	while (dist_scan >= size) do
+		-- scan the rectangles of other roads and detect if this segment would intersect any
+		local dist_check = dist
+		if (length_start > length_end) then
+			dist_check = length_start - dist_check + 1
+		else
+			dist_check = length_start + dist_check - 1
+		end
+		-- do the actual scan
+		for i, rectangle in ipairs(rectangles) do
+			if ((dist_check >= rectangle.start_x) and (dist_check <= rectangle.end_x) and
+			(axis >= rectangle.start_z) and (axis <= rectangle.end_z)) or
+
+			((dist_check >= rectangle.start_z) and (dist_check <= rectangle.end_z) and
+			(axis >= rectangle.start_x) and (axis <= rectangle.end_x)) then
+
+				-- this segment would intersect and existing road, stop here
+				break
+			end
+		end
+
+		-- increase size and decrease scan distance by segment size
 		dist = dist + size
 		dist_scan = dist_scan - size
 	end
 
 	-- handle negative direction
-	if (current_pos > new_pos) then
+	if (length_start > length_end) then
 		dist = -dist
 	end
 
@@ -37,7 +58,7 @@ local function branch_size (current_pos, new_pos, size)
 end
 
 -- branches multiple points from each point in a list
-local function branch (points, mins, maxs, name, size)
+local function branch (points, mins, maxs, name, size, rectangles)
 
 	local new_points = { }
 	local new_rectangles = { }
@@ -50,16 +71,16 @@ local function branch (points, mins, maxs, name, size)
 		-- loop through the directions of this point
 		for x, dir in ipairs(point.paths) do
 			-- each point may randomly branch in any direction except the one it came from
-			path_first = math.random(0, 1) == 1
-			path_second = math.random(0, 1) == 1
-			path_third = math.random(0, 1) == 1
+			local path_first = math.random(0, 1) == 1
+			local path_second = math.random(0, 1) == 1
+			local path_third = math.random(0, 1) == 1
 
 			-- create a new point in this direction if it's free
 			if (dir == true) then
 				-- directions: 1 = left, 2 = up, 3 = right, 4 = down
 				if (x == 1) then
 					-- create a new point to the left
-					local distance = branch_size (point.x, mins.x, size)
+					local distance = branch_size (point.x, mins.x, point.z + size, size, rectangles)
 					if (distance ~= nil) then
 						local new_point = {x = point.x + distance, z = point.z, paths = {path_first, path_second, false, path_third} }
 						table.insert(new_points, new_point)
@@ -70,7 +91,7 @@ local function branch (points, mins, maxs, name, size)
 					end
 				elseif (x == 2) then
 					-- create a new point upward
-					local distance = branch_size (point.z, maxs.z, size)
+					local distance = branch_size (point.z, maxs.z, point.x, size, rectangles)
 					if (distance ~= nil) then
 						local new_point = {x = point.x, z = point.z + distance, paths = {path_first, path_second, path_third, false} }
 						table.insert(new_points, new_point)
@@ -82,7 +103,7 @@ local function branch (points, mins, maxs, name, size)
 					end
 				elseif (x == 3) then
 					-- create a new point to the right
-					local distance = branch_size (point.x, maxs.x, size)
+					local distance = branch_size (point.x, maxs.x, point.z, size, rectangles)
 					if (distance ~= nil) then
 						local new_point = {x = point.x + distance, z = point.z, paths = {false, path_first, path_second, path_third} }
 						table.insert(new_points, new_point)
@@ -93,7 +114,7 @@ local function branch (points, mins, maxs, name, size)
 					end
 				elseif (x == 4) then
 					-- create a new point downward
-					local distance = branch_size (point.z, mins.z, size)
+					local distance = branch_size (point.z, mins.z, point.x + size, size, rectangles)
 					if (distance ~= nil) then
 						local new_point = {x = point.x, z = point.z + distance, paths = {path_first, false, path_second, path_third} }
 						table.insert(new_points, new_point)
@@ -208,7 +229,7 @@ function mapgen_roads_get (pos, scale_horizontal, group)
 				local points = { {x = math.random(mins.x, maxs.x), z = math.random(mins.z, maxs.z), paths = {true, true, true, true} } }
 
 				while (instances > 0) do
-					local new_points, new_rectangles, new_schemes = branch(points, mins, maxs, entry[3], size.x)
+					local new_points, new_rectangles, new_schemes = branch(points, mins, maxs, entry[3], size.x, rectangles)
 					points = new_points
 
 					-- keep going as long as new points exist
