@@ -1,15 +1,15 @@
-- Consider replacing the metadata system with per-structure script files, ran after a structure has spawned naturally. Such scripts would be editable from the formspec, but must be limited to disallow griefing. See mesecons - luacontroller for example.
-
 - Find a way to use schematic probabilities, to make some nodes only appear sometimes each spawn (eg: flowers in houses). For this we need a way to set them for specific nodes... perhaps when clicking them with an I/O Marker?
 
-- Allow multiple trigger nodes to be specified for a structure, possibly as a comma separated string
-
-- Add a system for nodes with inventories (chests, furnaces, etc) to randomly add items to them, using the metadata system.
+- Add a system for nodes with inventories (chests, furnaces, etc) allowing items to be added to them, using the metadata system.
 
 - Add debug messages. When the preference is set to 1, only print normal messages and errors. When set to 2, print everything important the code is doing.
 
-- Try to center structure spawning around around the group trigger origin.
+- Add support for multiple floors on buildings. When the option is greater than 0, the normal building file (eg: structure.mts) is looped vertically. The start schematic is suffixed with _S and the end with _E (eg: structure_S.mts, structure_E.mts). There should also be a new metadata parameter which passes the floor number.
 
-- Create a road system, which places roads between structures. To do this we'll need a system in the structure manager (via formspec) to register some structures as road segments, road intersections, and road ends. In the mpgen code, we need to choose multiple points in the group (where we determine building positions) and loop road segments to connect them. Since the start of a road will be higher / lower than its end, each segment should go up / down by 1 node in the needed pattern to reach that destination. If there's no way to incline the road enough to reach both points, abort making a road there. When no roads are registered for a mapgen group, make none. This should be added in another lua file (structures_mapgen_roads.lua).
+- Allow towns to be generated via console command, not just by exploring. The command requires a privilege, takes group name as input (if none is specified choose randomly), and creates the town at the player's origin. In this case we no longer build a floor or care if the group's trigger node was found.
 
-- A wall system which surrounds the area / range of the group. The structure manager (formspec) must allow registering wall segments, wall corners / connections, and gates. Like the roads idea, walls would only be spawned if any are registered for that mapgen group. Should be done in its own lua file once again (structures_mapgen_walls.lua).
+- Re-implement the ability to edit the mapgen text file via formspec, but this time just use a text editor on the file.
+
+- Consider making collision detection also account height, so that buried / floating buildings and roads can avoid buildings they wouldn't intersect in height. We should also detect if such structures might contribute to the vertical size of the group, considering they'd only avoid structures of intersecting height.
+
+- Refractor the mapgen system so that a city isn't spawned all at once. Instead, each building and road segment is added to a table (as position + scale + angle + etc) and on_generated places the buildings in its range each time. But how would we know the average level of the city's floor, or how to even decide where we place the city?

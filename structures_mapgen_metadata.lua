@@ -4,7 +4,7 @@
 -- Global functions - Metadata
 
 -- set metadata accordingly for everything in this area
-function metadata_set (minp, maxp, expressions, group)
+function mapgen_metadata_set (minp, maxp, expressions, group)
 	-- randomize the metadata table first
 	-- parameters: group [1], type [2], node [3], item [4], value [5], format [6], probability [7]
 
