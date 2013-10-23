@@ -67,8 +67,10 @@ end
 local function branch_draw_intersection(paths)
 	-- intersection shapes are assumed to start down-up and left-right at 0 angle
 	-- directions: 1 = left, 2 = up, 3 = right, 4 = down
-	local shape = ""
-	local angle = 0
+
+	-- intersections that connect to 4 point (X shape), default
+	local shape = "_X"
+	local angle = 90 * math.random(0, 3)
 
 	-- intersections that connect to 1 point (P shape)
 	if (paths[1] == true) and (paths[2] == false) and (paths[3] == false) and (paths[4] == false) then
@@ -119,11 +121,6 @@ local function branch_draw_intersection(paths)
 	elseif (paths[1] == false) and (paths[2] == true) and (paths[3] == true) and (paths[4] == true) then
 		shape = "_T"
 		angle = 270
-
-	-- intersections that connect to 4 point (X shape)
-	else
-		local shape = "_X"
-		local angle = 90 * math.random(0, 3)
 	end
 
 	return shape, angle
@@ -161,13 +158,13 @@ local function branch_draw (name, point_start, points_end, size_h, size_v, heigh
 			-- the point is down
 			for w = pos_start.z - size_h, pos_end.z + size_h, -size_h do
 				local pos = { x = pos_start.x, y = height, z = w }
-				table.insert(new_scheme, { name.."_I", pos, 0, size })
+				table.insert(new_scheme, { name.."_I", pos, 180, size })
 			end
 		elseif (pos_start.z < pos_end.z) then
 			-- the point is up
 			for w = pos_start.z + size_h, pos_end.z - size_h, size_h do
 				local pos = { x = pos_start.x, y = height, z = w }
-				table.insert(new_scheme, { name.."_I", pos, 180, size })
+				table.insert(new_scheme, { name.."_I", pos, 0, size })
 			end
 		end
 	end
@@ -190,7 +187,7 @@ local function branch (name, points, mins, maxs, size, height, limit, schemes, r
 		-- directions: 1 = left, 2 = up, 3 = right, 4 = down
 		if (point.paths[1] == false) and (new_limit > 0) then
 			-- create a new point to the left
-			local distance = branch_size(point.x - 1, mins.x + size_h, point.z, size_h, rectangles)
+			local distance = branch_size(point.x - 1, mins.x, point.z, size_h, rectangles)
 			if (distance ~= nil) then
 				point.paths[1] = true
 				new_limit = new_limit - 1
@@ -209,7 +206,7 @@ local function branch (name, points, mins, maxs, size, height, limit, schemes, r
 		end
 		if (point.paths[2] == false) and (new_limit > 0) then
 			-- create a new point upward
-			local distance = branch_size(point.z + size_h, maxs.z - size_h, point.x, size_h, rectangles)
+			local distance = branch_size(point.z + size_h, maxs.z, point.x, size_h, rectangles)
 			if (distance ~= nil) then
 				point.paths[2] = true
 				new_limit = new_limit - 1
@@ -228,7 +225,7 @@ local function branch (name, points, mins, maxs, size, height, limit, schemes, r
 		end
 		if (point.paths[3] == false) and (limit > 0) then
 			-- create a new point to the right
-			local distance = branch_size(point.x + size_h, maxs.x - size_h, point.z, size_h, rectangles)
+			local distance = branch_size(point.x + size_h, maxs.x, point.z, size_h, rectangles)
 			if (distance ~= nil) then
 				point.paths[3] = true
 				new_limit = new_limit - 1
@@ -247,7 +244,7 @@ local function branch (name, points, mins, maxs, size, height, limit, schemes, r
 		end
 		if (point.paths[4] == false) and (new_limit > 0) then
 			-- create a new point downward
-			local distance = branch_size(point.z - 1, mins.z + size_h, point.x, size_h, rectangles)
+			local distance = branch_size(point.z - 1, mins.z, point.x, size_h, rectangles)
 			if (distance ~= nil) then
 				point.paths[4] = true
 				new_limit = new_limit - 1
@@ -279,11 +276,11 @@ end
 -- Global functions - Roads
 
 -- analyzes roads in the mapgen table and acts accordingly
-function mapgen_roads_get (pos, scale_horizontal, group)
+function mapgen_roads_get (pos, scale_h, group)
 	-- parameters: group [1], type [2], structure [3], count [4], offset [5]
 
 	local mins = { x = pos.x, z = pos.z }
-	local maxs = { x = pos.x + scale_horizontal, z = pos.z + scale_horizontal }
+	local maxs = { x = pos.x + scale_h, z = pos.z + scale_h }
 	-- roads table which will be filled and returned by this function
 	local schemes = { }
 	local rectangles = { }
@@ -313,7 +310,7 @@ function mapgen_roads_get (pos, scale_horizontal, group)
 			if (size ~= nil) then
 				-- initialize the road network with a starting point
 				local limit = tonumber(entry[4]) - 1
-				local points = { {x = math.random(mins.x, maxs.x), z = math.random(mins.z, maxs.z), paths = {false, false, false, false} } }
+				local points = { {x = math.random(mins.x, maxs.x - size.x), z = math.random(mins.z, maxs.z - size.z), paths = {false, false, false, false} } }
 				table.insert(rectangles, { start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1 })
 
 				while (#points > 0) do
