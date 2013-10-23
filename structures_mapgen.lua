@@ -98,6 +98,14 @@ local function groups_get_scale (group)
 			-- get size based on the type of structure
 			if (entry[2] == "building") then
 				size = io_get_size(0, entry[3])
+
+				-- if this building has floors, use the height of all segments
+				local floors = tonumber(entry[6])
+				if (floors > 0) then
+					local size_start = io_get_size(0, entry[3].."_(")
+					local size_end = io_get_size(0, entry[3].."_)")
+					size.y = size_start.y + size_end.y + (size.y * floors)
+				end
 			elseif (entry[2] == "road") then
 				size = io_get_size(0, entry[3].."_X")
 			end

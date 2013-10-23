@@ -1,5 +1,5 @@
 # Parameters - Settings: group [1], type [2], trigger nodes [3], filler nodes [4], height_min [5], height_max [6], probability [7]
-# Parameters - Builings: group [1], type [2], structure [3], count [4], offset [5]
+# Parameters - Builings: group [1], type [2], structure [3], count [4], offset [5], floors [6]
 # Parameters - Roads: group [1], type [2], structure [3], count [4], offset [5]
 # Parameters - Metadata: group [1], type [2], node [3], item [4], value [5], format [6], probability [7]
 # Metadata: $POSITION_X, $POSITION_Y, $POSITION_Z, $SIZE_X, $SIZE_Y, $SIZE_Z, $ANGLE, $NUMBER, $NAME, $GROUP
@@ -8,15 +8,16 @@
 structures	settings	default:dirt_with_grass default:dirt	default:dirt_with_grass	1	100	1
 
 # Default - Buildings:
-structures	building	default_house_small	20	0
-structures	building	default_house_medium	15	0
-structures	building	default_house_large	10	0
-structures	building	default_tower	15	0
-structures	building	default_fountain_small	5	0
-structures	building	default_fountain_large	5	0
-structures	building	default_pole	10	0
-structures	building	default_farm_small	10	-1
-structures	building	default_farm_large	5	-1
+structures	building	default_house_small	20	0	0
+structures	building	default_house_medium	15	0	0
+structures	building	default_house_large	10	0	0
+structures	building	default_hotel	10	0	2
+structures	building	default_tower	15	0	0
+structures	building	default_fountain_small	5	0	0
+structures	building	default_fountain_large	5	0	0
+structures	building	default_pole	10	0	0
+structures	building	default_farm_small	10	-1	0
+structures	building	default_farm_large	5	-1	0
 
 # Default - Roads:
 structures	road	default_road	15	-1

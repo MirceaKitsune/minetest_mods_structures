@@ -4,8 +4,6 @@
 
 - Add debug messages. When the preference is set to 1, only print normal messages and errors. When set to 2, print everything important the code is doing.
 
-- Add support for multiple floors on buildings. When the option is greater than 0, the normal building file (eg: structure.mts) is looped vertically. The start schematic is suffixed with _S and the end with _E (eg: structure_S.mts, structure_E.mts). There should also be a new metadata parameter which passes the floor number.
-
 - Allow towns to be generated via console command, not just by exploring. The command requires a privilege, takes group name as input (if none is specified choose randomly), and creates the town at the player's origin. In this case we no longer build a floor or care if the group's trigger node was found.
 
 - Re-implement the ability to edit the mapgen text file via formspec, but this time just use a text editor on the file.
