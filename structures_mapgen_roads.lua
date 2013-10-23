@@ -63,11 +63,82 @@ local function branch_size (length_start, length_end, axis, size, rectangles)
 	return dist
 end
 
+-- decides which shape and at which angle an intersection should use, based on the roads it connects
+local function branch_draw_intersection(paths)
+	-- intersection shapes are assumed to start down-up and left-right at 0 angle
+	-- directions: 1 = left, 2 = up, 3 = right, 4 = down
+	local shape = ""
+	local angle = 0
+
+	-- intersections that connect to 1 point (P shape)
+	if (paths[1] == true) and (paths[2] == false) and (paths[3] == false) and (paths[4] == false) then
+		shape = "_P"
+		angle = 90
+	elseif (paths[1] == false) and (paths[2] == true) and (paths[3] == false) and (paths[4] == false) then
+		shape = "_P"
+		angle = 180
+	elseif (paths[1] == false) and (paths[2] == false) and (paths[3] == true) and (paths[4] == false) then
+		shape = "_P"
+		angle = 270
+	elseif (paths[1] == false) and (paths[2] == false) and (paths[3] == false) and (paths[4] == true) then
+		shape = "_P"
+		angle = 0
+
+	-- intersections that connect to 2 point (L shape)
+	elseif (paths[1] == true) and (paths[2] == false) and (paths[3] == false) and (paths[4] == true) then
+		shape = "_L"
+		angle = 0
+	elseif (paths[1] == false) and (paths[2] == false) and (paths[3] == true) and (paths[4] == true) then
+		shape = "_L"
+		angle = 270
+	elseif (paths[1] == true) and (paths[2] == true) and (paths[3] == false) and (paths[4] == false) then
+		shape = "_L"
+		angle = 90
+	elseif (paths[1] == false) and (paths[2] == true) and (paths[3] == true) and (paths[4] == false) then
+		shape = "_L"
+		angle = 180
+
+	-- intersections that connect to 2 point (I shape)
+	elseif (paths[1] == false) and (paths[2] == true) and (paths[3] == false) and (paths[4] == true) then
+		shape = "_I"
+		angle = 180 * math.random(0, 1)
+	elseif (paths[1] == true) and (paths[2] == false) and (paths[3] == true) and (paths[4] == false) then
+		shape = "_I"
+		angle = 90 + (180 * math.random(0, 1))
+
+	-- intersections that connect to 3 point (T shape)
+	elseif (paths[1] == true) and (paths[2] == false) and (paths[3] == true) and (paths[4] == true) then
+		shape = "_T"
+		angle = 0
+	elseif (paths[1] == true) and (paths[2] == true) and (paths[3] == false) and (paths[4] == true) then
+		shape = "_T"
+		angle = 90
+	elseif (paths[1] == true) and (paths[2] == true) and (paths[3] == true) and (paths[4] == false) then
+		shape = "_T"
+		angle = 180
+	elseif (paths[1] == false) and (paths[2] == true) and (paths[3] == true) and (paths[4] == true) then
+		shape = "_T"
+		angle = 270
+
+	-- intersections that connect to 4 point (X shape)
+	else
+		local shape = "_X"
+		local angle = 90 * math.random(0, 3)
+	end
+
+	return shape, angle
+end
+
 -- obtains the position and rotation of all road segments between the given points
 local function branch_draw (name, point_start, points_end, size_h, size_v, height)
 	local new_scheme = { }
 	local pos_start = { x = point_start.x, z = point_start.z }
 	local size = { x = size_h, y = size_v, z = size_h }
+
+	-- draw the intersection at the starting point
+	local point_start_pos = { x = pos_start.x, y = height, z = pos_start.z }
+	local point_start_shape, point_start_angle = branch_draw_intersection(point_start.paths)
+	table.insert(new_scheme, { name..point_start_shape, point_start_pos, point_start_angle, size })
 
 	-- loop through the end points if any
 	for x, point_end in ipairs(points_end) do
@@ -78,25 +149,25 @@ local function branch_draw (name, point_start, points_end, size_h, size_v, heigh
 			-- the point is left
 			for w = pos_start.x - size_h, pos_end.x + size_h, -size_h do
 				local pos = { x = w, y = height, z = pos_start.z }
-				table.insert(new_scheme, { name.."_I", pos, 0, size })
+				table.insert(new_scheme, { name.."_I", pos, 90, size })
 			end
 		elseif (pos_start.x < pos_end.x) then
 			-- the point is right
 			for w = pos_start.x + size_h, pos_end.x - size_h, size_h do
 				local pos = { x = w, y = height, z = pos_start.z }
-				table.insert(new_scheme, { name.."_I", pos, 180, size })
+				table.insert(new_scheme, { name.."_I", pos, 270, size })
 			end
 		elseif (pos_start.z > pos_end.z) then
 			-- the point is down
 			for w = pos_start.z - size_h, pos_end.z + size_h, -size_h do
 				local pos = { x = pos_start.x, y = height, z = w }
-				table.insert(new_scheme, { name.."_I", pos, 90, size })
+				table.insert(new_scheme, { name.."_I", pos, 0, size })
 			end
 		elseif (pos_start.z < pos_end.z) then
 			-- the point is up
 			for w = pos_start.z + size_h, pos_end.z - size_h, size_h do
 				local pos = { x = pos_start.x, y = height, z = w }
-				table.insert(new_scheme, { name.."_I", pos, 270, size })
+				table.insert(new_scheme, { name.."_I", pos, 180, size })
 			end
 		end
 	end
@@ -105,8 +176,9 @@ local function branch_draw (name, point_start, points_end, size_h, size_v, heigh
 end
 
 -- calculates the branching of end points from starting points
-local function branch (name, points, mins, maxs, size, height, schemes, rectangles)
+local function branch (name, points, mins, maxs, size, height, limit, schemes, rectangles)
 	local new_points = { }
+	local new_limit = limit
 
 	-- loop through the starting points
 	for i, point in ipairs(points) do
@@ -114,14 +186,16 @@ local function branch (name, points, mins, maxs, size, height, schemes, rectangl
 		local size_h = size.x
 		local size_v = size.y
 
-		-- each point may branch in any direction except the one it came from
+		-- each point may branch in any direction except the one it came from, as long as the point limit of this road hasn't been reached
 		-- directions: 1 = left, 2 = up, 3 = right, 4 = down
-		if (point.paths[1] == true) then
+		if (point.paths[1] == false) and (new_limit > 0) then
 			-- create a new point to the left
 			local distance = branch_size(point.x - 1, mins.x + size_h, point.z, size_h, rectangles)
 			if (distance ~= nil) then
-				point.paths[1] = false
-				local new_point = {x = point.x + distance, z = point.z, paths = {true, true, false, true} }
+				point.paths[1] = true
+				new_limit = new_limit - 1
+
+				local new_point = {x = point.x + distance, z = point.z, paths = {false, false, true, false} }
 				table.insert(new_points, new_point)
 				table.insert(new_points_this, new_point)
 
@@ -133,15 +207,16 @@ local function branch (name, points, mins, maxs, size, height, schemes, rectangl
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
-		if (point.paths[2] == true) then
+		if (point.paths[2] == false) and (new_limit > 0) then
 			-- create a new point upward
 			local distance = branch_size(point.z + size_h, maxs.z - size_h, point.x, size_h, rectangles)
 			if (distance ~= nil) then
-				point.paths[2] = false
-				local new_point = {x = point.x, z = point.z + distance, paths = {true, true, true, false} }
+				point.paths[2] = true
+				new_limit = new_limit - 1
+
+				local new_point = {x = point.x, z = point.z + distance, paths = {false, false, false, true} }
 				table.insert(new_points, new_point)
 				table.insert(new_points_this, new_point)
-				z_highest = new_point.z
 
 				-- add road rectangle
 				local new_rectangle = { start_x = point.x, start_z = point.z + size_h, end_x = new_point.x + size_h - 1, end_z = new_point.z - 1 }
@@ -151,12 +226,14 @@ local function branch (name, points, mins, maxs, size, height, schemes, rectangl
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
-		if (point.paths[3] == true) then
+		if (point.paths[3] == false) and (limit > 0) then
 			-- create a new point to the right
 			local distance = branch_size(point.x + size_h, maxs.x - size_h, point.z, size_h, rectangles)
 			if (distance ~= nil) then
-				point.paths[3] = false
-				local new_point = {x = point.x + distance, z = point.z, paths = {false, true, true, true} }
+				point.paths[3] = true
+				new_limit = new_limit - 1
+
+				local new_point = {x = point.x + distance, z = point.z, paths = {true, false, false, false} }
 				table.insert(new_points, new_point)
 				table.insert(new_points_this, new_point)
 
@@ -168,12 +245,14 @@ local function branch (name, points, mins, maxs, size, height, schemes, rectangl
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
-		if (point.paths[4] == true) then
+		if (point.paths[4] == false) and (new_limit > 0) then
 			-- create a new point downward
 			local distance = branch_size(point.z - 1, mins.z + size_h, point.x, size_h, rectangles)
 			if (distance ~= nil) then
-				point.paths[4] = false
-				local new_point = {x = point.x, z = point.z + distance, paths = {true, false, true, true} }
+				point.paths[4] = true
+				new_limit = new_limit - 1
+
+				local new_point = {x = point.x, z = point.z + distance, paths = {false, true, false, false} }
 				table.insert(new_points, new_point)
 				table.insert(new_points_this, new_point)
 
@@ -194,7 +273,7 @@ local function branch (name, points, mins, maxs, size, height, schemes, rectangl
 	end
 
 	-- return the new points that were generated, which will be sent back to this function to continue the road network
-	return new_points
+	return new_points, new_limit
 end
 
 -- Global functions - Roads
@@ -216,7 +295,7 @@ function mapgen_roads_get (pos, scale_horizontal, group)
 			-- get the size of this road
 			-- each segment must be square and all segments the same size horizontally
 			local size = nil
-			local roads = { "_I", "_L", "_T", "_X" }
+			local roads = { "_P", "_I", "_L", "_T", "_X" }
 			for w, road in ipairs(roads) do
 				local current_size = io_get_size(0, entry[3]..road)
 				if (current_size.x ~= current_size.z) then
@@ -233,28 +312,16 @@ function mapgen_roads_get (pos, scale_horizontal, group)
 
 			if (size ~= nil) then
 				-- initialize the road network with a starting point
-				local instances = tonumber(entry[4]) - 1
-				local points = { {x = math.random(mins.x, maxs.x), z = math.random(mins.z, maxs.z), paths = {true, true, true, true} } }
+				local limit = tonumber(entry[4]) - 1
+				local points = { {x = math.random(mins.x, maxs.x), z = math.random(mins.z, maxs.z), paths = {false, false, false, false} } }
 				table.insert(rectangles, { start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1 })
 
-				while (instances > 0) do
-					-- if we have more points than the remaining count of this road, trim the point table
-					if (#points > instances) then
-						for i = #points - instances + 1, #points do
-							points[i] = nil
-						end
-					end
-
+				while (#points > 0) do
 					-- branch the existing points, then prepare the new ones for branching in the next loop iteration
-					local new_points = branch(entry[3], points, mins, maxs, size, pos.y + tonumber(entry[5]), schemes, rectangles)
+					-- this loop ends when no new points are created and all existing points were handles
+					local new_points, new_limit = branch(entry[3], points, mins, maxs, size, pos.y + tonumber(entry[5]), limit, schemes, rectangles)
 					points = new_points
-
-					-- keep going as long as new points exist
-					if (#new_points > 0) then
-						instances = instances - #new_points
-					else
-						break
-					end
+					limit = new_limit
 				end
 			end
 		end
