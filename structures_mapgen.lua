@@ -19,7 +19,7 @@ local MAPGEN_GROUP_DELAY_ATTEMPTS = 20
 local MAPGEN_GROUP_DELAY = 5
 -- spawning is delayed by this many seconds
 -- high values cause structures to spawn later, giving more time for other operations to finish
-local MAPGEN_GROUP_DELAY_SPAWN = 1
+local MAPGEN_GROUP_DELAY_SPAWN = 3
 -- amount of origins to maintain in the group avoidance list
 -- low values increase the risk of groups being ignored from distance calculations, high values store more data
 local MAPGEN_GROUP_TABLE_COUNT = 10

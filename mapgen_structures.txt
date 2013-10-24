@@ -5,23 +5,26 @@
 # Metadata: $POSITION_X, $POSITION_Y, $POSITION_Z, $SIZE_X, $SIZE_Y, $SIZE_Z, $ANGLE, $NUMBER, $NAME, $GROUP
 
 # Default - Settings:
-structures	settings	default:dirt_with_grass default:dirt	default:dirt_with_grass	1	100	1
+default_town	settings	default:dirt_with_grass default:dirt	default:dirt_with_grass default:cobble	2	100	1
 
 # Default - Buildings:
-structures	building	default_house_small	20	0	0
-structures	building	default_house_medium	15	0	0
-structures	building	default_house_large	10	0	0
-structures	building	default_hotel	10	0	2
-structures	building	default_tower	15	0	0
-structures	building	default_fountain_small	5	0	0
-structures	building	default_fountain_large	5	0	0
-structures	building	default_pole	10	0	0
-structures	building	default_farm_small	10	-1	0
-structures	building	default_farm_large	5	-1	0
+default_town	building	default_town_house_tiny_1	5	0	0
+default_town	building	default_town_house_tiny_2	5	0	0
+default_town	building	default_town_house_tiny_3	5	0	0
+default_town	building	default_town_house_small	10	-5	0
+default_town	building	default_town_house_medium	15	-5	0
+default_town	building	default_town_house_large_1	10	-5	0
+default_town	building	default_town_house_large_2	10	-5	0
+default_town	building	default_town_hotel	10	0	2
+default_town	building	default_town_tower	5	0	0
+default_town	building	default_town_farm	5	-2	0
+default_town	building	default_town_park	5	0	0
+default_town	building	default_town_fountain	5	0	0
+default_town	building	default_town_well	5	-7	0
 
 # Default - Roads:
-structures	road	default_road	15	-1
+default_town	road	default_town_road	15	-8
 
 # Default - Metadata:
-structures	metadata	default:sign_wall	text	$NUMBER, $NAME, $GROUP	string	1
-structures	metadata	default:sign_wall	infotext	$NUMBER, $NAME, $GROUP	string	1
+default_town	metadata	default:sign_wall	text	$NUMBER, $NAME, $GROUP	string	1
+default_town	metadata	default:sign_wall	infotext	$NUMBER, $NAME, $GROUP	string	1
