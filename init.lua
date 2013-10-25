@@ -25,7 +25,7 @@ end
 -- checks if the node is in the specified list
 function calculate_node_in_table (node, list)
 	for i, v in ipairs(list) do
-		if (node.name == v) then
+		if (node == v) then
 			return true
 		end
 	end

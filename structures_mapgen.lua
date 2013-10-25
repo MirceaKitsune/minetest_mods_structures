@@ -16,10 +16,10 @@ local MAPGEN_GROUP_DELAY_RETRY = 5
 local MAPGEN_GROUP_DELAY_ATTEMPTS = 20
 -- preparations are delayed by this many seconds
 -- high values cause calculations to take place later, giving more time for other operations to finish
-local MAPGEN_GROUP_DELAY = 5
+local MAPGEN_GROUP_DELAY = 3
 -- spawning is delayed by this many seconds
 -- high values cause structures to spawn later, giving more time for other operations to finish
-local MAPGEN_GROUP_DELAY_SPAWN = 3
+local MAPGEN_GROUP_DELAY_SPAWN = 1
 -- amount of origins to maintain in the group avoidance list
 -- low values increase the risk of groups being ignored from distance calculations, high values store more data
 local MAPGEN_GROUP_TABLE_COUNT = 10
@@ -289,21 +289,6 @@ end
 
 -- Local functions - Generate
 
--- clears and prepares an area before the structures are spawned
-local function generate_spawn_prepare (pos, terrain, scale_horizontal, scale_vertical, filler)
-	local pos1 = { x = pos.x - 1, y = pos.y - 1, z = pos.z - 1}
-	local pos2 = { x = pos.x + scale_horizontal + 1, y = pos.y + scale_vertical + 1, z = pos.z + scale_horizontal + 1}
-
-	-- clear the volume of the group, or highest intersecting terrain if that's taller
-	pos2.y = math.max(pos2.y - 1, terrain.high)
-	io_area_fill(pos1, pos2, nil)
-
-	-- build the floor, down to the estimated bottom of the terrain
-	pos1.y = pos1.y + 1
-	pos2.y = terrain.low
-	io_area_fill(pos1, pos2, filler)
-end
-
 -- spawns all structures in the given schematic
 function generate_spawn_structures (schematics, group)
 	-- schematics: name [1], position [2], angle [3], size [4]
@@ -330,8 +315,25 @@ function generate_spawn_structures (schematics, group)
 			{ "SIZE_X", tostring(size.x) }, { "SIZE_Y", tostring(size.y) }, { "SIZE_Z", tostring(size.z) },
 			{ "ANGLE", tostring(angle) }, { "NUMBER", tostring(i) }, { "NAME", name }, { "GROUP", group }
 		}
+		pos1 = { x = pos.x, y = pos.y, z = pos.z }
+		pos2 = { x = pos.x + size.x - 1, y = pos.y + size.y - 1, z = pos.z + size.z - 1 }
 		mapgen_metadata_set(pos1, pos2, expressions, group)
 	end
+end
+
+-- clears and prepares an area before the structures are spawned
+local function generate_spawn_prepare (pos, terrain, scale_horizontal, scale_vertical, filler)
+	local pos1 = { x = pos.x - 1, y = pos.y - 1, z = pos.z - 1}
+	local pos2 = { x = pos.x + scale_horizontal + 1, y = pos.y + scale_vertical + 1, z = pos.z + scale_horizontal + 1}
+
+	-- clear the volume of the group, or highest intersecting terrain if that's taller
+	pos2.y = math.max(pos2.y - 1, terrain.high)
+	io_area_fill(pos1, pos2, nil)
+
+	-- build the floor, down to the estimated bottom of the terrain
+	pos1.y = pos1.y + 1
+	pos2.y = terrain.low
+	io_area_fill(pos1, pos2, filler)
 end
 
 -- this fetches the structures of the given group and organizes them in a list

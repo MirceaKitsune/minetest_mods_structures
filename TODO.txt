@@ -11,3 +11,5 @@
 - Consider making collision detection also account height, so that buried / floating buildings and roads can avoid buildings they wouldn't intersect in height. We should also detect if such structures might contribute to the vertical size of the group, considering they'd only avoid structures of intersecting height.
 
 - Refractor the mapgen system so that a city isn't spawned all at once. Instead, each building and road segment is added to a table (as position + scale + angle + etc) and on_generated places the buildings in its range each time. But how would we know the average level of the city's floor, or how to even decide where we place the city?
+
+- Allow roads to have multiple random starting points rather than just one, so roads of the same type can appear in multiple places without always connecting to each other.
