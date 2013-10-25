@@ -59,7 +59,8 @@ function mapgen_buildings_get (pos, scale_h, boxes, group)
 		-- only advance if this is a building which belongs to the chosen mapgen group
 		if (entry[1] == group) and (entry[2] == "building") then
 			-- spawn this building based on its probability
-			for x = 1, tonumber(entry[4]) do
+			local count = calculate_random(entry[4], false)
+			for x = 1, count do
 				table.insert(instances, i)
 			end
 		end
@@ -72,7 +73,7 @@ function mapgen_buildings_get (pos, scale_h, boxes, group)
 		entry = mapgen_table[instance]
 
 		-- get number of floors this building has
-		local floors = tonumber(entry[6])
+		local floors = calculate_random(entry[6], false)
 
 		-- choose angle (0, 90, 180, 270)
 		-- TODO: Find a way to orient buildings uniformly, difficult because position is determined later but we already need to know angle + size for position
@@ -101,7 +102,8 @@ function mapgen_buildings_get (pos, scale_h, boxes, group)
 			-- used later to check if a position was found
 			local found_pos = false
 			-- location will be fully determined later
-			local location = { x = pos.x, y = pos.y + tonumber(entry[5]), z = pos.z }
+			local offset = calculate_random(entry[5], false)
+			local location = { x = pos.x, y = pos.y + offset, z = pos.z }
 
 			-- determine the X and Z position of this building
 			-- first shuffle the rectangles table, to avoid a fixed search order

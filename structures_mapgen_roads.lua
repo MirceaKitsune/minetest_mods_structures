@@ -309,14 +309,16 @@ function mapgen_roads_get (pos, scale_h, group)
 
 			if (size ~= nil) then
 				-- initialize the road network with a starting point
-				local limit = tonumber(entry[4]) - 1
+				local limit = calculate_random(entry[4], false) - 1
 				local points = { {x = math.random(mins.x, maxs.x - size.x), z = math.random(mins.z, maxs.z - size.z), paths = {false, false, false, false} } }
 				table.insert(rectangles, { start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1 })
+				-- get the offset of this road
+				local offset = calculate_random(entry[5], false)
 
 				while (#points > 0) do
 					-- branch the existing points, then prepare the new ones for branching in the next loop iteration
 					-- this loop ends when no new points are created and all existing points were handles
-					local new_points, new_limit = branch(entry[3], points, mins, maxs, size, pos.y + tonumber(entry[5]), limit, schemes, rectangles)
+					local new_points, new_limit = branch(entry[3], points, mins, maxs, size, pos.y + offset, limit, schemes, rectangles)
 					points = new_points
 					limit = new_limit
 				end

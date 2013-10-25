@@ -49,6 +49,30 @@ function calculate_table_shuffle(list)
 	return list
 end
 
+-- calculates a random value from a list of space separated numbers
+function calculate_random(line, return_max)
+	local value_min = nil
+	local value_max = nil
+
+	-- obtain the minimum and maximum values
+	-- the string should only have one or two parameters (min and max), but do a full search just in case
+	for item in line:gmatch("%S+") do
+		if (value_max == nil) or (tonumber(item) > value_max) then
+			value_max = tonumber(item)
+		end
+		if (value_min == nil) or (tonumber(item) < value_min) then
+			value_min = tonumber(item)
+		end
+	end
+
+	-- return a random value in range or the maximum value
+	if (return_max == true) or (value_min == value_max) then
+		return value_max
+	else
+		return math.random(value_min, value_max)
+	end
+end
+
 -- Local functions - Formspec
 
 local function make_formspec (file, io_angle, area_size, area_nodes)

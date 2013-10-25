@@ -99,8 +99,8 @@ local function groups_get_scale (group)
 			if (entry[2] == "building") then
 				size = io_get_size(0, entry[3])
 
-				-- if this building has floors, use the height of all segments
-				local floors = tonumber(entry[6])
+				-- if this building has floors, use the maximum height of all segments
+				local floors = calculate_random(entry[6], true)
 				if (floors > 0) then
 					local size_start = io_get_size(0, entry[3].."_(")
 					local size_end = io_get_size(0, entry[3].."_)")
@@ -111,17 +111,19 @@ local function groups_get_scale (group)
 			end
 
 			if (size ~= nil) then
+				local count = calculate_random(entry[4], true)
+
 				-- add the estimated horizontal scale of buildings to group space
-				scale_horizontal = scale_horizontal + math.ceil((size.x + size.z) / 2) * tonumber(entry[4])
+				scale_horizontal = scale_horizontal + math.ceil((size.x + size.z) / 2) * count
 
 				-- if this is the tallest structure, use its vertical size plus offset value
-				local height = size.y + tonumber(entry[5])
+				local height = size.y + calculate_random(entry[5], true)
 				if (height > scale_vertical) then
 					scale_vertical = height
 				end
 
 				-- increase the structure count
-				structures = structures + tonumber(entry[4])
+				structures = structures + count
 			end
 		end
 	end
