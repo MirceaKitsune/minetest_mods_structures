@@ -77,6 +77,9 @@ end
 
 local function make_formspec (file, io_angle, area_size, area_nodes)
 		local formspec="size[6,4]"..
+			default.gui_bg..
+			default.gui_bg_img..
+			default.gui_slots..
 			"field[0,0;4,2;file;File;"..file.."]"..
 			"field[4,0;2,2;io_angle;Import angle;"..io_angle.."]"..
 			"label[0,1;Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes.."]"..
