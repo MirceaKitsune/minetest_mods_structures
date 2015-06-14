@@ -8,22 +8,22 @@
 default_town	settings	2	20	1
 
 # Default - Buildings:
-default_town	building	default_town_house_tiny_1	5	0	0
-default_town	building	default_town_house_tiny_2	5	0	0
-default_town	building	default_town_house_tiny_3	5	0	0
-default_town	building	default_town_house_small	10	-5	0
-default_town	building	default_town_house_medium	15	-5	0
-default_town	building	default_town_house_large_1	10	-5	0
-default_town	building	default_town_house_large_2	10	-5	0
-default_town	building	default_town_hotel	10	0	2
-default_town	building	default_town_tower	5	0	0
-default_town	building	default_town_farm	5	-2	0
-default_town	building	default_town_park	5	0	0
-default_town	building	default_town_fountain	5	0	0
-default_town	building	default_town_well	5	-7	0
+default_town	building	default_town_house_tiny_1	15	0	0
+default_town	building	default_town_house_tiny_2	15	0	0
+default_town	building	default_town_house_tiny_3	15	0	0
+default_town	building	default_town_house_small	25	-5	0
+default_town	building	default_town_house_medium	50	-5	0
+default_town	building	default_town_house_large_1	25	-5	0
+default_town	building	default_town_house_large_2	25	-5	0
+default_town	building	default_town_hotel	25	0	2
+default_town	building	default_town_tower	15	0	0
+default_town	building	default_town_farm	15	-2	0
+default_town	building	default_town_park	15	0	0
+default_town	building	default_town_fountain	15	0	0
+default_town	building	default_town_well	15	-7	0
 
 # Default - Roads:
-default_town	road	default_town_road	15	-8
+default_town	road	default_town_road	50	-8
 
 # Default - Metadata:
 default_town	metadata	default:sign_wall	text	$NUMBER, $NAME, $GROUP	string	1

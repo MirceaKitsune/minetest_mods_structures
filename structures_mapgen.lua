@@ -14,8 +14,8 @@ local MAPGEN_DELAY_MAX = 10
 -- enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn
 local MAPGEN_KEEP_STRUCTURES = false
 -- the size of the virtual cube used per town, must be larger than the radius of the biggest possible town
-local MAPGEN_CUBE_SIZE_HORIZONTAL = 250
-local MAPGEN_CUBE_SIZE_VERTICAL = 50
+local MAPGEN_CUBE_SIZE_HORIZONTAL = 500
+local MAPGEN_CUBE_SIZE_VERTICAL = 100
 
 -- Local & Global values - Groups and mapgen
 
