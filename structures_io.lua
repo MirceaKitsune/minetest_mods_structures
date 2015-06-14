@@ -199,7 +199,7 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 		if (file == nil) then return end
 		file:close()
 
-		minetest.place_schematic(pos_start, path, angle)
+		minetest.place_schematic(pos_start, path, angle, _, true)
 
 		-- we need to call on_construct for each node that has one, otherwise some nodes won't work correctly and even crash
 		for search_x = pos_start.x, pos_end.x do
