@@ -14,7 +14,8 @@ local MAPGEN_DELAY_MAX = 10
 -- enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn
 local MAPGEN_KEEP_STRUCTURES = false
 -- the size of the virtual cube used per town, must be larger than the radius of the biggest possible town
-local MAPGEN_CUBE_SIZE = 250
+local MAPGEN_CUBE_SIZE_HORIZONTAL = 250
+local MAPGEN_CUBE_SIZE_VERTICAL = 50
 
 -- Local & Global values - Groups and mapgen
 
@@ -122,14 +123,14 @@ end
 -- returns the index of the virtual cube addressed by the given position
 local function generate_cube (pos)
 	local cube_minp = {
-		x = math.floor(pos.x / MAPGEN_CUBE_SIZE) * MAPGEN_CUBE_SIZE,
-		y = math.floor(pos.y / MAPGEN_CUBE_SIZE) * MAPGEN_CUBE_SIZE,
-		z = math.floor(pos.z / MAPGEN_CUBE_SIZE) * MAPGEN_CUBE_SIZE,
+		x = math.floor(pos.x / MAPGEN_CUBE_SIZE_HORIZONTAL) * MAPGEN_CUBE_SIZE_HORIZONTAL,
+		y = math.floor(pos.y / MAPGEN_CUBE_SIZE_VERTICAL) * MAPGEN_CUBE_SIZE_VERTICAL,
+		z = math.floor(pos.z / MAPGEN_CUBE_SIZE_HORIZONTAL) * MAPGEN_CUBE_SIZE_HORIZONTAL,
 	}
 	local cube_maxp = {
-		x = cube_minp.x + MAPGEN_CUBE_SIZE - 1,
-		y = cube_minp.y + MAPGEN_CUBE_SIZE - 1,
-		z = cube_minp.z + MAPGEN_CUBE_SIZE - 1,
+		x = cube_minp.x + MAPGEN_CUBE_SIZE_HORIZONTAL - 1,
+		y = cube_minp.y + MAPGEN_CUBE_SIZE_VERTICAL - 1,
+		z = cube_minp.z + MAPGEN_CUBE_SIZE_HORIZONTAL - 1,
 	}
 
 	-- check if this mapblock intersects an existing cube and return it if so
@@ -172,7 +173,7 @@ local function mapgen_generate (minp, maxp)
 					-- check if the height requirements are met
 					if maxp.y >= tonumber(entry[3]) and minp.y <= tonumber(entry[4]) then
 						-- add this group to the list of possible groups
-						table.insert(groups, entry[1])
+						table.insert(groups, { name = entry[1], minh = tonumber(entry[3]), maxh = tonumber(entry[4]) })
 					end
 				end
 			end
@@ -180,21 +181,31 @@ local function mapgen_generate (minp, maxp)
 
 		if #groups > 0 then
 			-- choose a random group from the list of possible groups
-			local group_name = groups[math.random(1, #groups)]
-			local group_size_horizontal, group_size_vertical = generate_group_size(group_name)
-			if math.max(group_size_horizontal, group_size_vertical) > MAPGEN_CUBE_SIZE then
+			local group = groups[math.random(1, #groups)]
+			local group_size_horizontal, group_size_vertical = generate_group_size(group.name)
+			if group_size_horizontal > MAPGEN_CUBE_SIZE_HORIZONTAL or group_size_vertical > MAPGEN_CUBE_SIZE_VERTICAL then
 				-- warn if the city is larger than the cube and limit its size
-				print("Mapgen Warning: Group "..group.." exceeds grid size ("..math.max(group_size_horizontal, group_size_vertical).." / "..MAPGEN_CUBE_SIZE.." nodes). Please decrease your structure count or increase the value of MAPGEN_CUBE_SIZE!")
-				group_size_horizontal = math.min(group_size_horizontal, MAPGEN_CUBE_SIZE)
-				group_size_vertical = math.min(group_size_vertical, MAPGEN_CUBE_SIZE)
+				print("Mapgen Warning: Group "..group.." exceeds grid size ("..group_size_horizontal.." of "..MAPGEN_CUBE_SIZE_HORIZONTAL.." horizontally, "..group_size_horizontal.." of "..MAPGEN_CUBE_SIZE_VERTICAL.." vertically). Please decrease your structure count or increase the value of MAPGEN_CUBE_SIZE_*!")
+				group_size_horizontal = math.min(group_size_horizontal, MAPGEN_CUBE_SIZE_HORIZONTAL)
+				group_size_vertical = math.min(group_size_vertical, MAPGEN_CUBE_SIZE_VERTICAL)
 			end
 			mapgen_cubes[cube_index].group_size_horizontal = group_size_horizontal
 			mapgen_cubes[cube_index].group_size_vertical = group_size_vertical
-			mapgen_cubes[cube_index].group = group_name
+			mapgen_cubes[cube_index].group = group.name
+
+			-- choose a random position within the cube
+			local position = {
+				x = math.random(mapgen_cubes[cube_index].minp.x, mapgen_cubes[cube_index].maxp.x - group_size_horizontal),
+				y = math.random(
+					math.max(group.minh, mapgen_cubes[cube_index].minp.y),
+					math.min(group.maxh, mapgen_cubes[cube_index].maxp.y - group_size_vertical)
+				),
+				z = math.random(mapgen_cubes[cube_index].minp.z, mapgen_cubes[cube_index].maxp.z - group_size_horizontal),
+			}
 
 			-- get the building and road lists
-			local schemes_roads, rectangles_roads = mapgen_roads_get(mapgen_cubes[cube_index].minp, group_size_horizontal, group_name)
-			local schemes_buildings = mapgen_buildings_get(mapgen_cubes[cube_index].minp, group_size_horizontal, rectangles_roads, group_name)
+			local schemes_roads, rectangles_roads = mapgen_roads_get(position, group_size_horizontal, group.name)
+			local schemes_buildings = mapgen_buildings_get(position, group_size_horizontal, rectangles_roads, group.name)
 			-- add everything to the cube's structure scheme
 			-- buildings should be first, so they're represented most accurately by metadata numbers
 			mapgen_cubes[cube_index].structures = schemes_buildings

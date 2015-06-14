@@ -5,7 +5,7 @@
 # Metadata: $POSITION_X, $POSITION_Y, $POSITION_Z, $SIZE_X, $SIZE_Y, $SIZE_Z, $ANGLE, $NUMBER, $NAME, $GROUP
 
 # Default - Settings:
-default_town	settings	2	100	1
+default_town	settings	2	20	1
 
 # Default - Buildings:
 default_town	building	default_town_house_tiny_1	5	0	0
