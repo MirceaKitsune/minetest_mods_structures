@@ -3,8 +3,6 @@
 
 structures:define({
 	name = "default_town",
-	height_min = 2,
-	height_max = 20,
 	probability = 1,
 	biomes = {1, 2},
 	noiseparams = {
