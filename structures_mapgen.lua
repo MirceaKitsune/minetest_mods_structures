@@ -120,6 +120,36 @@ local function generate_group_size (group)
 	return scale_horizontal, scale_vertical
 end
 
+-- gets the minimum and maximum height from the perlin map
+local function generate_height(minp, maxp, seed)
+	local noiseparams = {
+	   offset = -4,
+	   scale = 20,
+	   spread = {x=250, y=250, z=250},
+	   seed = seed,
+	   octaves = 5,
+	   persist = 0.6
+	}
+	local size = {
+		x = maxp.x - minp.x,
+		y = maxp.y - minp.y,
+		z = maxp.z - minp.z,
+	}
+	local perlin = minetest.get_perlin_map(noiseparams, size):get2dMap_flat(minp)
+
+	local lowest = maxp.y
+	local highest = minp.y
+	for _, entry in ipairs(perlin) do
+		if entry > highest then
+			highest = math.floor(entry)
+		end
+		if entry < lowest then
+			lowest = math.ceil(entry)
+		end
+	end
+	return lowest, highest
+end
+
 -- returns the index of the virtual cube addressed by the given position
 local function generate_cube (pos)
 	local cube_minp = {
@@ -151,13 +181,15 @@ local function generate_cube (pos)
 	return index
 end
 
-local function mapgen_generate (minp, maxp)
+local function mapgen_generate (minp, maxp, seed)
 	local pos = {
 		x = (minp.x + maxp.x) / 2,
 		y = (minp.y + maxp.y) / 2,
 		z = (minp.z + maxp.z) / 2,
 	}
 	local cube_index = generate_cube(pos)
+
+	local lowest, height = generate_height(mapgen_cubes[cube_index].minp, mapgen_cubes[cube_index].maxp, seed)
 
 	-- if a city is not already planned for this cube, generate one
 	if not mapgen_cubes[cube_index].structures then
@@ -196,10 +228,7 @@ local function mapgen_generate (minp, maxp)
 			-- choose a random position within the cube
 			local position = {
 				x = math.random(mapgen_cubes[cube_index].minp.x, mapgen_cubes[cube_index].maxp.x - group_size_horizontal),
-				y = math.random(
-					math.max(group.minh, mapgen_cubes[cube_index].minp.y),
-					math.min(group.maxh, mapgen_cubes[cube_index].maxp.y - group_size_vertical)
-				),
+				y = math.min(group.maxh, math.max(group.minh, height)),
 				z = math.random(mapgen_cubes[cube_index].minp.z, mapgen_cubes[cube_index].maxp.z - group_size_horizontal),
 			}
 
@@ -264,5 +293,5 @@ minetest.after(0, mapgen_to_table)
 -- run the map_generate function
 minetest.register_on_generated(function(minp, maxp, seed)
 	-- execute the main generate function
-	mapgen_generate(minp, maxp)
+	mapgen_generate(minp, maxp, seed)
 end)
