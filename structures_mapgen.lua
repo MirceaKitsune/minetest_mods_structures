@@ -26,7 +26,7 @@ mapgen_cubes = {}
 -- Local functions
 
 -- returns the size of this group in nodes
-local function generate_group_size (id)
+local function group_size (id)
 	local scale_horizontal = 0
 	local scale_vertical = 0
 	local structures = 0
@@ -188,30 +188,21 @@ local function mapgen_generate (minp, maxp, seed)
 			-- choose a random group from the list of possible groups
 			local group_id = groups_id[math.random(1, #groups_id)]
 			local group = mapgen_table[group_id]
-			local group_size_horizontal, group_size_vertical = generate_group_size(group_id)
 			local minh, maxh = generate_height(mapgen_cubes[cube_index].minp, mapgen_cubes[cube_index].maxp, seed, group.noiseparams)
-
-			if group_size_horizontal > MAPGEN_CUBE_SIZE_HORIZONTAL or group_size_vertical > MAPGEN_CUBE_SIZE_VERTICAL then
-				-- warn if the city is larger than the cube and limit its size
-				print("Mapgen Warning: Group "..group.name.." exceeds grid size ("..group_size_horizontal.." of "..MAPGEN_CUBE_SIZE_HORIZONTAL.." horizontally, "..group_size_horizontal.." of "..MAPGEN_CUBE_SIZE_VERTICAL.." vertically). Please decrease your structure count or increase the value of MAPGEN_CUBE_SIZE_*!")
-				group_size_horizontal = math.min(group_size_horizontal, MAPGEN_CUBE_SIZE_HORIZONTAL)
-				group_size_vertical = math.min(group_size_vertical, MAPGEN_CUBE_SIZE_VERTICAL)
-			end
-			mapgen_cubes[cube_index].group_size_horizontal = group_size_horizontal
-			mapgen_cubes[cube_index].group_size_vertical = group_size_vertical
 			mapgen_cubes[cube_index].group = group_id
 
 			-- choose a random position within the cube
 			local height = group.height_min + maxh
+			height = math.min(group.height_max, math.max(group.height_min, height))
 			local position = {
-				x = math.random(mapgen_cubes[cube_index].minp.x, mapgen_cubes[cube_index].maxp.x - group_size_horizontal),
-				y = math.min(group.height_max, math.max(group.height_min, height)),
-				z = math.random(mapgen_cubes[cube_index].minp.z, mapgen_cubes[cube_index].maxp.z - group_size_horizontal),
+				x = math.random(mapgen_cubes[cube_index].minp.x, mapgen_cubes[cube_index].maxp.x - group.size_horizontal),
+				y = math.min(mapgen_cubes[cube_index].maxp.y - group.size_vertical, height),
+				z = math.random(mapgen_cubes[cube_index].minp.z, mapgen_cubes[cube_index].maxp.z - group.size_horizontal),
 			}
 
 			-- get the building and road lists
-			local schemes_roads, rectangles_roads = mapgen_roads_get(position, group_size_horizontal, group.roads)
-			local schemes_buildings = mapgen_buildings_get(position, group_size_horizontal, rectangles_roads, group.buildings)
+			local schemes_roads, rectangles_roads = mapgen_roads_get(position, group.size_horizontal, group.roads)
+			local schemes_buildings = mapgen_buildings_get(position, group.size_horizontal, rectangles_roads, group.buildings)
 			-- add everything to the cube's structure scheme
 			-- buildings should be first, so they're represented most accurately by metadata numbers
 			mapgen_cubes[cube_index].structures = schemes_buildings
@@ -267,6 +258,17 @@ end
 -- the function used to define a structure group
 function structures:define(def)
 	table.insert(mapgen_table, def)
+
+	-- calculate the size of this group, and store it as a set of extra properties
+	local size_horizontal, size_vertical = group_size(#mapgen_table)
+	if size_horizontal > MAPGEN_CUBE_SIZE_HORIZONTAL or size_vertical > MAPGEN_CUBE_SIZE_VERTICAL then
+		-- warn if the city is larger than the cube and limit its size
+		print("Mapgen Warning: Group "..group.name.." exceeds grid size ("..size_horizontal.." of "..MAPGEN_CUBE_SIZE_HORIZONTAL.." horizontally, "..size_vertical.." of "..MAPGEN_CUBE_SIZE_VERTICAL.." vertically). Please decrease your structure count or increase the value of MAPGEN_CUBE_SIZE_*!")
+		size_horizontal = math.min(size_horizontal, MAPGEN_CUBE_SIZE_HORIZONTAL)
+		size_vertical = math.min(size_vertical, MAPGEN_CUBE_SIZE_VERTICAL)
+	end
+	mapgen_table[#mapgen_table].size_horizontal = size_horizontal
+	mapgen_table[#mapgen_table].size_vertical = size_vertical
 end
 
 -- Minetest functions
