@@ -19,10 +19,10 @@ function io_get_size (angle, filename)
 	local size = { x = 0, y = 0, z = 0 }
 
 	-- whether to use text files or schematics
-	if (IO_SCHEMATICS == true) then
+	if IO_SCHEMATICS == true then
 		path = path..".mts"
 		local file = io.open(path, "r")
-		if (file == nil) then return nil end
+		if file == nil then return nil end
 
 		-- thanks to sfan5 for this advanced code that reads the size from schematic files
 		local read_s16 = function(fi)
@@ -42,7 +42,7 @@ function io_get_size (angle, filename)
 	else
 		path = path..".txt"
 		local file = io.open(path, "r")
-		if (file == nil) then return nil end
+		if file == nil then return nil end
 
 		-- we must read the parameters of each node from the structure file
 		for line in io.lines(path) do
@@ -52,13 +52,13 @@ function io_get_size (angle, filename)
 			end
 
 			-- the furthest node in any direction determines the overall size of the structure
-			if (size.x < tonumber(parameters[1]) + 1) then
+			if size.x < tonumber(parameters[1]) + 1 then
 				size.x = tonumber(parameters[1]) + 1
 			end
-			if (size.y < tonumber(parameters[2]) + 1) then
+			if size.y < tonumber(parameters[2]) + 1 then
 				size.y = tonumber(parameters[2]) + 1
 			end
-			if (size.z < tonumber(parameters[3]) + 1) then
+			if size.z < tonumber(parameters[3]) + 1 then
 				size.z = tonumber(parameters[3]) + 1
 			end
 		end
@@ -66,7 +66,7 @@ function io_get_size (angle, filename)
 	end
 
 	-- rotate box size with angle
-	if (angle == 90) or (angle == 270) then
+	if angle == 90 or angle == 270 then
 		local size_rotate = { x = size.z, y = size.y, z = size.x }
 		size = size_rotate
 	end
@@ -80,7 +80,7 @@ function io_area_fill (pos, ends, node)
 	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
 
 	-- no node specified means we clear the area
-	if (node == nil) then
+	if node == nil then
 		node = "air"
 	end
 
@@ -106,14 +106,14 @@ end
 
 -- exports structure to a text file
 function io_area_export (pos, ends, filename)
-	if (ends == nil) then return end
+	if ends == nil then return end
 	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
 	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
 
 	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
 
 	-- whether to use text files or schematics
-	if (IO_SCHEMATICS == true) then
+	if IO_SCHEMATICS == true then
 		-- export to a schematic file
 		path = path..".mts"
 
@@ -125,7 +125,7 @@ function io_area_export (pos, ends, filename)
 					local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 					local node_here = minetest.env:get_node(pos_here).name
 					local liquidtype = minetest.registered_nodes[node_here].liquidtype
-					if (calculate_node_in_table(node_here, IO_IGNORE) == true) or (liquidtype == "flowing") then
+					if calculate_node_in_table(node_here, IO_IGNORE) == true or liquidtype == "flowing" then
 						table.insert(ignore, { pos = { x = loop_x, y = loop_y, z = loop_z }, prob = -1 } )
 					end
 				end
@@ -137,7 +137,7 @@ function io_area_export (pos, ends, filename)
 		-- export to a text file
 		path = path..".txt"
 		local file = io.open(path, "w")
-		if (file == nil) then return end
+		if file == nil then return end
 
 		-- write each node in the marked area to a line
 		for loop_x = pos_start.x, pos_end.x do
@@ -148,7 +148,7 @@ function io_area_export (pos, ends, filename)
 					local liquidtype = minetest.registered_nodes[node_here].liquidtype
 
 					-- don't export flowing liquid nodes, just sources
-					if (calculate_node_in_table(node_here, IO_IGNORE) == false) and (liquidtype ~= "flowing") then
+					if calculate_node_in_table(node_here, IO_IGNORE) == false and liquidtype ~= "flowing" then
 						-- we want to save origins as distance from the main I/O node
 						local dist = calculate_distance(pos_start, pos_here)
 						-- param2 must be persisted
@@ -171,17 +171,17 @@ end
 
 -- imports structure from a text file
 function io_area_import (pos, ends, angle, filename, check_bounds)
-	if (ends == nil) then return end
+	if ends == nil then return end
 	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
 	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
 
 	-- check if the structure fits between the start and end positions if necessary
-	if (check_bounds == true) then
+	if check_bounds == true then
 		local size = io_get_size(angle, filename)
-		if (size == nil) then return end
+		if size == nil then return end
 
 		-- abort if a node is larger than the marked area
-		if (pos_start.x + size.x - 1 > pos_end.x) or (pos_start.y + size.y - 1 > pos_end.y) or (pos_start.z + size.z - 1 > pos_end.z) then
+		if pos_start.x + size.x - 1 > pos_end.x or pos_start.y + size.y - 1 > pos_end.y or pos_start.z + size.z - 1 > pos_end.z then
 			print("Structure I/O Error: Structure is larger than the marked area, aborting.")
 			return
 		end
@@ -190,13 +190,13 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
 
 	-- whether to use text files or schematics
-	if (IO_SCHEMATICS == true) then
+	if IO_SCHEMATICS == true then
 		-- import from a schematic file
 		path = path..".mts"
 
 		-- abort if file doesn't exist
 		local file = io.open(path, "r")
-		if (file == nil) then return end
+		if file == nil then return end
 		file:close()
 
 		minetest.place_schematic(pos_start, path, angle, _, true)
@@ -217,7 +217,7 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 		-- import from a text file
 		path = path..".txt"
 		local file = io.open(path, "r")
-		if (file == nil) then return end
+		if file == nil then return end
 
 		for line in io.lines(path) do
 			local parameters = {}
@@ -232,59 +232,59 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 			local node_param2 = parameters[6]
 			local node_paramtype2 = minetest.registered_nodes[node_name].paramtype2
 
-			if (angle == 90) or (angle == -270) then
+			if angle == 90 or angle == -270 then
 				node_pos = { x = pos_end.x - tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[1]) }
 
 				-- if param2 is facedir, rotate it accordingly
 				-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
-				if (node_paramtype2 == "facedir") then
-					if (node_param2 == "0") then node_param2 = "3"
-					elseif (node_param2 == "1") then node_param2 = "0"
-					elseif (node_param2 == "2") then node_param2 = "1"
-					elseif (node_param2 == "3") then node_param2 = "2" end
+				if node_paramtype2 == "facedir" then
+					if node_param2 == "0" then node_param2 = "3"
+					elseif node_param2 == "1" then node_param2 = "0"
+					elseif node_param2 == "2" then node_param2 = "1"
+					elseif node_param2 == "3" then node_param2 = "2" end
 				end
 				-- if param2 is wallmounted, rotate it accordingly
-				if (node_paramtype2 == "wallmounted") then
-					if (node_param2 == "2") then node_param2 = "4"
-					elseif (node_param2 == "3") then node_param2 = "5"
-					elseif (node_param2 == "4") then node_param2 = "3"
-					elseif (node_param2 == "5") then node_param2 = "2" end
+				if node_paramtype2 == "wallmounted" then
+					if node_param2 == "2" then node_param2 = "4"
+					elseif node_param2 == "3" then node_param2 = "5"
+					elseif node_param2 == "4" then node_param2 = "3"
+					elseif node_param2 == "5" then node_param2 = "2" end
 				end
-			elseif (angle == 180) then
+			elseif angle == 180 then
 				node_pos = { x = pos_end.x - tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[3]) }
 
 				-- if param2 is facedir, rotate it accordingly
 				-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
-				if (node_paramtype2 == "facedir") then
-					if (node_param2 == "0") then node_param2 = "2"
-					elseif (node_param2 == "1") then node_param2 = "3"
-					elseif (node_param2 == "2") then node_param2 = "0"
-					elseif (node_param2 == "3") then node_param2 = "1" end
+				if node_paramtype2 == "facedir" then
+					if node_param2 == "0" then node_param2 = "2"
+					elseif node_param2 == "1" then node_param2 = "3"
+					elseif node_param2 == "2" then node_param2 = "0"
+					elseif node_param2 == "3" then node_param2 = "1" end
 				end
 				-- if param2 is wallmounted, rotate it accordingly
-				if (node_paramtype2 == "wallmounted") then
-					if (node_param2 == "2") then node_param2 = "3"
-					elseif (node_param2 == "3") then node_param2 = "2"
-					elseif (node_param2 == "4") then node_param2 = "5"
-					elseif (node_param2 == "5") then node_param2 = "4" end
+				if node_paramtype2 == "wallmounted" then
+					if node_param2 == "2" then node_param2 = "3"
+					elseif node_param2 == "3" then node_param2 = "2"
+					elseif node_param2 == "4" then node_param2 = "5"
+					elseif node_param2 == "5" then node_param2 = "4" end
 				end
-			elseif (angle == 270) or (angle == -90) then
+			elseif angle == 270 or angle == -90 then
 				node_pos = { x = pos_start.x + tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[1]) }
 
 				-- if param2 is facedir, rotate it accordingly
 				-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
-				if (node_paramtype2 == "facedir") then
-					if (node_param2 == "0") then node_param2 = "1"
-					elseif (node_param2 == "1") then node_param2 = "2"
-					elseif (node_param2 == "2") then node_param2 = "3"
-					elseif (node_param2 == "3") then node_param2 = "0" end
+				if node_paramtype2 == "facedir" then
+					if node_param2 == "0" then node_param2 = "1"
+					elseif node_param2 == "1" then node_param2 = "2"
+					elseif node_param2 == "2" then node_param2 = "3"
+					elseif node_param2 == "3" then node_param2 = "0" end
 				end
 				-- if param2 is wallmounted, rotate it accordingly
-				if (node_paramtype2 == "wallmounted") then
-					if (node_param2 == "2") then node_param2 = "5"
-					elseif (node_param2 == "3") then node_param2 = "4"
-					elseif (node_param2 == "4") then node_param2 = "2"
-					elseif (node_param2 == "5") then node_param2 = "3" end
+				if node_paramtype2 == "wallmounted" then
+					if node_param2 == "2" then node_param2 = "5"
+					elseif node_param2 == "3" then node_param2 = "4"
+					elseif node_param2 == "4" then node_param2 = "2"
+					elseif node_param2 == "5" then node_param2 = "3" end
 				end
 			else -- 0 degrees
 				node_pos = { x = pos_start.x + tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[3]) }
