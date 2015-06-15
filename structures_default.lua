@@ -6,6 +6,15 @@ structures:define({
 	height_min = 2,
 	height_max = 20,
 	probability = 1,
+	biomes = {1, 2},
+	noiseparams = {
+	   offset = -4,
+	   scale = 20,
+	   spread = {x = 250, y = 250, z = 250},
+	   seed = nil,
+	   octaves = 5,
+	   persist = 0.6
+	},
 
 	buildings = {
 		{

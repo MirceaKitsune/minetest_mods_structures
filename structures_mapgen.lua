@@ -86,15 +86,10 @@ local function generate_group_size (id)
 end
 
 -- gets the minimum and maximum height from the perlin map
-local function generate_height(minp, maxp, seed)
-	local noiseparams = {
-	   offset = -4,
-	   scale = 20,
-	   spread = {x=250, y=250, z=250},
-	   seed = seed,
-	   octaves = 5,
-	   persist = 0.6
-	}
+local function generate_height(minp, maxp, seed, noiseparams)
+	if not noiseparams.seed then
+		noiseparams.seed = seed
+	end
 	local size = {
 		x = maxp.x - minp.x,
 		y = maxp.y - minp.y,
@@ -154,8 +149,6 @@ local function mapgen_generate (minp, maxp, seed)
 	}
 	local cube_index = generate_cube(pos)
 
-	local lowest, height = generate_height(mapgen_cubes[cube_index].minp, mapgen_cubes[cube_index].maxp, seed)
-
 	-- if a city is not already planned for this cube, generate one
 	if not mapgen_cubes[cube_index].structures then
 		mapgen_cubes[cube_index].structures = {}
@@ -167,8 +160,26 @@ local function mapgen_generate (minp, maxp, seed)
 			if entry.probability >= math.random() then
 				-- check if the height requirements are met
 				if maxp.y >= entry.height_min and minp.y <= entry.height_max then
-					-- add this group to the list of possible groups
-					table.insert(groups_id, i)
+					-- check if this area is located in the corect biome
+					local has_biome = false
+					local biomes = minetest.get_mapgen_object("biomemap")
+					if not biomes or #biomes == 0 or not entry.biomes or #entry.biomes == 0 then
+						has_biome = true
+					else
+						for _, biome1 in ipairs(biomes) do
+							for _, biome2 in ipairs(entry.biomes) do
+								if biome1 == biome2 then
+									has_biome = true
+									break
+								end
+							end
+						end
+					end
+
+					if has_biome then
+						-- add this group to the list of possible groups
+						table.insert(groups_id, i)
+					end
 				end
 			end
 		end
@@ -178,6 +189,8 @@ local function mapgen_generate (minp, maxp, seed)
 			local group_id = groups_id[math.random(1, #groups_id)]
 			local group = mapgen_table[group_id]
 			local group_size_horizontal, group_size_vertical = generate_group_size(group_id)
+			local minh, maxh = generate_height(mapgen_cubes[cube_index].minp, mapgen_cubes[cube_index].maxp, seed, group.noiseparams)
+
 			if group_size_horizontal > MAPGEN_CUBE_SIZE_HORIZONTAL or group_size_vertical > MAPGEN_CUBE_SIZE_VERTICAL then
 				-- warn if the city is larger than the cube and limit its size
 				print("Mapgen Warning: Group "..group.name.." exceeds grid size ("..group_size_horizontal.." of "..MAPGEN_CUBE_SIZE_HORIZONTAL.." horizontally, "..group_size_horizontal.." of "..MAPGEN_CUBE_SIZE_VERTICAL.." vertically). Please decrease your structure count or increase the value of MAPGEN_CUBE_SIZE_*!")
@@ -189,6 +202,7 @@ local function mapgen_generate (minp, maxp, seed)
 			mapgen_cubes[cube_index].group = group_id
 
 			-- choose a random position within the cube
+			local height = group.height_min + maxh
 			local position = {
 				x = math.random(mapgen_cubes[cube_index].minp.x, mapgen_cubes[cube_index].maxp.x - group_size_horizontal),
 				y = math.min(group.height_max, math.max(group.height_min, height)),
