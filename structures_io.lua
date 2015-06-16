@@ -4,22 +4,22 @@
 -- Settings
 
 -- directory in which structure files are stored (inside the mod's own directory)
-local IO_DIRECTORY = "structures"
+structures.IO_directory = "structures"
 -- don't import the nodes listed here
-IO_IGNORE = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
+structures.IO_ignore = {"ignore", "air", "fire:basic_flame", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
 -- use schematics instead of text files, faster and recommended
-IO_SCHEMATICS = true
+structures.IO_schematics = true
 
 -- Global functions - Import / export
 
 -- gets the size of a structure file
 function io_get_size (angle, filename)
-	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
+	local path = minetest.get_modpath("structures").."/"..structures.IO_directory.."/"..filename
 
 	local size = {x = 0, y = 0, z = 0}
 
 	-- whether to use text files or schematics
-	if IO_SCHEMATICS == true then
+	if structures.IO_schematics == true then
 		path = path..".mts"
 		local file = io.open(path, "r")
 		if file == nil then return nil end
@@ -110,10 +110,10 @@ function io_area_export (pos, ends, filename)
 	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
 	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
 
-	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
+	local path = minetest.get_modpath("structures").."/"..structures.IO_directory.."/"..filename
 
 	-- whether to use text files or schematics
-	if IO_SCHEMATICS == true then
+	if structures.IO_schematics == true then
 		-- export to a schematic file
 		path = path..".mts"
 
@@ -125,7 +125,7 @@ function io_area_export (pos, ends, filename)
 					local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 					local node_here = minetest.env:get_node(pos_here).name
 					local liquidtype = minetest.registered_nodes[node_here].liquidtype
-					if calculate_node_in_table(node_here, IO_IGNORE) == true or liquidtype == "flowing" then
+					if calculate_node_in_table(node_here, structures.IO_ignore) == true or liquidtype == "flowing" then
 						table.insert(ignore, {pos = {x = loop_x, y = loop_y, z = loop_z}, prob = -1} )
 					end
 				end
@@ -148,7 +148,7 @@ function io_area_export (pos, ends, filename)
 					local liquidtype = minetest.registered_nodes[node_here].liquidtype
 
 					-- don't export flowing liquid nodes, just sources
-					if calculate_node_in_table(node_here, IO_IGNORE) == false and liquidtype ~= "flowing" then
+					if calculate_node_in_table(node_here, structures.IO_ignore) == false and liquidtype ~= "flowing" then
 						-- we want to save origins as distance from the main I/O node
 						local dist = calculate_distance(pos_start, pos_here)
 						-- param2 must be persisted
@@ -187,10 +187,10 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 		end
 	end
 
-	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
+	local path = minetest.get_modpath("structures").."/"..structures.IO_directory.."/"..filename
 
 	-- whether to use text files or schematics
-	if IO_SCHEMATICS == true then
+	if structures.IO_schematics == true then
 		-- import from a schematic file
 		path = path..".mts"
 

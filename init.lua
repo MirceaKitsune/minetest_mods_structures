@@ -135,7 +135,7 @@ local function make_formspec_nodes (pos)
 			for loop_z = math.min(pos.z, pos_markers.z) + 1, math.max(pos.z, pos_markers.z) - 1 do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 
-				if calculate_node_in_table(minetest.env:get_node(pos_here).name, IO_IGNORE) == false then
+				if calculate_node_in_table(minetest.env:get_node(pos_here).name, structures.IO_ignore) == false then
 					nodes = nodes + 1
 				end
 			end

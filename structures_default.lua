@@ -1,6 +1,22 @@
 -- Default town for the Structures mod
 -- Metadata: $POSITION_X, $POSITION_Y, $POSITION_Z, $SIZE_X, $SIZE_Y, $SIZE_Z, $ANGLE, $NUMBER, $NAME, $GROUP
 
+-- Settings
+
+-- spawning is delayed by this many seconds per structure
+-- higher values give more time for other mapgen operations to finish and reduce lag, but cause towns to appear more slowly
+-- example: if the delay is 0.1 and a town has 1000 structures, it will take the entire town 100 seconds to spawn
+structures.mapgen_delay = 0.25
+-- whether to keep structures in the table after they have been placed by on_generate
+-- enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn
+structures.mapgen_keep_structures = false
+-- multiply the size of the virtual cube (determined by the largest town) by this amount
+-- larger values decrease town frequency, but give more room for towns to be sorted in
+structures.mapgen_cube_multiply_horizontal = 1
+structures.mapgen_cube_multiply_vertical = 2
+
+-- Towns
+
 structures:define({
 	name = "default_town",
 	probability = 1,

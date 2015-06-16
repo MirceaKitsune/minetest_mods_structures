@@ -1,20 +1,6 @@
 -- Structures: Mapgen functions
 -- This file contains the base mapgen functions, used to place structures during world generation
 
--- Settings
-
--- spawning is delayed by this many seconds per structure
--- higher values give more time for other mapgen operations to finish and reduce lag, but cause towns to appear more slowly
--- example: if the delay is 0.1 and a town has 1000 structures, it will take the entire town 100 seconds to spawn
-local MAPGEN_DELAY = 0.25
--- whether to keep structures in the table after they have been placed by on_generate
--- enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn
-local MAPGEN_KEEP_STRUCTURES = false
--- multiply the size of the virtual cube (determined by the largest town) by this amount
--- larger values decrease town frequency, but give more room for towns to be sorted in
-local MAPGEN_CUBE_MULTIPLY_HORIZONTAL = 1
-local MAPGEN_CUBE_MULTIPLY_VERTICAL = 2
-
 -- Local & Global values - Groups and mapgen
 
 -- the mapgen table and groups table
@@ -206,6 +192,9 @@ local function mapgen_generate (minp, maxp, seed)
 				local height_max = group.noiseparams.offset + group.noiseparams.scale
 				local center = math.floor((height_min + height_max) / 2)
 
+				-- execute the group's spawn function if one is present, and abort spawning if it returns false
+				if group.spawn_group and not group.spawn_group(position_start, position_end, perlin) then return end
+
 				-- get the building and road lists
 				local schemes_roads, rectangles_roads = mapgen_roads_get(position_start, position_end, center, perlin, group.roads)
 				local schemes_buildings = mapgen_buildings_get(position_start, position_end, center, perlin, rectangles_roads, group.buildings)
@@ -221,10 +210,12 @@ local function mapgen_generate (minp, maxp, seed)
 
 	-- if a city is planned for this cube and there are valid structures, create the structures touched by this mapblock
 	if mapgen_cubes[cube_index].structures then
+		local group_id = mapgen_cubes[cube_index].group
+		local group = mapgen_table[group_id]
 		-- schematics: name [1], position [2], angle [3], size [4]
 		for i, structure in pairs(mapgen_cubes[cube_index].structures) do
 			-- schedule the function to execute after the spawn delay
-			minetest.after(MAPGEN_DELAY * i, function()
+			minetest.after(structures.mapgen_delay * i, function()
 				local name = structure[1]
 				local position = structure[2]
 				local angle = structure[3]
@@ -237,20 +228,28 @@ local function mapgen_generate (minp, maxp, seed)
 					local position1 = {x = position.x - 1, y = position.y - 1, z = position.z - 1}
 					local position2 = {x = position.x + size.x, y = position.y + size.y, z = position.z + size.z}
 
+					-- execute the structure's pre-spawn function if one is present, and abort spawning if it returns false
+					local spawn = true
+					if group.spawn_structure_pre then spawn = group.spawn_structure_pre(name, i, position1, position2, size, angle) end
+
 					-- import the structure
-					io_area_import(position1, position2, angle, name, false)
+					if spawn then
+						io_area_import(position1, position2, angle, name, false)
+					end
+
+					-- execute the structure's post-spawn function if one is present
+					if group.spawn_structure_post then group.spawn_structure_post(name, i, position1, position2, size, angle) end
 
 					-- apply metadata
-					local group = mapgen_cubes[cube_index].group
 					local expressions = {
 						{"POSITION_X", tostring(position.x)}, {"POSITION_Y", tostring(position.y)}, {"POSITION_Z", tostring(position.z)},
 						{"SIZE_X", tostring(size.x)}, {"SIZE_Y", tostring(size.y)}, {"SIZE_Z", tostring(size.z)},
-						{"ANGLE", tostring(angle)}, {"NUMBER", tostring(i)}, {"NAME", name}, {"GROUP", mapgen_table[group].name}
+						{"ANGLE", tostring(angle)}, {"NUMBER", tostring(i)}, {"NAME", name}, {"GROUP", group.name}
 					}
-					mapgen_metadata_set(position1, position2, expressions, group)
+					mapgen_metadata_set(position1, position2, expressions, group_id)
 
 					-- remove this structure from the list
-					if not MAPGEN_KEEP_STRUCTURES then
+					if not structures.mapgen_keep_structures then
 						mapgen_cubes[cube_index].structures[i] = nil
 					end
 				end
@@ -272,11 +271,11 @@ function structures:define(def)
 
 	-- determine the scale of the virtual cube based on the largest town
 	-- for height, also account the scale of the perlin map
-	local largest_horizontal = size_horizontal * MAPGEN_CUBE_MULTIPLY_HORIZONTAL
+	local largest_horizontal = size_horizontal * structures.mapgen_cube_multiply_horizontal
 	if largest_horizontal > mapgen_cube_horizontal then
 		mapgen_cube_horizontal = largest_horizontal
 	end
-	local largest_vertical = (mapgen_table[#mapgen_table].noiseparams.scale + size_vertical) * MAPGEN_CUBE_MULTIPLY_VERTICAL
+	local largest_vertical = (mapgen_table[#mapgen_table].noiseparams.scale + size_vertical) * structures.mapgen_cube_multiply_vertical
 	if largest_vertical > mapgen_cube_vertical then
 		mapgen_cube_vertical = largest_vertical
 	end
