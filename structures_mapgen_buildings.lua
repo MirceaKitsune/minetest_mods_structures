@@ -98,8 +98,8 @@ function mapgen_buildings_get (pos_start, pos_end, center, perlin, boxes, buildi
 			-- used later to check if a position was found
 			local found_pos = false
 
-			-- location will be fully determined later
-			local location = {x = pos_start.x, y = pos_start.y, z = pos_start.z}
+			-- height will be determined later
+			local location = {x = pos_start.x, z = pos_start.z}
 
 			-- determine the X and Z position of this building
 			-- first shuffle the rectangles table, to avoid a fixed search order
