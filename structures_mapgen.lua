@@ -3,11 +3,10 @@
 
 -- Settings
 
--- spawning is delayed by this many seconds after being triggered by on_generate
--- higher values give more time for other mapgen operations to finish, decreasing the probability of structures being cut by the cavegen and potentially reducing lag
--- the delay is randomized per structure and ranges between the min and max values, to avoid clutter and the engine doing too much work at once
-local MAPGEN_DELAY_MIN = 5
-local MAPGEN_DELAY_MAX = 30
+-- spawning is delayed by this many seconds per structure
+-- higher values give more time for other mapgen operations to finish and reduce lag, but cause towns to appear more slowly
+-- example: if the delay is 0.1 and a town has 1000 structures, it will take the entire town 100 seconds to spawn
+local MAPGEN_DELAY = 0.25
 -- whether to keep structures in the table after they have been placed by on_generate
 -- enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn
 local MAPGEN_KEEP_STRUCTURES = false
@@ -222,11 +221,10 @@ local function mapgen_generate (minp, maxp, seed)
 
 	-- if a city is planned for this cube and there are valid structures, create the structures touched by this mapblock
 	if mapgen_cubes[cube_index].structures then
-		-- schedule the function to execute after the spawn delay
-		local delay = MAPGEN_DELAY_MIN + math.random() * (MAPGEN_DELAY_MAX - MAPGEN_DELAY_MIN)
-		minetest.after(delay, function()
-			-- schematics: name [1], position [2], angle [3], size [4]
-			for i, structure in pairs(mapgen_cubes[cube_index].structures) do
+		-- schematics: name [1], position [2], angle [3], size [4]
+		for i, structure in pairs(mapgen_cubes[cube_index].structures) do
+			-- schedule the function to execute after the spawn delay
+			minetest.after(MAPGEN_DELAY * i, function()
 				local name = structure[1]
 				local position = structure[2]
 				local angle = structure[3]
@@ -256,8 +254,8 @@ local function mapgen_generate (minp, maxp, seed)
 						mapgen_cubes[cube_index].structures[i] = nil
 					end
 				end
-			end
-		end)
+			end)
+		end
 	end
 end
 
