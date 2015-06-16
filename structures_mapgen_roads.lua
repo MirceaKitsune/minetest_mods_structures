@@ -63,109 +63,117 @@ local function branch_size (length_start, length_end, axis, size, rectangles)
 	return dist
 end
 
--- decides which shape and at which angle an intersection should use, based on the roads it connects
-local function branch_draw_intersection(paths)
+-- decides which shape and which angle an intersection has, based on the roads it connects
+local function branch_draw_intersection(paths, entry)
 	-- intersection shapes are assumed to start down-up and left-right at 0 angle
 	-- directions: 1 = left, 2 = up, 3 = right, 4 = down
-	-- types: 1 = I, 2 = L, 3 = P, 4 = T, 5 = X
 
 	-- intersections that connect to 4 point (X shape), default
-	local shape = 5
+	local name = entry.name_X
 	local angle = 90 * math.random(0, 3)
 
 	-- intersections that connect to 1 point (P shape)
 	if paths[1] == true and paths[2] == false and paths[3] == false and paths[4] == false then
-		shape = 3
+		name = entry.name_P
 		angle = 90
 	elseif paths[1] == false and paths[2] == true and paths[3] == false and paths[4] == false then
-		shape = 3
+		name = entry.name_P
 		angle = 180
 	elseif paths[1] == false and paths[2] == false and paths[3] == true and paths[4] == false then
-		shape = 3
+		name = entry.name_P
 		angle = 270
 	elseif paths[1] == false and paths[2] == false and paths[3] == false and paths[4] == true then
-		shape = 3
+		name = entry.name_P
 		angle = 0
 
 	-- intersections that connect to 2 point (L shape)
 	elseif paths[1] == true and paths[2] == false and paths[3] == false and paths[4] == true then
-		shape = 2
+		name = entry.name_L
 		angle = 0
 	elseif paths[1] == false and paths[2] == false and paths[3] == true and paths[4] == true then
-		shape = 2
+		name = entry.name_L
 		angle = 270
 	elseif paths[1] == true and paths[2] == true and paths[3] == false and paths[4] == false then
-		shape = 2
+		name = entry.name_L
 		angle = 90
 	elseif paths[1] == false and paths[2] == true and paths[3] == true and paths[4] == false then
-		shape = 2
+		name = entry.name_L
 		angle = 180
 
 	-- intersections that connect to 2 point (I shape)
 	elseif paths[1] == false and paths[2] == true and paths[3] == false and paths[4] == true then
-		shape = 1
+		name = entry.name_I
 		angle = 180 * math.random(0, 1)
 	elseif paths[1] == true and paths[2] == false and paths[3] == true and paths[4] == false then
-		shape = 1
+		name = entry.name_I
 		angle = 90 + (180 * math.random(0, 1))
 
 	-- intersections that connect to 3 point (T shape)
 	elseif paths[1] == true and paths[2] == false and paths[3] == true and paths[4] == true then
-		shape = 4
+		name = entry.name_T
 		angle = 0
 	elseif paths[1] == true and paths[2] == true and paths[3] == false and paths[4] == true then
-		shape = 4
+		name = entry.name_T
 		angle = 90
 	elseif paths[1] == true and paths[2] == true and paths[3] == true and paths[4] == false then
-		shape = 4
+		name = entry.name_T
 		angle = 180
 	elseif paths[1] == false and paths[2] == true and paths[3] == true and paths[4] == true then
-		shape = 4
+		name = entry.name_T
 		angle = 270
 	end
 
-	return shape, angle
+	return name, angle
 end
 
 -- obtains the position and rotation of all road segments between the given points
-local function branch_draw (names, point_start, points_end, size_h, size_v, height)
+local function branch_draw (point_start, points_end, mins, maxs, size_h, size_v, center, perlin, entry)
 	local new_scheme = {}
-	local pos_start = { x = point_start.x, z = point_start.z }
-	local size = { x = size_h, y = size_v, z = size_h }
+	local pos_start = {x = point_start.x, z = point_start.z}
+	local size = {x = size_h, y = size_v, z = size_h}
 
 	-- draw the intersection at the starting point
-	local point_start_pos = { x = pos_start.x, y = height, z = pos_start.z }
-	local point_start_shape, point_start_angle = branch_draw_intersection(point_start.paths)
-	table.insert(new_scheme, { names[point_start_shape], point_start_pos, point_start_angle, size })
+	local point_start_height = calculate_perlin_height(perlin, maxs.x - pos_start.x, maxs.z - pos_start.z, center, entry.alignment)
+	local point_start_pos = {x = pos_start.x, y = point_start_height + entry.offset, z = pos_start.z}
+	local point_start_name, point_start_angle = branch_draw_intersection(point_start.paths, entry)
+	table.insert(new_scheme, {point_start_name, point_start_pos, point_start_angle, size})
 
 	-- loop through the end points if any
 	for x, point_end in ipairs(points_end) do
-		local pos_end = { x = point_end.x, z = point_end.z }
+		local pos_end = {x = point_end.x, z = point_end.z}
 
 		-- determine the direction of this end point from the starting point, and draw the road accordingly
 		if pos_start.x > pos_end.x then
 			-- the point is left
 			for w = pos_start.x - size_h, pos_end.x + size_h, -size_h do
-				local pos = { x = w, y = height, z = pos_start.z }
-				table.insert(new_scheme, { names[1], pos, 90, size })
+				local pos = {x = w, z = pos_start.z}
+				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
+				pos.y = height + entry.offset
+				table.insert(new_scheme, {entry.name_I, pos, 90, size})
 			end
 		elseif pos_start.x < pos_end.x then
 			-- the point is right
 			for w = pos_start.x + size_h, pos_end.x - size_h, size_h do
-				local pos = { x = w, y = height, z = pos_start.z }
-				table.insert(new_scheme, { names[1], pos, 270, size })
+				local pos = {x = w, z = pos_start.z}
+				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
+				pos.y = height + entry.offset
+				table.insert(new_scheme, {entry.name_I, pos, 270, size})
 			end
 		elseif pos_start.z > pos_end.z then
 			-- the point is down
 			for w = pos_start.z - size_h, pos_end.z + size_h, -size_h do
-				local pos = { x = pos_start.x, y = height, z = w }
-				table.insert(new_scheme, { names[1], pos, 180, size })
+				local pos = {x = pos_start.x, z = w}
+				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
+				pos.y = height + entry.offset
+				table.insert(new_scheme, {entry.name_I, pos, 180, size})
 			end
 		elseif pos_start.z < pos_end.z then
 			-- the point is up
 			for w = pos_start.z + size_h, pos_end.z - size_h, size_h do
-				local pos = { x = pos_start.x, y = height, z = w }
-				table.insert(new_scheme, { names[1], pos, 0, size })
+				local pos = {x = pos_start.x, z = w}
+				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
+				pos.y = height + entry.offset
+				table.insert(new_scheme, {entry.name_I, pos, 0, size})
 			end
 		end
 	end
@@ -174,13 +182,13 @@ local function branch_draw (names, point_start, points_end, size_h, size_v, heig
 end
 
 -- calculates the branching of end points from starting points
-local function branch (names, points, mins, maxs, size, height, limit, schemes, rectangles)
-	local new_points = { }
+local function branch (points, mins, maxs, size, limit, schemes, rectangles, center, perlin, entry)
+	local new_points = {}
 	local new_limit = limit
 
 	-- loop through the starting points
 	for i, point in ipairs(points) do
-		local new_points_this = { }
+		local new_points_this = {}
 		local size_h = size.x
 		local size_v = size.y
 
@@ -193,15 +201,15 @@ local function branch (names, points, mins, maxs, size, height, limit, schemes, 
 				point.paths[1] = true
 				new_limit = new_limit - 1
 
-				local new_point = {x = point.x + distance, z = point.z, paths = {false, false, true, false} }
+				local new_point = {x = point.x + distance, z = point.z, paths = {false, false, true, false}}
 				table.insert(new_points, new_point)
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = { start_x = new_point.x + size_h, start_z = new_point.z, end_x = point.x - 1, end_z = point.z + size_h - 1 }
+				local new_rectangle = {start_x = new_point.x + size_h, start_z = new_point.z, end_x = point.x - 1, end_z = point.z + size_h - 1}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = { start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1 }
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -212,15 +220,15 @@ local function branch (names, points, mins, maxs, size, height, limit, schemes, 
 				point.paths[2] = true
 				new_limit = new_limit - 1
 
-				local new_point = {x = point.x, z = point.z + distance, paths = {false, false, false, true} }
+				local new_point = {x = point.x, z = point.z + distance, paths = {false, false, false, true}}
 				table.insert(new_points, new_point)
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = { start_x = point.x, start_z = point.z + size_h, end_x = new_point.x + size_h - 1, end_z = new_point.z - 1 }
+				local new_rectangle = {start_x = point.x, start_z = point.z + size_h, end_x = new_point.x + size_h - 1, end_z = new_point.z - 1}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = { start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1 }
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -231,15 +239,15 @@ local function branch (names, points, mins, maxs, size, height, limit, schemes, 
 				point.paths[3] = true
 				new_limit = new_limit - 1
 
-				local new_point = {x = point.x + distance, z = point.z, paths = {true, false, false, false} }
+				local new_point = {x = point.x + distance, z = point.z, paths = {true, false, false, false}}
 				table.insert(new_points, new_point)
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = { start_x = point.x + size_h, start_z = point.z, end_x = new_point.x - 1, end_z = new_point.z + size_h - 1 }
+				local new_rectangle = {start_x = point.x + size_h, start_z = point.z, end_x = new_point.x - 1, end_z = new_point.z + size_h - 1}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = { start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1 }
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -250,21 +258,21 @@ local function branch (names, points, mins, maxs, size, height, limit, schemes, 
 				point.paths[4] = true
 				new_limit = new_limit - 1
 
-				local new_point = {x = point.x, z = point.z + distance, paths = {false, true, false, false} }
+				local new_point = {x = point.x, z = point.z + distance, paths = {false, true, false, false}}
 				table.insert(new_points, new_point)
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = { start_x = new_point.x, start_z = new_point.z + size_h, end_x = point.x + size_h - 1, end_z = point.z - 1 }
+				local new_rectangle = {start_x = new_point.x, start_z = new_point.z + size_h, end_x = point.x + size_h - 1, end_z = point.z - 1}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = { start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1 }
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
 
 		-- get the structures for this piece of road design, and add them to the schemes table
-		local new_scheme = branch_draw(names, point, new_points_this, size_h, size_v, height)
+		local new_scheme = branch_draw(point, new_points_this, mins, maxs, size_h, size_v, center, perlin, entry)
 		for v, road in ipairs(new_scheme) do
 			table.insert(schemes, road)
 		end
@@ -277,9 +285,9 @@ end
 -- Global functions - Roads
 
 -- analyzes roads in the mapgen table and acts accordingly
-function mapgen_roads_get (pos, scale_h, roads)
-	local mins = { x = pos.x, z = pos.z }
-	local maxs = { x = pos.x + scale_h, z = pos.z + scale_h }
+function mapgen_roads_get (pos_start, pos_end, center, perlin, roads)
+	local mins = {x = pos_start.x, z = pos_start.z}
+	local maxs = {x = pos_end.x, z = pos_end.z}
 	-- roads table which will be filled and returned by this function
 	local schemes = {}
 	local rectangles = {}
@@ -288,7 +296,7 @@ function mapgen_roads_get (pos, scale_h, roads)
 		-- get the size of this road
 		-- each segment must be square and all segments the same size horizontally
 		local size = nil
-		local roads = { entry.name_I, entry.name_L, entry.name_P, entry.name_T, entry.name_X }
+		local roads = {entry.name_I, entry.name_L, entry.name_P, entry.name_T, entry.name_X}
 		for w, road in ipairs(roads) do
 			local current_size = io_get_size(0, road)
 			if current_size.x ~= current_size.z then
@@ -306,21 +314,13 @@ function mapgen_roads_get (pos, scale_h, roads)
 		if size ~= nil then
 			-- initialize the road network with a starting point
 			local limit = calculate_random(entry.count, false) - 1
-			local points = { {x = math.random(mins.x, maxs.x - size.x), z = math.random(mins.z, maxs.z - size.z), paths = {false, false, false, false} } }
-			table.insert(rectangles, { start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1 })
-			-- get the offset of this road
-			local offset = calculate_random(entry.offset, false)
+			local points = {{x = math.random(mins.x, maxs.x - size.x), z = math.random(mins.z, maxs.z - size.z), paths = {false, false, false, false}}}
+			table.insert(rectangles, {start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1})
 
 			while (#points > 0) do
 				-- branch the existing points, then prepare the new ones for branching in the next loop iteration
 				-- this loop ends when no new points are created and all existing points were handles
-				local names = {}
-				names[1] = entry.name_I
-				names[2] = entry.name_L
-				names[3] = entry.name_P
-				names[4] = entry.name_T
-				names[5] = entry.name_X
-				local new_points, new_limit = branch(names, points, mins, maxs, size, pos.y + offset, limit, schemes, rectangles)
+				local new_points, new_limit = branch(points, mins, maxs, size, limit, schemes, rectangles, center, perlin, entry)
 				points = new_points
 				limit = new_limit
 			end

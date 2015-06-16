@@ -12,7 +12,7 @@ function mapgen_metadata_set (minp, maxp, expressions, group)
 	for search_x = minp.x, maxp.x do
 		for search_y = minp.y, maxp.y do
 			for search_z = minp.z, maxp.z do
-				local pos = { x = search_x, y = search_y, z = search_z }
+				local pos = {x = search_x, y = search_y, z = search_z}
 				local node = minetest.env:get_node(pos)
 
 				-- don't even bother for air nodes

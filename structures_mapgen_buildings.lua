@@ -5,33 +5,33 @@
 
 -- obtains the position and rotation of all building parts
 local function draw (names, pos, size, angle, floors)
-	local new_scheme = { }
+	local new_scheme = {}
 
 	if floors == 0 then
 		-- insert the building into the schemes table
 		-- types: 1 = normal & center, 2 = start, 3 = end
-		table.insert(new_scheme, { names[1], pos, angle, size } )
+		table.insert(new_scheme, {names[1], pos, angle, size} )
 	else
-		local size_start = { x = size.x, y = size.y_start, z = size.z }
-		local size_middle = { x = size.x, y = size.y, z = size.z }
-		local size_end = { x = size.x, y = size.y_end, z = size.z }
+		local size_start = {x = size.x, y = size.y_start, z = size.z}
+		local size_middle = {x = size.x, y = size.y, z = size.z}
+		local size_end = {x = size.x, y = size.y_end, z = size.z}
 
 		-- add the start segment to the schemes table
-		table.insert(new_scheme, { names[2], pos, angle, size_start } )
+		table.insert(new_scheme, {names[2], pos, angle, size_start} )
 
 		-- loop through the middle segments
 		local height_middle_start = pos.y + size_start.y
 		local height_middle_end = height_middle_start + (size_middle.y * (floors - 1))
 		for height = height_middle_start, height_middle_end, size_middle.y do
 			-- add the middle segments to the schemes table
-			local pos_middle = { x = pos.x, y = height, z = pos.z }
-			table.insert(new_scheme, { names[1], pos_middle, angle, size_middle } )
+			local pos_middle = {x = pos.x, y = height, z = pos.z}
+			table.insert(new_scheme, {names[1], pos_middle, angle, size_middle} )
 		end
 
 		-- add the start segment to the schemes table
 		local height_end = height_middle_end + size_middle.y
-		local pos_end = { x = pos.x, y = height_end, z = pos.z }
-		table.insert(new_scheme, { names[3], pos_end, angle, size_end } )
+		local pos_end = {x = pos.x, y = height_end, z = pos.z}
+		table.insert(new_scheme, {names[3], pos_end, angle, size_end} )
 	end
 
 	return new_scheme
@@ -40,15 +40,15 @@ end
 -- Global functions - Buildings
 
 -- analyzes buildings in the mapgen table and acts accordingly
-function mapgen_buildings_get (pos, scale_h, boxes, buildings)
-	local schemes = { }
+function mapgen_buildings_get (pos_start, pos_end, center, perlin, boxes, buildings)
+	local schemes = {}
 	-- store the bounding boxes of areas to avoid
 	-- if the function is called without any boxes (eg: roads), add a point in the center
 	local new_rectangles = boxes
 	if #new_rectangles == 0 then
-		local center_x = math.floor(pos.x + (scale_h / 2))
-		local center_z = math.floor(pos.z + (scale_h / 2))
-		table.insert(new_rectangles, { start_x = center_x, start_z = center_z, end_x = center_x, end_z = center_z })
+		local center_x = math.floor((pos_start.x + pos_end.x) / 2)
+		local center_z = math.floor((pos_start.z + pos_end.z) / 2)
+		table.insert(new_rectangles, {start_x = center_x, start_z = center_z, end_x = center_x, end_z = center_z})
 	end
 
 	-- although the group size tries to match the number of structures, buildings that spawn first may still decrease the probability of following buildings
@@ -97,9 +97,9 @@ function mapgen_buildings_get (pos, scale_h, boxes, buildings)
 		if size ~= nil then
 			-- used later to check if a position was found
 			local found_pos = false
+
 			-- location will be fully determined later
-			local offset = calculate_random(building.offset, false)
-			local location = { x = pos.x, y = pos.y + offset, z = pos.z }
+			local location = {x = pos_start.x, y = pos_start.y, z = pos_start.z}
 
 			-- determine the X and Z position of this building
 			-- first shuffle the rectangles table, to avoid a fixed search order
@@ -107,10 +107,10 @@ function mapgen_buildings_get (pos, scale_h, boxes, buildings)
 			-- loop 1: go through the recrangles we want to place this building next to
 			for w, rectangle1 in ipairs(new_rectangles) do
 				-- there are two ways to attempt placing this building around the rectangle: under it or right of it
-				local pos_under = { x = rectangle1.start_x, z = rectangle1.end_z + 1 }
-				local pos_right = { x = rectangle1.end_x + 1, z = rectangle1.start_z }
-				local pos_over = { x = rectangle1.start_x, z = rectangle1.start_z - size.z }
-				local pos_left = { x = rectangle1.start_x - size.x, z = rectangle1.start_z }
+				local pos_under = {x = rectangle1.start_x, z = rectangle1.end_z + 1}
+				local pos_right = {x = rectangle1.end_x + 1, z = rectangle1.start_z}
+				local pos_over = {x = rectangle1.start_x, z = rectangle1.start_z - size.z}
+				local pos_left = {x = rectangle1.start_x - size.x, z = rectangle1.start_z}
 				local found_under = true
 				local found_right = true
 				local found_over = true
@@ -155,35 +155,40 @@ function mapgen_buildings_get (pos, scale_h, boxes, buildings)
 				-- see which options succeeded if any (prefer under)
 				-- also make sure the building would still be within the group's bounds
 				if found_under == true and
-				pos_under.x + size.x - 1 <= pos.x + scale_h and pos_under.z + size.z - 1 <= pos.z + scale_h and
-				pos_under.x >= pos.x and pos_under.z >= pos.z then
+				pos_under.x + size.x - 1 <= pos_end.x and pos_under.z + size.z - 1 <= pos_end.z and
+				pos_under.x >= pos_start.x and pos_under.z >= pos_start.z then
 					location.x = pos_under.x
 					location.z = pos_under.z
 					found_pos = true
 					break
 				elseif found_right == true and
-				pos_right.x + size.x - 1 <= pos.x + scale_h and pos_right.z + size.z - 1 <= pos.z + scale_h and
-				pos_right.x >= pos.x and pos_right.z >= pos.z then
+				pos_right.x + size.x - 1 <= pos_end.x and pos_right.z + size.z - 1 <= pos_end.z and
+				pos_right.x >= pos_start.x and pos_right.z >= pos_start.z then
 					location.x = pos_right.x
 					location.z = pos_right.z
 					found_pos = true
 					break
 				elseif found_over == true and
-				pos_over.x + size.x - 1 <= pos.x + scale_h and pos_over.z + size.z - 1 <= pos.z + scale_h and
-				pos_over.x >= pos.x and pos_over.z >= pos.z then
+				pos_over.x + size.x - 1 <= pos_end.x and pos_over.z + size.z - 1 <= pos_end.z and
+				pos_over.x >= pos_start.x and pos_over.z >= pos_start.z then
 					location.x = pos_over.x
 					location.z = pos_over.z
 					found_pos = true
 					break
 				elseif found_left == true and
-				pos_left.x + size.x - 1 <= pos.x + scale_h and pos_left.z + size.z - 1 <= pos.z + scale_h and
-				pos_left.x >= pos.x and pos_left.z >= pos.z then
+				pos_left.x + size.x - 1 <= pos_end.x and pos_left.z + size.z - 1 <= pos_end.z and
+				pos_left.x >= pos_start.x and pos_left.z >= pos_start.z then
 					location.x = pos_left.x
 					location.z = pos_left.z
 					found_pos = true
 					break
 				end
 			end
+
+			-- determine height from the perlin map
+			local height = calculate_perlin_height(perlin, pos_end.x - location.x, pos_end.z - location.z, center, building.alignment)
+			local offset = calculate_random(building.offset, false)
+			location.y = height + offset
 
 			-- only if this building was found in the loop above
 			if found_pos == true then
@@ -197,7 +202,7 @@ function mapgen_buildings_get (pos, scale_h, boxes, buildings)
 				end
 
 				-- add this building's corners to the rectangle list
-				local rectangle = { start_x = location.x, start_z = location.z, end_x = location.x + size.x - 1, end_z = location.z + size.z - 1 }
+				local rectangle = {start_x = location.x, start_z = location.z, end_x = location.x + size.x - 1, end_z = location.z + size.z - 1}
 				table.insert(new_rectangles, rectangle)
 			end
 		end

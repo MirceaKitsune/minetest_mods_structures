@@ -16,7 +16,7 @@ IO_SCHEMATICS = true
 function io_get_size (angle, filename)
 	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
 
-	local size = { x = 0, y = 0, z = 0 }
+	local size = {x = 0, y = 0, z = 0}
 
 	-- whether to use text files or schematics
 	if IO_SCHEMATICS == true then
@@ -67,7 +67,7 @@ function io_get_size (angle, filename)
 
 	-- rotate box size with angle
 	if angle == 90 or angle == 270 then
-		local size_rotate = { x = size.z, y = size.y, z = size.x }
+		local size_rotate = {x = size.z, y = size.y, z = size.x}
 		size = size_rotate
 	end
 
@@ -76,8 +76,8 @@ end
 
 -- fills the marked aream, ignored objects are not affected
 function io_area_fill (pos, ends, node)
-	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
-	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
+	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
+	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
 
 	-- no node specified means we clear the area
 	if node == nil then
@@ -88,7 +88,7 @@ function io_area_fill (pos, ends, node)
 	local vm = VoxelManip()
 	local minp, maxp = vm:read_from_map(pos_start, pos_end)
 	local data = vm:get_data()
-	local va = VoxelArea:new{ MinEdge = minp, MaxEdge = maxp }
+	local va = VoxelArea:new{MinEdge = minp, MaxEdge = maxp}
 	for x = pos_start.x, pos_end.x do
 		for y = pos_start.y, pos_end.y do
 			for z = pos_start.z, pos_end.z do
@@ -107,8 +107,8 @@ end
 -- exports structure to a text file
 function io_area_export (pos, ends, filename)
 	if ends == nil then return end
-	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
-	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
+	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
+	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
 
 	local path = minetest.get_modpath("structures").."/"..IO_DIRECTORY.."/"..filename
 
@@ -118,7 +118,7 @@ function io_area_export (pos, ends, filename)
 		path = path..".mts"
 
 		-- add ignored nodes with 0 probability
-		local ignore = { }
+		local ignore = {}
 		for loop_x = pos_start.x, pos_end.x do
 			for loop_y = pos_start.y, pos_end.y do
 				for loop_z = pos_start.z, pos_end.z do
@@ -126,7 +126,7 @@ function io_area_export (pos, ends, filename)
 					local node_here = minetest.env:get_node(pos_here).name
 					local liquidtype = minetest.registered_nodes[node_here].liquidtype
 					if calculate_node_in_table(node_here, IO_IGNORE) == true or liquidtype == "flowing" then
-						table.insert(ignore, { pos = { x = loop_x, y = loop_y, z = loop_z }, prob = -1 } )
+						table.insert(ignore, {pos = {x = loop_x, y = loop_y, z = loop_z}, prob = -1} )
 					end
 				end
 			end
@@ -172,8 +172,8 @@ end
 -- imports structure from a text file
 function io_area_import (pos, ends, angle, filename, check_bounds)
 	if ends == nil then return end
-	local pos_start = { x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1 }
-	local pos_end = { x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1 }
+	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
+	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
 
 	-- check if the structure fits between the start and end positions if necessary
 	if check_bounds == true then
@@ -226,14 +226,14 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 			end
 
 			-- parameters: x position [1], y position [2], z position [3], node type [4], param1 [5], param2 [6]
-			local node_pos = { }
+			local node_pos = {}
 			local node_name = parameters[4]
 			local node_param1 = parameters[5]
 			local node_param2 = parameters[6]
 			local node_paramtype2 = minetest.registered_nodes[node_name].paramtype2
 
 			if angle == 90 or angle == -270 then
-				node_pos = { x = pos_end.x - tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[1]) }
+				node_pos = {x = pos_end.x - tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[1])}
 
 				-- if param2 is facedir, rotate it accordingly
 				-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
@@ -251,7 +251,7 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 					elseif node_param2 == "5" then node_param2 = "2" end
 				end
 			elseif angle == 180 then
-				node_pos = { x = pos_end.x - tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[3]) }
+				node_pos = {x = pos_end.x - tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[3])}
 
 				-- if param2 is facedir, rotate it accordingly
 				-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
@@ -269,7 +269,7 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 					elseif node_param2 == "5" then node_param2 = "4" end
 				end
 			elseif angle == 270 or angle == -90 then
-				node_pos = { x = pos_start.x + tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[1]) }
+				node_pos = {x = pos_start.x + tonumber(parameters[3]), y = pos_start.y + tonumber(parameters[2]), z = pos_end.z - tonumber(parameters[1])}
 
 				-- if param2 is facedir, rotate it accordingly
 				-- 0 = y+ ; 1 = z+ ; 2 = z- ; 3 = x+ ; 4 = x- ; 5 = y-
@@ -287,9 +287,9 @@ function io_area_import (pos, ends, angle, filename, check_bounds)
 					elseif node_param2 == "5" then node_param2 = "3" end
 				end
 			else -- 0 degrees
-				node_pos = { x = pos_start.x + tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[3]) }
+				node_pos = {x = pos_start.x + tonumber(parameters[1]), y = pos_start.y + tonumber(parameters[2]), z = pos_start.z + tonumber(parameters[3])}
 			end
-			minetest.env:set_node(node_pos, { name = node_name, param1 = node_param1, param2 = node_param2 })
+			minetest.env:set_node(node_pos, {name = node_name, param1 = node_param1, param2 = node_param2})
 		end
 
 		file:close()

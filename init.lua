@@ -14,9 +14,14 @@ local CONNECT_TIME = 1
 
 -- Global functions - Calculate
 
+-- calculates the linear interpolation between two numbers
+function calculate_lerp (value_start, value_end, control)
+	return (1 - control) * value_start + control * value_end
+end
+
 -- returns the distance between two origins
 function calculate_distance (pos1, pos2)
-	local size = { x = 0, y = 0, z = 0 }
+	local size = {x = 0, y = 0, z = 0}
 	if pos1.x < pos2.x then size.x = pos2.x - pos1.x else size.x = pos1.x - pos2.x end
 	if pos1.y < pos2.y then size.y = pos2.y - pos1.y else size.y = pos1.y - pos2.y end
 	if pos1.z < pos2.z then size.z = pos2.z - pos1.z else size.z = pos1.z - pos2.z end
@@ -79,6 +84,15 @@ function calculate_random(table, return_max)
 	end
 end
 
+-- returns the height based on perlin map
+function calculate_perlin_height (perlin, pos_x, pos_z, center, alignment)
+	local height = perlin[pos_x][pos_z]
+	if alignment > 0 then
+		height = math.floor(calculate_lerp(height, center, alignment))
+	end
+	return height
+end
+
 -- Local functions - Formspec
 
 local function make_formspec (file, io_angle, area_size, area_nodes)
@@ -139,22 +153,22 @@ function markers_remove (pos)
 	local pos_here = {}
 
 	-- remove X
-	pos_here = { x = pos_markers.x, y = pos.y, z = pos.z }
+	pos_here = {x = pos_markers.x, y = pos.y, z = pos.z}
 	if minetest.env:get_node(pos_here).name == "structures:marker" then
 		minetest.env:remove_node(pos_here)
 	end
 	-- remove Y
-	pos_here = { x = pos.x, y = pos_markers.y, z = pos.z }
+	pos_here = {x = pos.x, y = pos_markers.y, z = pos.z}
 	if minetest.env:get_node(pos_here).name == "structures:marker" then
 		minetest.env:remove_node(pos_here)
 	end
 	-- remove Z
-	pos_here = { x = pos.x, y = pos.y, z = pos_markers.z }
+	pos_here = {x = pos.x, y = pos.y, z = pos_markers.z}
 	if minetest.env:get_node(pos_here).name == "structures:marker" then
 		minetest.env:remove_node(pos_here)
 	end
 
-	minetest.env:add_node(pos, { name = "structures:manager_disabled" })
+	minetest.env:add_node(pos, {name = "structures:manager_disabled"})
 end
 
 -- search for in-line markers on the X / Y / Z axes within radius and return their positions
@@ -193,11 +207,11 @@ function markers_transform (pos)
 	local pos_markers = markers_get(pos)
 	if pos_markers.x ~= nil and pos_markers.y ~= nil and pos_markers.z ~= nil then
 		if minetest.env:get_node(pos).name == "structures:manager_disabled" then
-			minetest.env:add_node(pos, { name = "structures:manager_enabled" })
+			minetest.env:add_node(pos, {name = "structures:manager_enabled"})
 		end
 	else
 		if minetest.env:get_node(pos).name == "structures:manager_enabled" then
-			minetest.env:add_node(pos, { name = "structures:manager_disabled" })
+			minetest.env:add_node(pos, {name = "structures:manager_disabled"})
 		end
 	end
 end
@@ -275,7 +289,7 @@ minetest.register_node("structures:marker", {
 })
 
 minetest.register_abm({
-	nodenames = { "structures:manager_disabled", "structures:manager_enabled" },
+	nodenames = {"structures:manager_disabled", "structures:manager_enabled"},
 	interval = CONNECT_TIME,
 	chance = 1,
 

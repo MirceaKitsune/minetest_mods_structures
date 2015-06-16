@@ -7,7 +7,7 @@
 -- higher values give more time for other mapgen operations to finish, decreasing the probability of structures being cut by the cavegen and potentially reducing lag
 -- the delay is randomized per structure and ranges between the min and max values, to avoid clutter and the engine doing too much work at once
 local MAPGEN_DELAY_MIN = 5
-local MAPGEN_DELAY_MAX = 10
+local MAPGEN_DELAY_MAX = 30
 -- whether to keep structures in the table after they have been placed by on_generate
 -- enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn
 local MAPGEN_KEEP_STRUCTURES = false
@@ -88,29 +88,21 @@ local function group_size (id)
 	return scale_horizontal, scale_vertical
 end
 
--- gets the minimum and maximum height from the perlin map
-local function generate_height(minp, maxp, seed, noiseparams)
+-- gets the perlin map and its minimum and maximum height
+local function generate_perlin(minp, maxp, seed, noiseparams)
 	if not noiseparams.seed then
 		noiseparams.seed = seed
 	end
+	local pos = {
+		x = minp.x,
+		y = minp.z,
+	}
 	local size = {
 		x = maxp.x - minp.x,
-		y = maxp.y - minp.y,
-		z = maxp.z - minp.z,
+		y = maxp.z - minp.z,
 	}
-	local perlin = minetest.get_perlin_map(noiseparams, size):get2dMap_flat(minp)
-
-	local lowest = maxp.y
-	local highest = minp.y
-	for _, entry in ipairs(perlin) do
-		if entry > highest then
-			highest = math.floor(entry)
-		end
-		if entry < lowest then
-			lowest = math.ceil(entry)
-		end
-	end
-	return lowest, highest
+	local perlin = minetest.get_perlin_map(noiseparams, size):get2dMap(pos)
+	return perlin
 end
 
 -- returns the index of the virtual cube addressed by the given position
@@ -188,19 +180,42 @@ local function mapgen_generate (minp, maxp, seed)
 			-- choose a random group from the list of possible groups
 			local group_id = groups_id[math.random(1, #groups_id)]
 			local group = mapgen_table[group_id]
-			local minh, maxh = generate_height(mapgen_cubes[cube_index].minp, mapgen_cubes[cube_index].maxp, seed, group.noiseparams)
 			mapgen_cubes[cube_index].group = group_id
 
 			-- choose a random position within the cube
-			local position = {
+			local position_start = {
 				x = math.random(mapgen_cubes[cube_index].minp.x, mapgen_cubes[cube_index].maxp.x - group.size_horizontal + 1),
-				y = math.min(math.max(maxh, mapgen_cubes[cube_index].minp.y), mapgen_cubes[cube_index].maxp.y - group.size_vertical + 1),
+				y = math.random(mapgen_cubes[cube_index].minp.y, mapgen_cubes[cube_index].maxp.y - group.size_vertical + 1),
 				z = math.random(mapgen_cubes[cube_index].minp.z, mapgen_cubes[cube_index].maxp.z - group.size_horizontal + 1),
 			}
+			local position_end = {
+				x = position_start.x + group.size_horizontal,
+				y = position_start.y + group.size_vertical,
+				z = position_start.z + group.size_horizontal,
+			}
+
+			-- get the perlin noise used to determine structure height
+			local perlin = generate_perlin(position_start, position_end, seed, group.noiseparams)
+
+			-- determine minimum and maximum height
+			-- initialize min and max in reverse to calculate them properly
+			local height_min = position_end.y
+			local height_max = position_start.y
+			for _, entry1 in ipairs(perlin) do
+				for _, entry2 in ipairs(entry1) do
+					if entry2 > height_max then
+						height_max = math.floor(entry2)
+					end
+					if entry2 < height_min then
+						height_min = math.ceil(entry2)
+					end
+				end
+			end
+			local center = math.floor((height_min + height_max) / 2)
 
 			-- get the building and road lists
-			local schemes_roads, rectangles_roads = mapgen_roads_get(position, group.size_horizontal, group.roads)
-			local schemes_buildings = mapgen_buildings_get(position, group.size_horizontal, rectangles_roads, group.buildings)
+			local schemes_roads, rectangles_roads = mapgen_roads_get(position_start, position_end, center, perlin, group.roads)
+			local schemes_buildings = mapgen_buildings_get(position_start, position_end, center, perlin, rectangles_roads, group.buildings)
 			-- add everything to the cube's structure scheme
 			-- buildings should be first, so they're represented most accurately by metadata numbers
 			mapgen_cubes[cube_index].structures = schemes_buildings
@@ -226,8 +241,8 @@ local function mapgen_generate (minp, maxp, seed)
 				position.z >= minp.z and position.z <= maxp.z then
 					-- determine the corners of the structure's cube
 					-- since the I/O function doesn't include the start and end nodes themselves, decrease start position by 1 to get the right spot
-					local position1 = { x = position.x - 1, y = position.y - 1, z = position.z - 1 }
-					local position2 = { x = position.x + size.x, y = position.y + size.y, z = position.z + size.z }
+					local position1 = {x = position.x - 1, y = position.y - 1, z = position.z - 1}
+					local position2 = {x = position.x + size.x, y = position.y + size.y, z = position.z + size.z}
 
 					-- import the structure
 					io_area_import(position1, position2, angle, name, false)
@@ -235,9 +250,9 @@ local function mapgen_generate (minp, maxp, seed)
 					-- apply metadata
 					local group = mapgen_cubes[cube_index].group
 					local expressions = {
-						{ "POSITION_X", tostring(position.x) }, { "POSITION_Y", tostring(position.y) }, { "POSITION_Z", tostring(position.z) },
-						{ "SIZE_X", tostring(size.x) }, { "SIZE_Y", tostring(size.y) }, { "SIZE_Z", tostring(size.z) },
-						{ "ANGLE", tostring(angle) }, { "NUMBER", tostring(i) }, { "NAME", name }, { "GROUP", mapgen_table[group].name }
+						{"POSITION_X", tostring(position.x)}, {"POSITION_Y", tostring(position.y)}, {"POSITION_Z", tostring(position.z)},
+						{"SIZE_X", tostring(size.x)}, {"SIZE_Y", tostring(size.y)}, {"SIZE_Z", tostring(size.z)},
+						{"ANGLE", tostring(angle)}, {"NUMBER", tostring(i)}, {"NAME", name}, {"GROUP", mapgen_table[group].name}
 					}
 					mapgen_metadata_set(position1, position2, expressions, group)
 
