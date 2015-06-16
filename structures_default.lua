@@ -6,7 +6,10 @@
 -- spawning is delayed by this many seconds per structure
 -- higher values give more time for other mapgen operations to finish and reduce lag, but cause towns to appear more slowly
 -- example: if the delay is 0.1 and a town has 1000 structures, it will take the entire town 100 seconds to spawn
-structures.mapgen_delay = 0.25
+structures.mapgen_delay = 0.1
+-- whether to persist the mapgen cube list into a text file
+-- enabling this assures that virtual cubes are persisted between server restarts, reducing the chances of incompletely spawned towns
+structures.mapgen_keep_cubes = true
 -- whether to keep structures in the table after they have been placed by on_generate
 -- enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn
 structures.mapgen_keep_structures = false
@@ -148,6 +151,7 @@ structures:define({
 			count = 50,
 			offset = -8,
 			alignment = 0.75,
+			branch_min = 5,
 		},
 	},
 	spawn_structure_post = function(name, number, minp, maxp, size, angle)

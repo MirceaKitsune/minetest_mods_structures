@@ -1,18 +1,13 @@
 -- Structures: Mapgen functions: Roads
 -- This file contains the building mapgen functions, for structures meant to be placed as roads
 
--- Settings
-
--- minimum branch distance of a road in segments
-MAPGEN_ROADS_MIN = 3
-
 -- Local functions - Branch
 
 -- determines the distance of an end point branching from its starting point
-local function branch_size (length_start, length_end, axis, size, rectangles)
+local function branch_size (length_start, length_end, axis, size, rectangles, entry)
 	local dist = 0
 	local dist_scan = math.abs(length_start - length_end)
-	local size_min = size * MAPGEN_ROADS_MIN
+	local size_min = size * entry.branch_min
 
 	-- scan the rectangles of other roads and detect if this segment would intersect any
 	for i, rectangle in ipairs(rectangles) do
@@ -196,7 +191,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, cen
 		-- directions: 1 = left, 2 = up, 3 = right, 4 = down
 		if point.paths[1] == false and new_limit > 0 then
 			-- create a new point to the left
-			local distance = branch_size(point.x - 1, mins.x, point.z, size_h, rectangles)
+			local distance = branch_size(point.x - 1, mins.x, point.z, size_h, rectangles, entry)
 			if distance ~= nil then
 				point.paths[1] = true
 				new_limit = new_limit - 1
@@ -215,7 +210,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, cen
 		end
 		if point.paths[2] == false and new_limit > 0 then
 			-- create a new point upward
-			local distance = branch_size(point.z + size_h, maxs.z, point.x, size_h, rectangles)
+			local distance = branch_size(point.z + size_h, maxs.z, point.x, size_h, rectangles, entry)
 			if distance ~= nil then
 				point.paths[2] = true
 				new_limit = new_limit - 1
@@ -234,7 +229,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, cen
 		end
 		if point.paths[3] == false and limit > 0 then
 			-- create a new point to the right
-			local distance = branch_size(point.x + size_h, maxs.x, point.z, size_h, rectangles)
+			local distance = branch_size(point.x + size_h, maxs.x, point.z, size_h, rectangles, entry)
 			if distance ~= nil then
 				point.paths[3] = true
 				new_limit = new_limit - 1
@@ -253,7 +248,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, cen
 		end
 		if point.paths[4] == false and new_limit > 0 then
 			-- create a new point downward
-			local distance = branch_size(point.z - 1, mins.z, point.x, size_h, rectangles)
+			local distance = branch_size(point.z - 1, mins.z, point.x, size_h, rectangles, entry)
 			if distance ~= nil then
 				point.paths[4] = true
 				new_limit = new_limit - 1
