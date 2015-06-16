@@ -240,14 +240,6 @@ local function mapgen_generate (minp, maxp, seed)
 					-- execute the structure's post-spawn function if one is present
 					if group.spawn_structure_post then group.spawn_structure_post(name, i, position1, position2, size, angle) end
 
-					-- apply metadata
-					local expressions = {
-						{"POSITION_X", tostring(position.x)}, {"POSITION_Y", tostring(position.y)}, {"POSITION_Z", tostring(position.z)},
-						{"SIZE_X", tostring(size.x)}, {"SIZE_Y", tostring(size.y)}, {"SIZE_Z", tostring(size.z)},
-						{"ANGLE", tostring(angle)}, {"NUMBER", tostring(i)}, {"NAME", name}, {"GROUP", group.name}
-					}
-					mapgen_metadata_set(position1, position2, expressions, group_id)
-
 					-- remove this structure from the list
 					if not structures.mapgen_keep_structures then
 						mapgen_cubes[cube_index].structures[i] = nil

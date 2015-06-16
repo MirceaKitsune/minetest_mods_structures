@@ -15,6 +15,20 @@ structures.mapgen_keep_structures = false
 structures.mapgen_cube_multiply_horizontal = 1
 structures.mapgen_cube_multiply_vertical = 2
 
+-- Functions
+
+-- set metadata accordingly for everything in this area
+local function set_signs (name, number, minp, maxp, group_name)
+	-- go through each node in the given area
+	local nodes = minetest.find_nodes_in_area(minp, maxp, {"default:sign_wall",})
+	for _, node in ipairs(nodes) do
+		local meta = minetest.get_meta(node)
+		local s = number..", "..name..", "..group_name
+		meta:set_string("text", s)
+		meta:set_string("infotext", s)
+	end
+end
+
 -- Towns
 
 structures:define({
@@ -29,7 +43,6 @@ structures:define({
 	   octaves = 5,
 	   persist = 0.6
 	},
-
 	buildings = {
 		{
 			name = "default_town_house_tiny_1",
@@ -125,7 +138,6 @@ structures:define({
 			floors = 0,
 		},
 	},
-
 	roads = {
 		{
 			name_I = "default_town_road_I",
@@ -138,21 +150,7 @@ structures:define({
 			alignment = 0.75,
 		},
 	},
-
-	metadata = {
-		{
-			name = "default:sign_wall",
-			item = "text",
-			value = "$NUMBER, $NAME, $GROUP",
-			format = "string",
-			probability = 1,
-		},
-		{
-			name = "default:sign_wall",
-			item = "infotext",
-			value = "$NUMBER, $NAME, $GROUP",
-			format = "string",
-			probability = 1,
-		},
-	},
+	spawn_structure_post = function(name, number, minp, maxp, size, angle)
+		set_signs (name, number, minp, maxp, "default_town")
+	end,
 })

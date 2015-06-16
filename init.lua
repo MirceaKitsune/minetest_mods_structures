@@ -304,6 +304,5 @@ dofile(minetest.get_modpath("structures").."/structures_io.lua")
 dofile(minetest.get_modpath("structures").."/structures_mapgen.lua")
 dofile(minetest.get_modpath("structures").."/structures_mapgen_roads.lua")
 dofile(minetest.get_modpath("structures").."/structures_mapgen_buildings.lua")
-dofile(minetest.get_modpath("structures").."/structures_mapgen_metadata.lua")
 
 dofile(minetest.get_modpath("structures").."/structures_default.lua")
