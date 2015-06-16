@@ -11,8 +11,9 @@ local function branch_size (length_start, length_end, axis, size, rectangles, en
 
 	-- scan the rectangles of other roads and detect if this segment would intersect any
 	for i, rectangle in ipairs(rectangles) do
-		if (axis >= rectangle.start_z and axis <= rectangle.end_z) or
-		(axis >= rectangle.start_x and axis <= rectangle.end_x) then
+		if not (rectangle.layer and entry.layer and rectangle.layer ~= entry.layer) and
+		((axis >= rectangle.start_z and axis <= rectangle.end_z) or
+		(axis >= rectangle.start_x and axis <= rectangle.end_x)) then
 			local dist_limit_X = dist_scan
 			local dist_limit_Z = dist_scan
 
@@ -201,10 +202,10 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, cen
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = {start_x = new_point.x + size_h, start_z = new_point.z, end_x = point.x - 1, end_z = point.z + size_h - 1}
+				local new_rectangle = {start_x = new_point.x + size_h, start_z = new_point.z, end_x = point.x - 1, end_z = point.z + size_h - 1, layer = entry.layer}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1}
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1, layer = entry.layer}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -220,10 +221,10 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, cen
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = {start_x = point.x, start_z = point.z + size_h, end_x = new_point.x + size_h - 1, end_z = new_point.z - 1}
+				local new_rectangle = {start_x = point.x, start_z = point.z + size_h, end_x = new_point.x + size_h - 1, end_z = new_point.z - 1, layer = entry.layer}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1}
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1, layer = entry.layer}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -239,10 +240,10 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, cen
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = {start_x = point.x + size_h, start_z = point.z, end_x = new_point.x - 1, end_z = new_point.z + size_h - 1}
+				local new_rectangle = {start_x = point.x + size_h, start_z = point.z, end_x = new_point.x - 1, end_z = new_point.z + size_h - 1, layer = entry.layer}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1}
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1, layer = entry.layer}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -258,10 +259,10 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, cen
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = {start_x = new_point.x, start_z = new_point.z + size_h, end_x = point.x + size_h - 1, end_z = point.z - 1}
+				local new_rectangle = {start_x = new_point.x, start_z = new_point.z + size_h, end_x = point.x + size_h - 1, end_z = point.z - 1, layer = entry.layer}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1}
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size_h - 1, end_z = new_point.z + size_h - 1, layer = entry.layer}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -310,7 +311,7 @@ function mapgen_roads_get (pos_start, pos_end, center, perlin, roads)
 			-- initialize the road network with a starting point
 			local limit = calculate_random(entry.count, false) - 1
 			local points = {{x = math.random(mins.x, maxs.x - size.x), z = math.random(mins.z, maxs.z - size.z), paths = {false, false, false, false}}}
-			table.insert(rectangles, {start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1})
+			table.insert(rectangles, {start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1, layer = entry.layer})
 
 			while (#points > 0) do
 				-- branch the existing points, then prepare the new ones for branching in the next loop iteration

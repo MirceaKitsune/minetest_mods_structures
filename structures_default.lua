@@ -49,6 +49,7 @@ structures:define({
 	buildings = {
 		{
 			name = "default_town_house_tiny_1",
+			layer = 0,
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
@@ -56,6 +57,7 @@ structures:define({
 		},
 		{
 			name = "default_town_house_tiny_2",
+			layer = 0,
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
@@ -63,6 +65,7 @@ structures:define({
 		},
 		{
 			name = "default_town_house_tiny_3",
+			layer = 0,
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
@@ -70,6 +73,7 @@ structures:define({
 		},
 		{
 			name = "default_town_house_small",
+			layer = 0,
 			count = 25,
 			offset = -5,
 			alignment = 0.5,
@@ -77,6 +81,7 @@ structures:define({
 		},
 		{
 			name = "default_town_house_medium",
+			layer = 0,
 			count = 50,
 			offset = -5,
 			alignment = 0.5,
@@ -84,6 +89,7 @@ structures:define({
 		},
 		{
 			name = "default_town_house_large_1",
+			layer = 0,
 			count = 25,
 			offset = -5,
 			alignment = 0.5,
@@ -91,6 +97,7 @@ structures:define({
 		},
 		{
 			name = "default_town_house_large_2",
+			layer = 0,
 			count = 25,
 			offset = -5,
 			alignment = 0.5,
@@ -100,6 +107,7 @@ structures:define({
 			name = "default_town_hotel",
 			name_start = "default_town_hotel_(",
 			name_end = "default_town_hotel_)",
+			layer = 0,
 			count = 25,
 			offset = 0,
 			alignment = 0.5,
@@ -107,6 +115,7 @@ structures:define({
 		},
 		{
 			name = "default_town_tower",
+			layer = 0,
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
@@ -114,6 +123,7 @@ structures:define({
 		},
 		{
 			name = "default_town_farm",
+			layer = 0,
 			count = 15,
 			offset = -2,
 			alignment = 0.5,
@@ -121,6 +131,7 @@ structures:define({
 		},
 		{
 			name = "default_town_park",
+			layer = 0,
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
@@ -128,6 +139,7 @@ structures:define({
 		},
 		{
 			name = "default_town_fountain",
+			layer = 0,
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
@@ -135,6 +147,7 @@ structures:define({
 		},
 		{
 			name = "default_town_well",
+			layer = 0,
 			count = 15,
 			offset = -7,
 			alignment = 0.5,
@@ -148,6 +161,7 @@ structures:define({
 			name_P = "default_town_road_P",
 			name_T = "default_town_road_T",
 			name_X = "default_town_road_X",
+			layer = 0,
 			count = 50,
 			offset = -8,
 			alignment = 0.75,
