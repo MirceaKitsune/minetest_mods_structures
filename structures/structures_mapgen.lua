@@ -270,7 +270,7 @@ end
 -- Global functions
 
 -- the function used to define a structure group
-function structures:define(def)
+function structures:register_group(def)
 	table.insert(structures.mapgen_groups, def)
 
 	-- calculate the size of this group, and store it as a set of extra properties

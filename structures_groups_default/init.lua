@@ -2,26 +2,17 @@
 
 local path_schematics = minetest.get_modpath("structures_groups_default").."/schematics/"
 
--- Settings
+-- #1 - Settings
 
--- spawning is delayed by this many seconds per structure
--- higher values give more time for other mapgen operations to finish and reduce lag, but cause towns to appear more slowly
--- example: if the delay is 0.1 and a town has 1000 structures, it will take the entire town 100 seconds to spawn
 structures.mapgen_delay = 0.1
--- whether to persist the mapgen cube list into a text file
--- enabling this assures that virtual cubes are persisted between server restarts, reducing the chances of incompletely spawned towns
 structures.mapgen_keep_cubes = true
--- whether to keep structures in the table after they have been placed by on_generate
--- enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn
 structures.mapgen_keep_structures = false
--- multiply the size of the virtual cube (determined by the largest town) by this amount
--- larger values decrease town frequency, but give more room for towns to be sorted in
 structures.mapgen_cube_multiply_horizontal = 1
 structures.mapgen_cube_multiply_vertical = 2
 
--- Functions
+-- #2 - Functions
 
--- set metadata accordingly for everything in this area
+-- set the desired metadata for nodes in this area
 local function set_signs (name, number, minp, maxp, group_name)
 	-- go through each node in the given area
 	local nodes = minetest.find_nodes_in_area(minp, maxp, {"default:sign_wall",})
@@ -37,11 +28,10 @@ local function set_signs (name, number, minp, maxp, group_name)
 	end
 end
 
--- Towns
+-- #3 - Towns
 
-structures:define({
+structures:register_group({
 	name = "default_town",
-	probability = 1,
 	biomes = {1, 2},
 	noiseparams = {
 	   offset = 20,
