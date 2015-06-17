@@ -132,7 +132,7 @@ local function branch_draw (point_start, points_end, mins, maxs, size_h, size_v,
 	local point_start_height = calculate_perlin_height(perlin, maxs.x - pos_start.x, maxs.z - pos_start.z, center, entry.alignment)
 	local point_start_pos = {x = pos_start.x, y = point_start_height + entry.offset, z = pos_start.z}
 	local point_start_name, point_start_angle = branch_draw_intersection(point_start.paths, entry)
-	table.insert(new_scheme, {point_start_name, point_start_pos, point_start_angle, size})
+	table.insert(new_scheme, {name = point_start_name, pos = point_start_pos, angle = point_start_angle, size = size})
 
 	-- loop through the end points if any
 	for x, point_end in ipairs(points_end) do
@@ -145,7 +145,7 @@ local function branch_draw (point_start, points_end, mins, maxs, size_h, size_v,
 				local pos = {x = w, z = pos_start.z}
 				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
 				pos.y = height + entry.offset
-				table.insert(new_scheme, {entry.name_I, pos, 90, size})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 90, size = size})
 			end
 		elseif pos_start.x < pos_end.x then
 			-- the point is right
@@ -153,7 +153,7 @@ local function branch_draw (point_start, points_end, mins, maxs, size_h, size_v,
 				local pos = {x = w, z = pos_start.z}
 				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
 				pos.y = height + entry.offset
-				table.insert(new_scheme, {entry.name_I, pos, 270, size})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 270, size = size})
 			end
 		elseif pos_start.z > pos_end.z then
 			-- the point is down
@@ -161,7 +161,7 @@ local function branch_draw (point_start, points_end, mins, maxs, size_h, size_v,
 				local pos = {x = pos_start.x, z = w}
 				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
 				pos.y = height + entry.offset
-				table.insert(new_scheme, {entry.name_I, pos, 180, size})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 180, size = size})
 			end
 		elseif pos_start.z < pos_end.z then
 			-- the point is up
@@ -169,7 +169,7 @@ local function branch_draw (point_start, points_end, mins, maxs, size_h, size_v,
 				local pos = {x = pos_start.x, z = w}
 				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
 				pos.y = height + entry.offset
-				table.insert(new_scheme, {entry.name_I, pos, 0, size})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 0, size = size})
 			end
 		end
 	end
@@ -289,37 +289,27 @@ function mapgen_roads_get (pos_start, pos_end, center, perlin, roads)
 	local rectangles = {}
 
 	for i, entry in ipairs(roads) do
+		-- if the name is a table, choose a random schematic from it
+		entry.name_I = calculate_entry(entry.name_I)
+		entry.name_L = calculate_entry(entry.name_L)
+		entry.name_P = calculate_entry(entry.name_P)
+		entry.name_T = calculate_entry(entry.name_T)
+		entry.name_X = calculate_entry(entry.name_X)
+
 		-- get the size of this road
-		-- each segment must be square and all segments the same size horizontally
-		local size = nil
-		local roads = {entry.name_I, entry.name_L, entry.name_P, entry.name_T, entry.name_X}
-		for w, road in ipairs(roads) do
-			local current_size = io_get_size(0, road)
-			if current_size.x ~= current_size.z then
-				print("Structure Mapgen Error: The segment is not square, skipping this road.")
-				size = nil
-				break
-			elseif w > 1 and size.x ~= current_size.x then
-				print("Structure Mapgen Error: Two segments of the same road type are of different sizes, skipping this road.")
-				size = nil
-				break
-			end
-			size = current_size
-		end
+		local size = io_get_size(0, entry.name_I)
 
-		if size ~= nil then
-			-- initialize the road network with a starting point
-			local limit = calculate_random(entry.count, false) - 1
-			local points = {{x = math.random(mins.x, maxs.x - size.x), z = math.random(mins.z, maxs.z - size.z), paths = {false, false, false, false}}}
-			table.insert(rectangles, {start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1, layer = entry.layer})
+		-- initialize the road network with a starting point
+		local limit = entry.count - 1
+		local points = {{x = math.random(mins.x, maxs.x - size.x), z = math.random(mins.z, maxs.z - size.z), paths = {false, false, false, false}}}
+		table.insert(rectangles, {start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1, layer = entry.layer})
 
-			while (#points > 0) do
-				-- branch the existing points, then prepare the new ones for branching in the next loop iteration
-				-- this loop ends when no new points are created and all existing points were handles
-				local new_points, new_limit = branch(points, mins, maxs, size, limit, schemes, rectangles, center, perlin, entry)
-				points = new_points
-				limit = new_limit
-			end
+		while (#points > 0) do
+			-- branch the existing points, then prepare the new ones for branching in the next loop iteration
+			-- this loop ends when no new points are created and all existing points were handles
+			local new_points, new_limit = branch(points, mins, maxs, size, limit, schemes, rectangles, center, perlin, entry)
+			points = new_points
+			limit = new_limit
 		end
 	end
 

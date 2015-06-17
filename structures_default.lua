@@ -53,7 +53,8 @@ structures:define({
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_house_tiny_2",
@@ -61,7 +62,8 @@ structures:define({
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_house_tiny_3",
@@ -69,7 +71,8 @@ structures:define({
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_house_small",
@@ -77,7 +80,8 @@ structures:define({
 			count = 25,
 			offset = -5,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_house_medium",
@@ -85,7 +89,8 @@ structures:define({
 			count = 50,
 			offset = -5,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_house_large_1",
@@ -93,7 +98,8 @@ structures:define({
 			count = 25,
 			offset = -5,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_house_large_2",
@@ -101,7 +107,8 @@ structures:define({
 			count = 25,
 			offset = -5,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_hotel",
@@ -111,7 +118,8 @@ structures:define({
 			count = 25,
 			offset = 0,
 			alignment = 0.5,
-			floors = 2,
+			floors_min = 1,
+			floors_max = 3,
 		},
 		{
 			name = "default_town_tower",
@@ -119,7 +127,8 @@ structures:define({
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_farm",
@@ -127,7 +136,8 @@ structures:define({
 			count = 15,
 			offset = -2,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_park",
@@ -135,7 +145,8 @@ structures:define({
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_fountain",
@@ -143,7 +154,8 @@ structures:define({
 			count = 15,
 			offset = 0,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 		{
 			name = "default_town_well",
@@ -151,7 +163,8 @@ structures:define({
 			count = 15,
 			offset = -7,
 			alignment = 0.5,
-			floors = 0,
+			floors_min = 0,
+			floors_max = 0,
 		},
 	},
 	roads = {

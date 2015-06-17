@@ -56,34 +56,6 @@ function calculate_table_shuffle(list)
 	return list
 end
 
--- calculates a random value from a table of two numbers
-function calculate_random(table, return_max)
-	-- the table should only have one or two parameters (min and max), but do a full search just in case
-	if type(table) == "table" then
-		local value_min = nil
-		local value_max = nil
-
-		for item in tab do
-			if value_max == nil or item > value_max then
-				value_max = tonumber(item)
-			end
-			if value_min == nil or item < value_min then
-				value_min = tonumber(item)
-			end
-		end
-
-		-- return a random value in range or the maximum value
-		if return_max == true or value_min == value_max then
-			return value_max
-		else
-			return math.random(value_min, value_max)
-		end
-	-- if this isn't a table, return its original value
-	else
-		return table
-	end
-end
-
 -- returns the height based on perlin map
 function calculate_perlin_height (perlin, pos_x, pos_z, center, alignment)
 	local height = perlin[pos_x][pos_z]
@@ -91,6 +63,15 @@ function calculate_perlin_height (perlin, pos_x, pos_z, center, alignment)
 		height = math.floor(calculate_lerp(height, center, alignment))
 	end
 	return height
+end
+
+-- returns a random entry if value is a table
+function calculate_entry (value)
+	if type(value) == "table" then
+		return value[math.random(1, #value)]
+	else
+		return value
+	end
 end
 
 -- Local functions - Formspec
