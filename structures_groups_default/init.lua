@@ -1,6 +1,6 @@
 -- Default town for the Structures mod
 
-local path_schematics = minetest.get_modpath("structures").."/schematics/"
+local path_schematics = minetest.get_modpath("structures_groups_default").."/schematics/"
 
 -- Settings
 
