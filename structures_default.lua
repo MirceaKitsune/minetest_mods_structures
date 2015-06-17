@@ -1,5 +1,6 @@
 -- Default town for the Structures mod
--- Metadata: $POSITION_X, $POSITION_Y, $POSITION_Z, $SIZE_X, $SIZE_Y, $SIZE_Z, $ANGLE, $NUMBER, $NAME, $GROUP
+
+local path_schematics = minetest.get_modpath("structures").."/schematics/"
 
 -- Settings
 
@@ -25,6 +26,10 @@ local function set_signs (name, number, minp, maxp, group_name)
 	-- go through each node in the given area
 	local nodes = minetest.find_nodes_in_area(minp, maxp, {"default:sign_wall",})
 	for _, node in ipairs(nodes) do
+		-- remove path from the name
+		name = string.gsub(name, path_schematics.."default_town_", "")
+		name = string.gsub(name, ".mts", "")
+
 		local meta = minetest.get_meta(node)
 		local s = number..", "..name..", "..group_name
 		meta:set_string("text", s)
@@ -48,7 +53,7 @@ structures:define({
 	},
 	buildings = {
 		{
-			name = "default_town_house_tiny_1",
+			name = path_schematics.."default_town_house_tiny_1.mts",
 			layer = 0,
 			count = 15,
 			offset = 0,
@@ -57,7 +62,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_house_tiny_2",
+			name = path_schematics.."default_town_house_tiny_2.mts",
 			layer = 0,
 			count = 15,
 			offset = 0,
@@ -66,7 +71,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_house_tiny_3",
+			name = path_schematics.."default_town_house_tiny_3.mts",
 			layer = 0,
 			count = 15,
 			offset = 0,
@@ -75,7 +80,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_house_small",
+			name = path_schematics.."default_town_house_small.mts",
 			layer = 0,
 			count = 25,
 			offset = -5,
@@ -84,7 +89,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_house_medium",
+			name = path_schematics.."default_town_house_medium.mts",
 			layer = 0,
 			count = 50,
 			offset = -5,
@@ -93,7 +98,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_house_large_1",
+			name = path_schematics.."default_town_house_large_1.mts",
 			layer = 0,
 			count = 25,
 			offset = -5,
@@ -102,7 +107,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_house_large_2",
+			name = path_schematics.."default_town_house_large_2.mts",
 			layer = 0,
 			count = 25,
 			offset = -5,
@@ -111,9 +116,9 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_hotel",
-			name_start = "default_town_hotel_(",
-			name_end = "default_town_hotel_)",
+			name = path_schematics.."default_town_hotel.mts",
+			name_start = path_schematics.."default_town_hotel_start.mts",
+			name_end = path_schematics.."default_town_hotel_end.mts",
 			layer = 0,
 			count = 25,
 			offset = 0,
@@ -122,7 +127,7 @@ structures:define({
 			floors_max = 3,
 		},
 		{
-			name = "default_town_tower",
+			name = path_schematics.."default_town_tower.mts",
 			layer = 0,
 			count = 15,
 			offset = 0,
@@ -131,7 +136,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_farm",
+			name = path_schematics.."default_town_farm.mts",
 			layer = 0,
 			count = 15,
 			offset = -2,
@@ -140,7 +145,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_park",
+			name = path_schematics.."default_town_park.mts",
 			layer = 0,
 			count = 15,
 			offset = 0,
@@ -149,7 +154,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_fountain",
+			name = path_schematics.."default_town_fountain.mts",
 			layer = 0,
 			count = 15,
 			offset = 0,
@@ -158,7 +163,7 @@ structures:define({
 			floors_max = 0,
 		},
 		{
-			name = "default_town_well",
+			name = path_schematics.."default_town_well.mts",
 			layer = 0,
 			count = 15,
 			offset = -7,
@@ -169,11 +174,11 @@ structures:define({
 	},
 	roads = {
 		{
-			name_I = "default_town_road_I",
-			name_L = "default_town_road_L",
-			name_P = "default_town_road_P",
-			name_T = "default_town_road_T",
-			name_X = "default_town_road_X",
+			name_I = path_schematics.."default_town_road_I.mts",
+			name_L = path_schematics.."default_town_road_L.mts",
+			name_P = path_schematics.."default_town_road_P.mts",
+			name_T = path_schematics.."default_town_road_T.mts",
+			name_X = path_schematics.."default_town_road_X.mts",
 			layer = 0,
 			count = 50,
 			offset = -8,
