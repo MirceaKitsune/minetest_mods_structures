@@ -1,421 +1,335 @@
 -- Structures: Mapgen functions
 -- This file contains the base mapgen functions, used to place structures during world generation
 
--- Settings
+-- Local & Global values
 
--- file which contains the mapgen entries
-local MAPGEN_FILE = "mapgen_structures.txt"
--- when enabled, the mapgen system will only work with one group at a time, deactivating until that group finishes spawning
--- this prevents the server being overwhelmed by too many cities spawning at once, but also makes new groups wait in line if any are triggered during that time
-local MAPGEN_SINGLE = true
--- if the area we're spawning in didn't finish loading, or the server is busy with another group (MAPGEN_SINGLE), retry this many seconds
--- low values preform checks more frequently, higher values are recommended when the world is slow to load
-local MAPGEN_GROUP_DELAY_RETRY = 5
--- how many times to try spawning the group before giving up
--- lower values give less chances of success, higher values cause attempts doomed to failure to clog the server for a longer time
-local MAPGEN_GROUP_DELAY_ATTEMPTS = 20
--- preparations are delayed by this many seconds
--- high values cause calculations to take place later, giving more time for other operations to finish
-local MAPGEN_GROUP_DELAY = 3
--- spawning is delayed by this many seconds
--- high values cause structures to spawn later, giving more time for other operations to finish
-local MAPGEN_GROUP_DELAY_SPAWN = 1
--- amount of origins to maintain in the group avoidance list
--- low values increase the risk of groups being ignored from distance calculations, high values store more data
-local MAPGEN_GROUP_TABLE_COUNT = 10
--- resolution (in nodes) of area checks, used to detect terrain roughness and unloaded spots (1 is best quality)
--- lower values mean a greater chance of detecting holes and bumps in terrain, but also more intensive checking
-local MAPGEN_GROUP_AREA_POINTS = 15
--- how much the horizontal size of a group represents terrain roughness limit, eg: 0.1 means a group 100 nodes wide accepts a roughness of 10 nodes
--- higher means more probability but greater holes in mountains and larger floors
-local MAPGEN_GROUP_AREA_ROUGHNESS = 0.5
+-- stores the structure groups
+structures.mapgen_groups = {}
+-- stores the virtual cubes in which cities are calculated
+structures.mapgen_cubes = {}
+-- stores the size of the virtual cube
+structures.mapgen_cube_horizontal = 0
+structures.mapgen_cube_vertical = 0
 
--- Local & Global values - Groups and mapgen
-
--- true when the mapgen system is busy
-local mapgen_busy = false
-
--- stores the origin of each group in the group avoidance list
-local groups_avoid = { }
-
--- the mapgen table and groups table
-mapgen_table = { }
-
--- Local functions - Groups
-
--- adds entries to the group avoidance list
-local function groups_avoid_add (pos, scale_horizontal, scale_vertical)
-	-- if the maximum amount of entries was reached, delete the oldest one
-	if (#groups_avoid >= MAPGEN_GROUP_TABLE_COUNT) then
-		table.remove(groups_avoid, 1)
-	end
-
-	table.insert(groups_avoid, { x = pos.x, y = pos.y, z = pos.z, h = scale_horizontal, v = scale_vertical } )
-end
-
--- checks if a given distance is far enough from all existing groups
-local function groups_avoid_check (pos, scale_horizontal, scale_vertical)
-	for i, group in ipairs(groups_avoid) do
-		-- each group begins at the lower-left corner (down-up and left-right), so:
-		-- if this group is above / right of the other group, we check distance against that group's scale
-		-- if this group is under / left of the other group, we check distance against this group's scale
-		local target_horizontal = 0
-		if (pos.x < group.x) or (pos.z < group.z) then
-			target_horizontal = scale_horizontal
-		else
-			target_horizontal = group.h
-		end
-
-		local target_vertical = 0
-		if (pos.y < group.y) then
-			target_vertical = scale_vertical
-		else
-			target_vertical = group.v
-		end
-
-		-- now check the distance and height
-		local dist = calculate_distance(pos, group)
-		if (dist.x < target_horizontal) and (dist.y < target_vertical) and (dist.z < target_horizontal) then
-			return false
-		end
-	end
-
-	return true
-end
+-- Local functions
 
 -- returns the size of this group in nodes
-local function groups_get_scale (group)
+local function group_size (id)
 	local scale_horizontal = 0
 	local scale_vertical = 0
-	local structures = 0
+	local num = 0
 
-	-- loop through the mapgen table
-	for i, entry in ipairs(mapgen_table) do
-		local size = nil
+	-- loop through buildings
+	for i, entry in ipairs(structures.mapgen_groups[id].buildings) do
+		-- if the name is a table, choose a random schematic from it
+		entry.name = calculate_entry(entry.name)
+		entry.name_start = calculate_entry(entry.name_start)
+		entry.name_end = calculate_entry(entry.name_end)
+		local size = io_get_size(0, entry.name)
 
-		-- only if this structure belongs to the mapgen group
-		if (entry[1] == group) then
-			-- get size based on the type of structure
-			if (entry[2] == "building") then
-				size = io_get_size(0, entry[3])
+		-- if this building has floors, use the maximum height of all segments
+		if entry.floors_min and entry.floors_max and entry.floors_max > 0 then
+			local size_start = io_get_size(0, entry.name_start)
+			local size_end = io_get_size(0, entry.name_end)
+			size.y = size_start.y + size_end.y + size.y * (entry.floors_max - 1)
+		end
 
-				-- if this building has floors, use the maximum height of all segments
-				local floors = calculate_random(entry[6], true)
-				if (floors > 0) then
-					local size_start = io_get_size(0, entry[3].."_(")
-					local size_end = io_get_size(0, entry[3].."_)")
-					size.y = size_start.y + size_end.y + (size.y * floors)
-				end
-			elseif (entry[2] == "road") then
-				size = io_get_size(0, entry[3].."_X")
+		if size ~= nil then
+			-- add the estimated horizontal scale of buildings
+			scale_horizontal = scale_horizontal + math.ceil((size.x + size.z) / 2) * entry.count
+
+			-- if this is the tallest structure, use its vertical size plus offset
+			local height = size.y + entry.offset
+			if height > scale_vertical then
+				scale_vertical = height
 			end
 
-			if (size ~= nil) then
-				local count = calculate_random(entry[4], true)
-
-				-- add the estimated horizontal scale of buildings to group space
-				scale_horizontal = scale_horizontal + math.ceil((size.x + size.z) / 2) * count
-
-				-- if this is the tallest structure, use its vertical size plus offset value
-				local height = size.y + calculate_random(entry[5], true)
-				if (height > scale_vertical) then
-					scale_vertical = height
-				end
-
-				-- increase the structure count
-				structures = structures + count
-			end
+			num = num + entry.count
 		end
 	end
+
+	-- loop through roads
+	for i, entry in ipairs(structures.mapgen_groups[id].roads) do
+		-- if the name is a table, choose a random schematic from it
+		entry.name_I = calculate_entry(entry.name_I)
+		entry.name_L = calculate_entry(entry.name_L)
+		entry.name_P = calculate_entry(entry.name_P)
+		entry.name_T = calculate_entry(entry.name_T)
+		entry.name_X = calculate_entry(entry.name_X)
+		local size = io_get_size(0, entry.name_I)
+
+		if size ~= nil then
+			-- add the estimated horizontal scale of roads
+			scale_horizontal = scale_horizontal + math.ceil((size.x + size.z) / 2) * entry.count
+
+			-- if this is the tallest structure, use its vertical size plus offset
+			local height = size.y + entry.offset
+			if height > scale_vertical then
+				scale_vertical = height
+			end
+
+			num = num + entry.count
+		end
+	end
+
+	-- add maximum perlin noise height to vertical space
+	scale_vertical = scale_vertical + structures.mapgen_groups[id].noiseparams.scale
+
 	-- divide horizontal space by the square root of total buildings to get the proper row / column sizes
-	scale_horizontal = math.ceil(scale_horizontal / math.sqrt(structures))
+	scale_horizontal = math.ceil(scale_horizontal / math.sqrt(num))
 
 	return scale_horizontal, scale_vertical
 end
 
--- choose a mapgen group appropriate for the given area, and return the necessary parameters for this group
-local function groups_get (center, height_start, height_end)
-	-- each acceptable group is added to this table
-	local list_group = { }
+-- gets the 2D perlin map which determines structure height
+local function generate_perlin(minp, maxp, seed, noiseparams)
+	-- if a seed isn't specified, use the same as the mapgen
+	if not noiseparams.seed then
+		noiseparams.seed = seed
+	end
+	local pos = {
+		x = minp.x,
+		y = minp.z,
+	}
+	local size = {
+		x = maxp.x - minp.x,
+		y = maxp.z - minp.z,
+	}
+	local perlin = minetest.get_perlin_map(noiseparams, size):get2dMap(pos)
+	return perlin
+end
 
-	-- go through the mapgen table and read all group settings
-	-- settings: group [1], type [2], trigger nodes [3], filler nodes [4], height_min [5], height_max [6], probability [7]
-	for i, entry in ipairs(mapgen_table) do
-		if (entry[2] == "settings") then
-			local scale_horizontal, scale_vertical = groups_get_scale(entry[1])
+-- returns the index of the virtual cube addressed by the given position
+local function generate_cube (pos)
+	local cube_minp = {
+		x = math.floor(pos.x / structures.mapgen_cube_horizontal) * structures.mapgen_cube_horizontal,
+		y = math.floor(pos.y / structures.mapgen_cube_vertical) * structures.mapgen_cube_vertical,
+		z = math.floor(pos.z / structures.mapgen_cube_horizontal) * structures.mapgen_cube_horizontal,
+	}
+	local cube_maxp = {
+		x = cube_minp.x + structures.mapgen_cube_horizontal - 1,
+		y = cube_minp.y + structures.mapgen_cube_vertical - 1,
+		z = cube_minp.z + structures.mapgen_cube_horizontal - 1,
+	}
 
-			-- only advance if this area is within the area's height range, to avoid wasting resources
-			if (height_start < tonumber(entry[6])) and (height_end > tonumber(entry[5])) then
-				-- actual position of the group, true y is set later
-				local pos = { x = center.x - math.ceil(scale_horizontal / 2), y = center.y, z = center.z - math.ceil(scale_horizontal / 2) }
+	-- check if this position intersects an existing cube and return it if so
+	for i, cube in ipairs(structures.mapgen_cubes) do
+		if cube_maxp.x >= cube.minp.x and cube_minp.x <= cube.maxp.x and
+		cube_maxp.y >= cube.minp.y and cube_minp.y <= cube.maxp.y and
+		cube_maxp.z >= cube.minp.z and cube_minp.z <= cube.maxp.z then
+			return i
+		end
+	end
 
-				-- if this group is too close to another group stop here
-				if (groups_avoid_check(pos, scale_horizontal, scale_vertical) == true) then
-					-- below is the point check, which verifies terrain roughness and if we hit an unloaded area
-					-- first, generate the list of points to verify within the group's area horizontally
-					local points = { }
-					local points_spacing = math.min(scale_horizontal, MAPGEN_GROUP_AREA_POINTS)
-					for points_x = pos.x, pos.x + scale_horizontal, points_spacing do
-						for points_z = pos.z, pos.z + scale_horizontal, points_spacing do
-							table.insert(points, { x = math.ceil(points_x), z = math.ceil(points_z) } )
+	-- if this position didn't intersect an existing cube, create a new one
+	local index = #structures.mapgen_cubes + 1
+	structures.mapgen_cubes[index] = {
+		minp = cube_minp,
+		maxp = cube_maxp,
+	}
+	return index
+end
+
+-- main mapgen function, plans or spawns the town
+local function mapgen_generate (minp, maxp, seed)
+	local pos = {
+		x = (minp.x + maxp.x) / 2,
+		y = (minp.y + maxp.y) / 2,
+		z = (minp.z + maxp.z) / 2,
+	}
+	local cube_index = generate_cube(pos)
+	local cube = structures.mapgen_cubes[cube_index]
+
+	-- if a city is not already planned for this cube, generate one
+	if not structures.mapgen_cubes[cube_index].structures then
+		structures.mapgen_cubes[cube_index].structures = {}
+
+		-- first obtain a list of acceptable groups, then choose a random entry from it
+		local groups_id = {}
+		for i, entry in ipairs(structures.mapgen_groups) do
+			-- check if the minimum and maximum height generated by the perlin noise is within this cube
+			local height_min = entry.noiseparams.offset
+			local height_max = entry.noiseparams.offset + entry.size_vertical
+
+			-- if this group intersects the vertical boundary between virtual cubes, snap to the closest valid height and print a warning
+			if height_min <= cube.maxp.y and height_max > cube.maxp.y then
+				height_min = cube.maxp.y - entry.size_vertical
+				height_max = cube.maxp.y
+				local s = "Warning: The structure group "..entry.name.." intersects the vertical boundary between virtual cubes. "..
+					"Please change noiseparams.offset to either "..(cube.maxp.y - entry.size_vertical).." or "..(cube.maxp.y + 1).." (currently "..entry.noiseparams.offset.."). "..
+					"The offset was temporarily snapped to "..height_min.."."
+				print(s)
+			end
+
+			-- check if this area is located at the correct height
+			if height_min >= cube.minp.y and height_max <= cube.maxp.y then
+				-- check if this area is located in the corect biome
+				-- only relevant if the mapgen can report biomes, assume true if not
+				local has_biome = false
+				local biomes = minetest.get_mapgen_object("biomemap")
+				if not biomes or #biomes == 0 or not entry.biomes or #entry.biomes == 0 then
+					has_biome = true
+				else
+					for _, biome1 in ipairs(biomes) do
+						for _, biome2 in ipairs(entry.biomes) do
+							if biome1 == biome2 then
+								has_biome = true
+							end
+							-- stop looping if we found a matching biome
+							if has_biome then break end
 						end
+						-- stop looping if we found a matching biome
+						if has_biome then break end
 					end
-					local points_total = #points
-					-- the values below store minimum and maximum ground height
-					-- in order for the scan to work, they must be initialized in reverse
-					local corner_top = height_start
-					local corner_bottom = height_end
-					-- now loop through all of the group's points
-					for x, v in ipairs(points) do
-						-- scan from the highest spot to the lowest
-						for search = height_end, height_start, -1 do
-							local found = false
-							local pos_here = { x = v.x, y = search, z = v.z }
-							local node_here = minetest.env:get_node(pos_here)
-
-							-- if we hit an ignore node, this area didn't finish loading, so return nil and let this function re-run later
-							if (node_here.name == "ignore") then
-								return nil
-							end
-
-							-- scan each entry in the trigger node list
-							for item in entry[3]:gmatch("%S+") do
-								-- check that this node is a trigger node, and account it for terrain height if so
-								if (node_here.name == item) then
-									if (corner_bottom > search) then
-										corner_bottom = search
-									end
-									if (corner_top < search) then
-										corner_top = search
-									end
-
-									found = true
-									break
-								end
-							end
-
-							-- we checked what we needed for this corner, remove it
-							if (found == true) then
-								points_total = points_total - 1
-								break
-							end
-						end
-
-						-- if the loop iteration doesn't equal the number of remaining points, the corner failed so don't keep going
-						if (points_total ~= #points - x) then
-							break
-						end
-					end
-
-					-- check if terrain level was detected and the trigger node was found
-					if (points_total == 0) and
-					-- now test the group's probability, and only advance if it's true
-					-- this is purposely done at the stage, since the point check needs preform even if the group won't spawn, otherwise unloaded areas would influence probability
-					(math.random() <= tonumber(entry[7])) and
-					-- check if terrain roughness is within acceptable range
-					(corner_top - corner_bottom <= scale_horizontal * MAPGEN_GROUP_AREA_ROUGHNESS) then
-						-- center the group in the middle of the detected terrain
-						pos.y = math.floor((corner_bottom + corner_top) / 2)
-
-						-- see if this height is within range
-						if (pos.y >= tonumber(entry[5])) and (pos.y <= tonumber(entry[6])) then
-							-- randomly choose a filler node
-							local fillers = { }
-							for item in entry[4]:gmatch("%S+") do
-								table.insert(fillers, item)
-							end
-							local filler = fillers[math.random(1, #fillers)]
-
-							-- add this group and its properties to the list of potential groups
-							-- group: name [1], position [2], scale [3], terrain [4], filler [5]
-							table.insert(list_group, { entry[1], pos, { h = scale_horizontal, v = scale_vertical }, { low = corner_bottom, high = corner_top }, filler })
-						end
-					end
+				end
+				if has_biome then
+					-- add this group to the list of possible groups
+					table.insert(groups_id, i)
 				end
 			end
 		end
-	end
 
-	-- if no suitable groups exist, return an empty string
-	if (#list_group == 0) then return "" end
-	-- randomly choose an entry from the list of acceptable groups
-	local list_group_random = list_group[math.random(1, #list_group)]
-	return list_group_random[1], list_group_random[2], list_group_random[3], list_group_random[4], list_group_random[5]
-end
+		if #groups_id > 0 then
+			-- choose a random group from the list of possible groups
+			local group_id = groups_id[math.random(1, #groups_id)]
+			local group = structures.mapgen_groups[group_id]
+			structures.mapgen_cubes[cube_index].group = group_id
 
--- Local functions - Mapgen
+			-- choose a random position within the cube
+			local position_start = {
+				x = math.random(cube.minp.x, cube.maxp.x - group.size_horizontal + 1),
+				y = cube.minp.y,
+				z = math.random(cube.minp.z, cube.maxp.z - group.size_horizontal + 1),
+			}
+			local position_end = {
+				x = position_start.x + group.size_horizontal,
+				y = position_start.y + group.size_vertical,
+				z = position_start.z + group.size_horizontal,
+			}
 
--- writes the mapgen file into the mapgen table
-local function mapgen_to_table ()
-	local path = minetest.get_modpath("structures").."/"..MAPGEN_FILE
-	local file = io.open(path, "r")
-	if (file == nil) then return end
+			-- get the perlin noise used to determine structure height
+			local perlin = generate_perlin(position_start, position_end, seed, group.noiseparams)
+			-- determine minimum and maximum spawn height and center
+			local height_min = group.noiseparams.offset
+			local height_max = group.noiseparams.offset + group.noiseparams.scale
+			local center = math.floor((height_min + height_max) / 2)
 
-	mapgen_table = {}
-	-- loop through each line
-	for line in io.lines(path) do
-		-- loop through each parameter in the line, ignore comments and empty lines
-		if (line ~= "") and (string.sub(line, 1, 1) ~= "#") then
-			local parameters = {}
-			for item in line:gmatch("[^\t]+") do
-				table.insert(parameters, item)
+			-- execute the group's spawn function if one is present, and abort spawning if it returns false
+			if group.spawn_group and not group.spawn_group(position_start, position_end, perlin) then return end
+
+			-- get the building and road lists
+			local schemes_roads, rectangles_roads = mapgen_roads_get(position_start, position_end, center, perlin, group.roads)
+			local schemes_buildings = mapgen_buildings_get(position_start, position_end, center, perlin, rectangles_roads, group.buildings)
+			-- add everything to the cube's structure scheme
+			-- buildings should be first, so their number is represented most accurately in custom spawn functions
+			structures.mapgen_cubes[cube_index].structures = schemes_buildings
+			for _, road in ipairs(schemes_roads) do
+				table.insert(cube.structures, road)
 			end
-			table.insert(mapgen_table, parameters)
 		end
 	end
 
-	file:close()
-end
+	-- if a city is planned for this cube and there are valid structures, create the structures touched by this mapblock
+	if cube.structures then
+		local group_id = cube.group
+		local group = structures.mapgen_groups[group_id]
 
--- writes the mapgen table into the mapgen file
-local function mapgen_to_file ()
-	local path = minetest.get_modpath("structures").."/"..MAPGEN_FILE
-	local file = io.open(path, "w")
-	if (file == nil) then return end
+		for i, structure in pairs(cube.structures) do
+			if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
+			structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
+			structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
+				-- schedule structure creation to execute after the spawn delay
+				minetest.after(structures.mapgen_delay * i, function()
+					-- determine the corners of the structure's cube
+					-- since the I/O function doesn't include the start and end nodes, decrease start position by 1 to get the right spot
+					local pos1 = {x = structure.pos.x - 1, y = structure.pos.y - 1, z = structure.pos.z - 1}
+					local pos2 = {x = structure.pos.x + structure.size.x, y = structure.pos.y + structure.size.y, z = structure.pos.z + structure.size.z}
 
-	-- loop through each entry
-	for i, entry1 in ipairs(mapgen_table) do
-		s = ""
-		-- loop through each parameter in the entry
-		for w, entry2 in ipairs(entry1) do
-			s = s..entry2.."	"
+					-- execute the structure's pre-spawn function if one is present, and abort spawning if it returns false
+					local spawn = true
+					if group.spawn_structure_pre then spawn = group.spawn_structure_pre(structure.name, i, pos1, pos2, structure.size, structure.angle) end
+
+					if spawn then
+						-- import the structure
+						io_area_import(pos1, pos2, structure.angle, structure.name, false)
+
+						-- execute the structure's post-spawn function if one is present
+						if group.spawn_structure_post then group.spawn_structure_post(structure.name, i, pos1, pos2, structure.size, structure.angle) end
+					end
+
+					-- remove this structure from the list
+					if not structures.mapgen_keep_structures then
+						structures.mapgen_cubes[cube_index].structures[i] = nil
+					end
+				end)
+			end
 		end
-		s = s.."\n"
-		file:write(s)
-	end
-
-	file:close()
-end
-
--- Local functions - Generate
-
--- spawns all structures in the given schematic
-function generate_spawn_structures (schematics, group)
-	-- schematics: name [1], position [2], angle [3], size [4]
-	for i, structure in ipairs(schematics) do
-		local name = structure[1]
-		local pos = structure[2]
-		local angle = structure[3]
-		local size = structure[4]
-
-		-- determine the corners of the structure's cube
-		-- since the I/O function doesn't include the start and end nodes themselves, decrease start position by 1 to get the right spot
-		local pos1 = { x = pos.x - 1, y = pos.y - 1, z = pos.z - 1 }
-		local pos2 = { x = pos.x + size.x, y = pos.y + size.y, z = pos.z + size.z }
-
-		-- clear the structure's area before spawning
-		io_area_fill(pos1, pos2, nil)
-
-		-- at last, import the structure itself
-		io_area_import(pos1, pos2, angle, name, false)
-
-		-- apply metadata
-		local expressions = {
-			{ "POSITION_X", tostring(pos.x) }, { "POSITION_Y", tostring(pos.y) }, { "POSITION_Z", tostring(pos.z) },
-			{ "SIZE_X", tostring(size.x) }, { "SIZE_Y", tostring(size.y) }, { "SIZE_Z", tostring(size.z) },
-			{ "ANGLE", tostring(angle) }, { "NUMBER", tostring(i) }, { "NAME", name }, { "GROUP", group }
-		}
-		pos1 = { x = pos.x, y = pos.y, z = pos.z }
-		pos2 = { x = pos.x + size.x - 1, y = pos.y + size.y - 1, z = pos.z + size.z - 1 }
-		mapgen_metadata_set(pos1, pos2, expressions, group)
 	end
 end
 
--- clears and prepares an area before the structures are spawned
-local function generate_spawn_prepare (pos, terrain, scale_horizontal, scale_vertical, filler)
-	local pos1 = { x = pos.x - 1, y = pos.y - 1, z = pos.z - 1}
-	local pos2 = { x = pos.x + scale_horizontal + 1, y = pos.y + scale_vertical + 1, z = pos.z + scale_horizontal + 1}
+-- Global functions
 
-	-- clear the volume of the group, or highest intersecting terrain if that's taller
-	pos2.y = math.max(pos2.y - 1, terrain.high)
-	io_area_fill(pos1, pos2, nil)
+-- the function used to define a structure group
+function structures:define(def)
+	table.insert(structures.mapgen_groups, def)
 
-	-- build the floor, down to the estimated bottom of the terrain
-	pos1.y = pos1.y + 1
-	pos2.y = terrain.low
-	io_area_fill(pos1, pos2, filler)
-end
+	-- calculate the size of this group, and store it as a set of extra properties
+	local size_horizontal, size_vertical = group_size(#structures.mapgen_groups)
+	structures.mapgen_groups[#structures.mapgen_groups].size_horizontal = size_horizontal
+	structures.mapgen_groups[#structures.mapgen_groups].size_vertical = size_vertical
 
--- this fetches the structures of the given group and organizes them in a list
-local function generate_spawn (group, pos, scale, terrain, filler)
-	-- the mapgen system started working
-	if (MAPGEN_SINGLE == true) then
-		mapgen_busy = true
+	-- determine the scale of the virtual cube based on the largest town
+	local largest_horizontal = size_horizontal * structures.mapgen_cube_multiply_horizontal
+	if largest_horizontal > structures.mapgen_cube_horizontal then
+		structures.mapgen_cube_horizontal = largest_horizontal
 	end
-
-	-- get the the buildings and roads lists
-	local schemes_roads, rectangles_roads = mapgen_roads_get(pos, scale.h, group)
-	local schemes_buildings = mapgen_buildings_get(pos, scale.h, rectangles_roads, group)
-	-- add everything to one scheme
-	-- buildings should be first, so they're represented most accurately by metadata numbers
-	local schemes = schemes_buildings
-	for w, road in ipairs(schemes_roads) do
-		table.insert(schemes, road)
+	local largest_vertical = size_vertical * structures.mapgen_cube_multiply_vertical
+	if largest_vertical > structures.mapgen_cube_vertical then
+		structures.mapgen_cube_vertical = largest_vertical
 	end
-
-	-- schedule the buildings and roads for spawning
-	minetest.after(MAPGEN_GROUP_DELAY_SPAWN, function()
-		generate_spawn_prepare (pos, terrain, scale.h, scale.v, filler)
-		generate_spawn_structures(schemes, group)
-
-		-- the mapgen system finished
-		mapgen_busy = false
-	end)
-end
-
--- this runs for each piece of world being generated
-local function generate (minp, maxp, attempts)
-	-- if we're out of attempts give up
-	if (attempts > MAPGEN_GROUP_DELAY_ATTEMPTS) then return end
-	attempts = attempts + 1
-
-	-- if the mapgen system is busy spawning another group, schedule this to run later
-	if (mapgen_busy == true) then
-		minetest.after(MAPGEN_GROUP_DELAY_RETRY, function()
-			generate (minp, maxp, attempts)
-		end)
-		return
-	end
-
-	-- choose the middle of the generated area as the center of the group
-	local center_x = math.floor((minp.x + maxp.x) / 2)
-	local center_z = math.floor((minp.z + maxp.z) / 2)
-	local center = { x = center_x, y = minp.y, z = center_z }
-
-	-- choose a mapgen group
-	local group, pos, scale, terrain, filler = groups_get(center, minp.y, maxp.y)
-
-	-- if group is nil, the area one of the groups would occupy hasn't finished loading, so schedule a retry
-	if (group == nil) then
-		minetest.after(MAPGEN_GROUP_DELAY_RETRY, function()
-			generate (minp, maxp, attempts)
-		end)
-		return
-	end
-
-	-- if group is an empty string, no suitable groups were found for this area
-	if (group == "") then return end
-
-	-- if this function executed multiple times simultaneously, the groups spawned by each instance might have not gotten the chance to check each other
-	-- so preform the avoidance check here too as a failsafe, and abort if a collision is detected
-	if (groups_avoid_check(pos, scale.h, scale.v) == false) then return end
-
-	-- add this group to the group avoidance list
-	groups_avoid_add(pos, scale.h, scale.v)
-
-	-- begin spawning the group we chose
-	generate_spawn (group, pos, scale, terrain, filler)
 end
 
 -- Minetest functions
 
--- cache the mapgen file at startup
-minetest.after(0, mapgen_to_table)
-
--- register the main mapgen function to on_generated
+-- run the map_generate function
 minetest.register_on_generated(function(minp, maxp, seed)
-	-- schedule the main generate function
-	minetest.after(MAPGEN_GROUP_DELAY, function()
-		generate (minp, maxp, 0)
-	end)
+	-- execute the main generate function
+	mapgen_generate(minp, maxp, seed)
 end)
+
+-- save and load mapgen cubes to and from file
+if structures.mapgen_keep_cubes then
+	local file = io.open(minetest:get_worldpath().."/structures.mapgen_cubes.txt", "r")
+	if file then
+		local table = minetest.deserialize(file:read("*all"))
+		if type(table) == "table" then
+			structures.mapgen_cubes = table
+		else
+			minetest.log("error", "Corrupted mapgen cube file")
+		end
+		file:close()
+	end
+
+	local function save_cubes()
+		local file = io.open(minetest:get_worldpath().."/structures.mapgen_cubes.txt", "w")
+		if file then
+			file:write(minetest.serialize(structures.mapgen_cubes))
+			file:close()
+		else
+			minetest.log("error", "Can't save mapgen cubes to file")
+		end
+	end
+
+	local save_cubes_timer = 0
+	minetest.register_globalstep(function(dtime)
+		save_cubes_timer = save_cubes_timer + dtime
+		if save_cubes_timer > 10 then
+			save_cubes_timer = 0
+			save_cubes()
+		end
+	end)
+
+	minetest.register_on_shutdown(function()
+		save_cubes()
+	end)
+end

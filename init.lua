@@ -1,6 +1,8 @@
 -- Structures: Item definitions
 -- This file contains the item definitions and logics for the Manager and Markers
 
+structures = {}
+
 -- Settings
 
 -- number of nodes in which a structure manager searches for markers
@@ -12,9 +14,14 @@ local CONNECT_TIME = 1
 
 -- Global functions - Calculate
 
+-- calculates the linear interpolation between two numbers
+function calculate_lerp (value_start, value_end, control)
+	return (1 - control) * value_start + control * value_end
+end
+
 -- returns the distance between two origins
 function calculate_distance (pos1, pos2)
-	local size = { x = 0, y = 0, z = 0 }
+	local size = {x = 0, y = 0, z = 0}
 	if pos1.x < pos2.x then size.x = pos2.x - pos1.x else size.x = pos1.x - pos2.x end
 	if pos1.y < pos2.y then size.y = pos2.y - pos1.y else size.y = pos1.y - pos2.y end
 	if pos1.z < pos2.z then size.z = pos2.z - pos1.z else size.z = pos1.z - pos2.z end
@@ -25,7 +32,7 @@ end
 -- checks if the node is in the specified list
 function calculate_node_in_table (node, list)
 	for i, v in ipairs(list) do
-		if (node == v) then
+		if node == v then
 			return true
 		end
 	end
@@ -49,27 +56,21 @@ function calculate_table_shuffle(list)
 	return list
 end
 
--- calculates a random value from a list of space separated numbers
-function calculate_random(line, return_max)
-	local value_min = nil
-	local value_max = nil
-
-	-- obtain the minimum and maximum values
-	-- the string should only have one or two parameters (min and max), but do a full search just in case
-	for item in line:gmatch("%S+") do
-		if (value_max == nil) or (tonumber(item) > value_max) then
-			value_max = tonumber(item)
-		end
-		if (value_min == nil) or (tonumber(item) < value_min) then
-			value_min = tonumber(item)
-		end
+-- returns the height based on perlin map
+function calculate_perlin_height (perlin, pos_x, pos_z, center, alignment)
+	local height = perlin[pos_x][pos_z]
+	if alignment > 0 then
+		height = math.floor(calculate_lerp(height, center, alignment))
 	end
+	return height
+end
 
-	-- return a random value in range or the maximum value
-	if (return_max == true) or (value_min == value_max) then
-		return value_max
+-- returns a random entry if value is a table
+function calculate_entry (value)
+	if type(value) == "table" then
+		return value[math.random(1, #value)]
 	else
-		return math.random(value_min, value_max)
+		return value
 	end
 end
 
@@ -92,7 +93,7 @@ end
 
 local function make_formspec_size (pos)
 	local pos_markers = markers_get(pos)
-	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return nil end
+	if pos_markers.x == nil or pos_markers.y == nil or pos_markers.z == nil then return nil end
 
 	local size = calculate_distance(pos, pos_markers)
 	-- remove edge from calculation
@@ -106,7 +107,7 @@ end
 
 local function make_formspec_nodes (pos)
 	local pos_markers = markers_get(pos)
-	if (pos_markers.x == nil) or (pos_markers.y == nil) or (pos_markers.z == nil) then return nil end
+	if pos_markers.x == nil or pos_markers.y == nil or pos_markers.z == nil then return nil end
 	
 	local nodes = 0
 
@@ -115,7 +116,7 @@ local function make_formspec_nodes (pos)
 			for loop_z = math.min(pos.z, pos_markers.z) + 1, math.max(pos.z, pos_markers.z) - 1 do
 				local pos_here = {x = loop_x, y = loop_y, z = loop_z}
 
-				if (calculate_node_in_table(minetest.env:get_node(pos_here).name, IO_IGNORE) == false) then
+				if calculate_node_in_table(minetest.env:get_node(pos_here).name, structures.IO_ignore) == false then
 					nodes = nodes + 1
 				end
 			end
@@ -133,22 +134,22 @@ function markers_remove (pos)
 	local pos_here = {}
 
 	-- remove X
-	pos_here = { x = pos_markers.x, y = pos.y, z = pos.z }
-	if (minetest.env:get_node(pos_here).name == "structures:marker") then
+	pos_here = {x = pos_markers.x, y = pos.y, z = pos.z}
+	if minetest.env:get_node(pos_here).name == "structures:marker" then
 		minetest.env:remove_node(pos_here)
 	end
 	-- remove Y
-	pos_here = { x = pos.x, y = pos_markers.y, z = pos.z }
-	if (minetest.env:get_node(pos_here).name == "structures:marker") then
+	pos_here = {x = pos.x, y = pos_markers.y, z = pos.z}
+	if minetest.env:get_node(pos_here).name == "structures:marker" then
 		minetest.env:remove_node(pos_here)
 	end
 	-- remove Z
-	pos_here = { x = pos.x, y = pos.y, z = pos_markers.z }
-	if (minetest.env:get_node(pos_here).name == "structures:marker") then
+	pos_here = {x = pos.x, y = pos.y, z = pos_markers.z}
+	if minetest.env:get_node(pos_here).name == "structures:marker" then
 		minetest.env:remove_node(pos_here)
 	end
 
-	minetest.env:add_node(pos, { name = "structures:manager_disabled" })
+	minetest.env:add_node(pos, {name = "structures:manager_disabled"})
 end
 
 -- search for in-line markers on the X / Y / Z axes within radius and return their positions
@@ -157,7 +158,7 @@ function markers_get (pos)
 	-- search X
 	for search = pos.x - CONNECT_DISTANCE, pos.x + CONNECT_DISTANCE do
 		pos_search = {x = search, y = pos.y, z = pos.z}
-		if(minetest.env:get_node(pos_search).name == "structures:marker") then
+		if minetest.env:get_node(pos_search).name == "structures:marker" then
 			pos_markers.x = pos_search.x
 			break
 		end
@@ -165,7 +166,7 @@ function markers_get (pos)
 	-- search Y
 	for search = pos.y - CONNECT_DISTANCE, pos.y + CONNECT_DISTANCE do
 		pos_search = {x = pos.x, y = search, z = pos.z}
-		if(minetest.env:get_node(pos_search).name == "structures:marker") then
+		if minetest.env:get_node(pos_search).name == "structures:marker" then
 			pos_markers.y = pos_search.y
 			break
 		end
@@ -173,7 +174,7 @@ function markers_get (pos)
 	-- search Z
 	for search = pos.z - CONNECT_DISTANCE, pos.z + CONNECT_DISTANCE do
 		pos_search = {x = pos.x, y = pos.y, z = search}
-		if(minetest.env:get_node(pos_search).name == "structures:marker") then
+		if minetest.env:get_node(pos_search).name == "structures:marker" then
 			pos_markers.z = pos_search.z
 			break
 		end
@@ -185,15 +186,13 @@ end
 -- check that the block is connected to 3 markers and change it accordingly
 function markers_transform (pos)
 	local pos_markers = markers_get(pos)
-	if (pos_markers.x ~= nil)
-	and (pos_markers.y ~= nil)
-	and (pos_markers.z ~= nil) then
-		if(minetest.env:get_node(pos).name == "structures:manager_disabled") then
-			minetest.env:add_node(pos, { name = "structures:manager_enabled" })
+	if pos_markers.x ~= nil and pos_markers.y ~= nil and pos_markers.z ~= nil then
+		if minetest.env:get_node(pos).name == "structures:manager_disabled" then
+			minetest.env:add_node(pos, {name = "structures:manager_enabled"})
 		end
 	else
-		if(minetest.env:get_node(pos).name == "structures:manager_enabled") then
-			minetest.env:add_node(pos, { name = "structures:manager_disabled" })
+		if minetest.env:get_node(pos).name == "structures:manager_enabled" then
+			minetest.env:add_node(pos, {name = "structures:manager_disabled"})
 		end
 	end
 end
@@ -232,7 +231,7 @@ minetest.register_node("structures:manager_enabled", {
 
 	on_receive_fields = function(pos, formname, fields, sender)
 		local player = sender:get_player_name()
-		if not (minetest.check_player_privs(player, {structures=true})) then
+		if not minetest.check_player_privs(player, {structures=true}) then
 			minetest.chat_send_player(player, "Error: You need the \"structures\" privilege to use the structure manager", false)
 			return
 		end
@@ -242,11 +241,11 @@ minetest.register_node("structures:manager_enabled", {
 		meta:set_float("io_angle", fields.io_angle)
 		meta:set_string("formspec", make_formspec(fields.file, fields.io_angle, make_formspec_size(pos), make_formspec_nodes(pos)))
 
-		if (fields.io_export) then
+		if fields.io_export then
 			io_area_export(pos, markers_get(pos), fields.file)
-		elseif (fields.io_import) then
+		elseif fields.io_import then
 			io_area_import(pos, markers_get(pos), tonumber(fields.io_angle), fields.file, true)
-		elseif (fields.io_clear) then
+		elseif fields.io_clear then
 			io_area_fill(pos, markers_get(pos), nil)
 		end
 	end
@@ -271,7 +270,7 @@ minetest.register_node("structures:marker", {
 })
 
 minetest.register_abm({
-	nodenames = { "structures:manager_disabled", "structures:manager_enabled" },
+	nodenames = {"structures:manager_disabled", "structures:manager_enabled"},
 	interval = CONNECT_TIME,
 	chance = 1,
 
@@ -286,4 +285,5 @@ dofile(minetest.get_modpath("structures").."/structures_io.lua")
 dofile(minetest.get_modpath("structures").."/structures_mapgen.lua")
 dofile(minetest.get_modpath("structures").."/structures_mapgen_roads.lua")
 dofile(minetest.get_modpath("structures").."/structures_mapgen_buildings.lua")
-dofile(minetest.get_modpath("structures").."/structures_mapgen_metadata.lua")
+
+dofile(minetest.get_modpath("structures").."/structures_default.lua")
