@@ -5,10 +5,9 @@ local path_schematics = minetest.get_modpath("structures_groups_default").."/sch
 -- #1 - Settings
 
 structures.mapgen_delay = 0.25
-structures.mapgen_keep_cubes = true
+structures.mapgen_keep_areas = true
 structures.mapgen_keep_structures = false
-structures.mapgen_cube_multiply_horizontal = 1
-structures.mapgen_cube_multiply_vertical = 2
+structures.mapgen_area_multiply = 1
 
 -- #2 - Functions
 

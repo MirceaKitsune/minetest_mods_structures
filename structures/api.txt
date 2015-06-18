@@ -1,16 +1,15 @@
 * Settings:
 
 structures.mapgen_delay = 0.1: Spawning is delayed by this many seconds per structure. Higher values give more time for other mapgen operations to finish and reduce lag, but cause towns to appear more slowly. Example: If the delay is 0.1 and a town has 1000 structures, it will take the entire town 100 seconds to spawn.
-structures.mapgen_keep_cubes = true: Whether to persist the mapgen cube list to a text file. Enabling this assures that virtual cubes are persisted between server restarts, allowing towns to resume spawning after the server is back up.
+structures.mapgen_keep_areas = true: Whether to persist the mapgen area list to a text file. Enabling this assures that virtual areas are persisted between server restarts, allowing towns to resume spawning after the server is back up.
 structures.mapgen_keep_structures = false: Whether to keep structures in the table after they have been placed by on_generate. Enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn.
-structures.mapgen_cube_multiply_horizontal = 1: Multiply the horizontal size of the virtual cube by this amount. Larger values decrease town frequency, but give more room for towns to be arranged in.
-structures.mapgen_cube_multiply_vertical = 2: Multiply the vertical size of the virtual cube by this amount.
+structures.mapgen_area_multiply = 1: Multiply the size of the virtual area by this amount. Larger values decrease town frequency, but give more room for towns to be arranged in.
 
 * Main functions and values:
 
-structures:register_group({...}): The function used to define a structure group. Each group is scanned when a virtual cube is activated, and chosen as a potential group if it meets the necessary criteria. Parameters:
+structures:register_group({...}): The function used to define a structure group. Each group is scanned when a virtual area is activated, and chosen as a potential group if it meets the necessary criteria. Parameters:
 	name = "town": The name used to identify this structure group.
-	biomes = {1, ...}: The biomes this group may spawn in, represented as a list of biome ID's. Optional, only works if the mapgen can report biomes. Note that biomes are checked in the first chunk that activates the virtual cube, which means success is probabilistic.
+	biomes = {1, ...}: The biomes this group may spawn in, represented as a list of biome ID's. Optional, only works if the mapgen can report biomes. Note that biomes are checked in the first chunk that activates the virtual area, which means success is probabilistic.
 	height_min = 2: Minimum height at which this group and its structures are allowed to spawn.
 	height_max = 2: Maximum height at which this group and its structures are allowed to spawn.
 	buildings = {{...}, {...}}: The table that contains this group's buildings, each building defined in a sub-table. Parameters:
@@ -52,10 +51,9 @@ structures:register_group({...}): The function used to define a structure group.
 	structures.mapgen_groups = {...}: The table containing all structure groups (defined by structures:register_group). Additional parameters:
 		size_horizontal: The horizontal size of the group, determined by the size and count of all structures.
 		size_vertical: The vertical size of the group, determined by the tallest structure and the perlin height map.
-	structures.mapgen_cubes = {...}: The table containing all virtual cubes that a town may spawn in. Parameters:
-		mins = {...}: The start corner of the cube.
-		maxs = {...}: The end corner of the cube.
-		group = 0: The ID of the group chosen for this virtual cube if any.
-		structures = {...}: The list of structures inside this group which haven't spawned yet. Created when the cube is activated and the group is chosen.
-	structures.mapgen_cube_horizontal = 0: The horizontal scale of virtual cubes, determined by the largest group.
-	structures.mapgen_cube_vertical = 0: The vertical scale of virtual cubes, determined by the largest group.
+	structures.mapgen_areas = {...}: The table containing all virtual areas that a town may spawn in. Parameters:
+		mins = {...}: The start corner of the area.
+		maxs = {...}: The end corner of the area.
+		group = 0: The ID of the group chosen for this virtual area if any.
+		structures = {...}: The list of structures inside this group which haven't spawned yet. Created when the area is activated and the group is chosen.
+	structures.mapgen_area_area = 0: The scale of virtual area, determined by the largest group.
