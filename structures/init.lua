@@ -56,15 +56,6 @@ function calculate_table_shuffle(list)
 	return list
 end
 
--- returns the height based on perlin map
-function calculate_perlin_height (perlin, pos_x, pos_z, center, alignment)
-	local height = perlin[pos_x][pos_z]
-	if alignment > 0 then
-		height = math.floor(calculate_lerp(height, center, alignment))
-	end
-	return height
-end
-
 -- returns a random entry if value is a table
 function calculate_entry (value)
 	if type(value) == "table" then
@@ -72,6 +63,14 @@ function calculate_entry (value)
 	else
 		return value
 	end
+end
+
+-- returns the height based on height map
+function calculate_heightmap_pos (heightmap, minp, maxp, pos_x, pos_z)
+	local chunksize = maxp.x - minp.x + 1
+	local index = (pos_z - minp.z) * chunksize + (pos_x - minp.x) + 1
+	local height = heightmap[index]
+	return height
 end
 
 -- Local functions - Formspec

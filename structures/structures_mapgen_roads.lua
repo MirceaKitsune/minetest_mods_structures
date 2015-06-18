@@ -123,16 +123,15 @@ local function branch_draw_intersection(paths, entry)
 end
 
 -- obtains the position and rotation of all road segments between the given points
-local function branch_draw (point_start, points_end, mins, maxs, size_h, size_v, center, perlin, entry)
+local function branch_draw (point_start, points_end, size_h, size_v, entry)
 	local new_scheme = {}
 	local pos_start = {x = point_start.x, z = point_start.z}
 	local size = {x = size_h, y = size_v, z = size_h}
 
 	-- draw the intersection at the starting point
-	local point_start_height = calculate_perlin_height(perlin, maxs.x - pos_start.x, maxs.z - pos_start.z, center, entry.alignment)
-	local point_start_pos = {x = pos_start.x, y = point_start_height + entry.offset, z = pos_start.z}
+	local point_start_pos = {x = pos_start.x, y = entry.offset, z = pos_start.z}
 	local point_start_name, point_start_angle = branch_draw_intersection(point_start.paths, entry)
-	table.insert(new_scheme, {name = point_start_name, pos = point_start_pos, angle = point_start_angle, size = size})
+	table.insert(new_scheme, {name = point_start_name, pos = point_start_pos, angle = point_start_angle, size = size, chain = entry.chain})
 
 	-- loop through the end points if any
 	for x, point_end in ipairs(points_end) do
@@ -142,34 +141,26 @@ local function branch_draw (point_start, points_end, mins, maxs, size_h, size_v,
 		if pos_start.x > pos_end.x then
 			-- the point is left
 			for w = pos_start.x - size_h, pos_end.x + size_h, -size_h do
-				local pos = {x = w, z = pos_start.z}
-				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
-				pos.y = height + entry.offset
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 90, size = size})
+				local pos = {x = w, y = entry.offset, z = pos_start.z}
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 90, size = size, chain = entry.chain})
 			end
 		elseif pos_start.x < pos_end.x then
 			-- the point is right
 			for w = pos_start.x + size_h, pos_end.x - size_h, size_h do
-				local pos = {x = w, z = pos_start.z}
-				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
-				pos.y = height + entry.offset
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 270, size = size})
+				local pos = {x = w, y = entry.offset, z = pos_start.z}
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 270, size = size, chain = entry.chain})
 			end
 		elseif pos_start.z > pos_end.z then
 			-- the point is down
 			for w = pos_start.z - size_h, pos_end.z + size_h, -size_h do
-				local pos = {x = pos_start.x, z = w}
-				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
-				pos.y = height + entry.offset
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 180, size = size})
+				local pos = {x = pos_start.x, y = entry.offset, z = w}
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 180, size = size, chain = entry.chain})
 			end
 		elseif pos_start.z < pos_end.z then
 			-- the point is up
 			for w = pos_start.z + size_h, pos_end.z - size_h, size_h do
-				local pos = {x = pos_start.x, z = w}
-				local height = calculate_perlin_height(perlin, maxs.x - pos.x, maxs.z - pos.z, center, entry.alignment)
-				pos.y = height + entry.offset
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 0, size = size})
+				local pos = {x = pos_start.x, y = entry.offset, z = w}
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 0, size = size, chain = entry.chain})
 			end
 		end
 	end
@@ -178,7 +169,7 @@ local function branch_draw (point_start, points_end, mins, maxs, size_h, size_v,
 end
 
 -- calculates the branching of end points from starting points
-local function branch (points, mins, maxs, size, limit, schemes, rectangles, center, perlin, entry)
+local function branch (points, mins, maxs, size, limit, schemes, rectangles, entry)
 	local new_points = {}
 	local new_limit = limit
 
@@ -268,7 +259,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, cen
 		end
 
 		-- get the structures for this piece of road design, and add them to the schemes table
-		local new_scheme = branch_draw(point, new_points_this, mins, maxs, size_h, size_v, center, perlin, entry)
+		local new_scheme = branch_draw(point, new_points_this, size_h, size_v, entry)
 		for v, road in ipairs(new_scheme) do
 			table.insert(schemes, road)
 		end
@@ -281,7 +272,7 @@ end
 -- Global functions - Roads
 
 -- analyzes roads in the mapgen table and acts accordingly
-function mapgen_roads_get (pos_start, pos_end, center, perlin, roads)
+function mapgen_roads_get (pos_start, pos_end, roads)
 	local mins = {x = pos_start.x, z = pos_start.z}
 	local maxs = {x = pos_end.x, z = pos_end.z}
 	-- roads table which will be filled and returned by this function
@@ -307,7 +298,7 @@ function mapgen_roads_get (pos_start, pos_end, center, perlin, roads)
 		while (#points > 0) do
 			-- branch the existing points, then prepare the new ones for branching in the next loop iteration
 			-- this loop ends when no new points are created and all existing points were handles
-			local new_points, new_limit = branch(points, mins, maxs, size, limit, schemes, rectangles, center, perlin, entry)
+			local new_points, new_limit = branch(points, mins, maxs, size, limit, schemes, rectangles, entry)
 			points = new_points
 			limit = new_limit
 		end

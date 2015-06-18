@@ -11,7 +11,8 @@ structures.mapgen_cube_multiply_vertical = 2: Multiply the vertical size of the 
 structures:register_group({...}): The function used to define a structure group. Each group is scanned when a virtual cube is activated, and chosen as a potential group if it meets the necessary criteria. Parameters:
 	name = "town": The name used to identify this structure group.
 	biomes = {1, ...}: The biomes this group may spawn in, represented as a list of biome ID's. Optional, only works if the mapgen can report biomes. Note that biomes are checked in the first chunk that activates the virtual cube, which means success is probabilistic.
-	noiseparams = {..}: Parameters for the perlin noise used to determine group and structure height. You almost always want this to match the noise parameters of the biome the group spawns in, so buildings can align with the terrain and not float or get buried. If the seed parameter is nil, the mapgen's seed is used.
+	height_min = 2: Minimum height at which this group and its structures are allowed to spawn.
+	height_max = 2: Maximum height at which this group and its structures are allowed to spawn.
 	buildings = {{...}, {...}}: The table that contains this group's buildings, each building defined in a sub-table. Parameters:
 		name = "path/house.mts": The path to the schematic of this structure.
 		name = {"path/house_foo.mts", "path/house_bar.mts"}: When defined like this, a random schematic is chosen from the list. ALL SCHEMATICS MUST HAVE THE SAME SIZE!
@@ -20,7 +21,6 @@ structures:register_group({...}): The function used to define a structure group.
 		count = 10: The number of structures of this type to be spawned. This determines both the probability of the structure, as well as the horizontal scale of the group.
 		layer = 0: The collision layer this structure is located on. Structures will only align with each other if part of the same layer, and cut through one another if not. This is typically useful for underground passages or suspended road systems.
 		offset = 0: Number of nodes by which to deviate this structure vertically. Use a positive value to lift the structure, negative to bury it. Typically useful if the building has a basement, in which case you'll want the basement's height as a negative value.
-		alignment = 0: Amount by which the structure is centered toward the middle of the height map. If 0 height is determined entirely by the perlin noise, if 1 the structure is positioned in the center.
 		floors_min = 0: If this building has multiple floors, this represents the minimum amount. When this is greater than zero, name_start and name_end must also be specified!
 		floors_max = 0: If this building has multiple floors, this represents the maximum amount. When this is greater than zero, name_start and name_end must also be specified!
 	roads = {{...}, {...}}: The table that contains this group's roads, each building defined in a sub-table. Parameters:
@@ -32,7 +32,7 @@ structures:register_group({...}): The function used to define a structure group.
 		count = 10: Same as for buildings.
 		layer = 0: Same as for buildings.
 		offset = 0: Same as for buildings.
-		alignment = 0: Same as for buildings.
+		chain = 0: If specified, road segments will not deviate from one another by more than this many nodes per segment. You almost always want this to be either 0 or 1.
 		branch_min = 1: Minimum number of segments after which an intersection can occur. Higher values result in rarer roads.
 	group.spawn_group = function(mins, maxs, perlin) ... end: Executes after the group and its properties have been chosen, and before the structures are planned and spawned. If this function exists and doesn't return true, spawning the group is aborted. Parameters:
 		mins = {...}: The start corner of the group.
