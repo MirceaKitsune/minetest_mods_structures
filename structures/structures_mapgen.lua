@@ -117,16 +117,14 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 	local pos_start = {x = structure.pos.x - 1, z = structure.pos.z - 1}
 	local pos_end = {x = pos_start.x + structure.size.x + 1, z = pos_start.z + structure.size.z + 1}
 
-	-- get the height at each corner, and choose that of the lowest corner
+	-- get the height at each valid point and choose the lowest elevation
 	local height = nil
-	local heights = {}
-	table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_start.x, pos_start.z))
-	table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_start.x, pos_end.z))
-	table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_end.x, pos_start.z))
-	table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_end.x, pos_end.z))
-	for _, point in ipairs(heights) do
-		if not height or point < height then
-			height = point
+	for px = pos_start.x, pos_end.x do
+		for pz = pos_start.z, pos_end.z do
+			local point = calculate_heightmap_pos(heightmap, minp, maxp, px, pz)
+			if point and (not height or point < height) then
+				height = point
+			end
 		end
 	end
 
