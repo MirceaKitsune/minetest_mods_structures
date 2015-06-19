@@ -194,7 +194,20 @@ local function mapgen_generate (minp, maxp, seed)
 					-- determine the corners of the structure's cube, X and Z
 					local pos_start = {x = structure.pos.x - 1, z = structure.pos.z - 1}
 					local pos_end = {x = pos_start.x + structure.size.x + 1, z = pos_start.z + structure.size.z + 1}
-					local height = calculate_heightmap_pos(heightmap, minp, maxp, math.floor((pos_start.x + pos_end.x) / 2), math.floor((pos_start.z + pos_end.z) / 2))
+
+					-- get the height at each corner, and choose that of the lowest corner
+					local height = nil
+					local heights = {}
+					table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_start.x, pos_start.z))
+					table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_start.x, pos_end.z))
+					table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_end.x, pos_start.z))
+					table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_end.x, pos_end.z))
+					for _, h in ipairs(heights) do
+						if not height or h < height then
+							height = h
+						end
+					end
+
 					if height then
 						-- if flatness is enabled for this structure, limit its height offset from the first structure
 						if structure.flatness and structure.flatness > 0 and area.first_height then
