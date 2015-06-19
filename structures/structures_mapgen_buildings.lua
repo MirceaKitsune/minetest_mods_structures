@@ -10,14 +10,14 @@ local function draw (pos, size, angle, floors, entry)
 	if floors == 0 then
 		-- insert the building into the schemes table
 		-- types: 1 = normal & center, 2 = start, 3 = end
-		table.insert(new_scheme, {name = entry.name, pos = pos, angle = angle, size = size})
+		table.insert(new_scheme, {name = entry.name, pos = pos, angle = angle, size = size, flatness = entry.flatness})
 	else
 		local size_start = {x = size.x, y = size.y_start, z = size.z}
 		local size_middle = {x = size.x, y = size.y, z = size.z}
 		local size_end = {x = size.x, y = size.y_end, z = size.z}
 
 		-- add the start segment to the schemes table
-		table.insert(new_scheme, {name = entry.name_start, pos = pos, angle = angle, size = size_start})
+		table.insert(new_scheme, {name = entry.name_start, pos = pos, angle = angle, size = size_start, flatness = nil})
 
 		-- loop through the middle segments
 		local height_middle_start = pos.y + size_start.y
@@ -25,13 +25,13 @@ local function draw (pos, size, angle, floors, entry)
 		for height = height_middle_start, height_middle_end, size_middle.y do
 			-- add the middle segments to the schemes table
 			local pos_middle = {x = pos.x, y = height, z = pos.z}
-			table.insert(new_scheme, {name = entry.name, pos = pos_middle, angle = angle, size = size_middle})
+			table.insert(new_scheme, {name = entry.name, pos = pos_middle, angle = angle, size = size_middle, flatness = nil})
 		end
 
 		-- add the end segment to the schemes table
 		local height_end = height_middle_end + size_middle.y
 		local pos_end = {x = pos.x, y = height_end, z = pos.z}
-		table.insert(new_scheme, {name = entry.name_end, pos = pos_end, angle = angle, size = size_end})
+		table.insert(new_scheme, {name = entry.name_end, pos = pos_end, angle = angle, size = size_end, flatness = nil})
 	end
 
 	return new_scheme
@@ -187,7 +187,7 @@ function mapgen_buildings_get (pos_start, pos_end, rectangles, buildings)
 
 		-- only if this building was found in the loop above
 		if found_pos == true then
-			new_scheme = draw(pos, size, angle, floors, entry)
+			local new_scheme = draw(pos, size, angle, floors, entry)
 			for v, building in ipairs(new_scheme) do
 				table.insert(schemes, building)
 			end

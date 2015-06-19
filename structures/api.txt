@@ -20,6 +20,7 @@ structures:register_group({...}): The function used to define a structure group.
 		count = 10: The number of structures of this type to be spawned. This determines both the probability of the structure, as well as the horizontal scale of the group.
 		layer = 0: The collision layer this structure is located on. Structures will only align with each other if part of the same layer, and cut through one another if not. This is typically useful for underground passages or suspended road systems.
 		offset = 0: Number of nodes by which to deviate this structure vertically. Use a positive value to lift the structure, negative to bury it. Typically useful if the building has a basement, in which case you'll want the basement's height as a negative value.
+		flatness = 0: How much structures of this type center toward the height of the first structure that spawned, used to limit height differences. Ranges between 0 and 1. Only works for structures that don't have multiple floors.
 		floors_min = 0: If this building has multiple floors, this represents the minimum amount. When this is greater than zero, name_start and name_end must also be specified!
 		floors_max = 0: If this building has multiple floors, this represents the maximum amount. When this is greater than zero, name_start and name_end must also be specified!
 	roads = {{...}, {...}}: The table that contains this group's roads, each building defined in a sub-table. Parameters:
@@ -31,7 +32,7 @@ structures:register_group({...}): The function used to define a structure group.
 		count = 10: Same as for buildings.
 		layer = 0: Same as for buildings.
 		offset = 0: Same as for buildings.
-		chain = 0: If specified, road segments will not deviate from one another by more than this many nodes per segment. You almost always want this to be either 0 or 1.
+		flatness = 0: Same as for buildings. For roads you will almost always want this on.
 		branch_min = 1: Minimum number of segments after which an intersection can occur. Higher values result in rarer roads.
 	group.spawn_group = function(mins, maxs, perlin) ... end: Executes after the group and its properties have been chosen, and before the structures are planned and spawned. If this function exists and doesn't return true, spawning the group is aborted. Parameters:
 		mins = {...}: The start corner of the group.

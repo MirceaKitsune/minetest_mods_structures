@@ -182,7 +182,6 @@ local function mapgen_generate (minp, maxp, seed)
 		local group_id = area.group
 		local group = structures.mapgen_groups[group_id]
 		local heightmap = minetest.get_mapgen_object("heightmap")
-		local last_height = {}
 
 		for i, structure in pairs(area.structures) do
 			if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
@@ -197,13 +196,9 @@ local function mapgen_generate (minp, maxp, seed)
 					local pos_end = {x = pos_start.x + structure.size.x + 1, z = pos_start.z + structure.size.z + 1}
 					local height = calculate_heightmap_pos(heightmap, minp, maxp, math.floor((pos_start.x + pos_end.x) / 2), math.floor((pos_start.z + pos_end.z) / 2))
 					if height then
-						-- if chaining is enabled for this structure, limit its height offset in relation to other structures of its type
-						if structure.chain and last_height[structure.name] then
-							if height + last_height[structure.name] > height + structure.chain then
-								height = last_height[structure.name] + structure.chain
-							elseif height - last_height[structure.name] < height - structure.chain then
-								height = last_height[structure.name] - structure.chain
-							end
+						-- if flatness is enabled for this structure, limit its height offset from the first structure
+						if structure.flatness and structure.flatness > 0 and area.first_height then
+							height = calculate_lerp(height, area.first_height, structure.flatness)
 						end
 						-- determine the corners of the structure's cube, Y
 						pos_start.y = height + structure.pos.y - 1
@@ -221,8 +216,10 @@ local function mapgen_generate (minp, maxp, seed)
 								-- execute the structure's post-spawn function if one is present
 								if group.spawn_structure_post then group.spawn_structure_post(structure.name, i, pos_start, pos_end, structure.size, structure.angle) end
 
-								-- record the average height of this structure type
-								last_height[structure.name] = height
+								-- record the height of the first structure
+								if not structures.mapgen_areas[area_index].first_height then
+									structures.mapgen_areas[area_index].first_height = height
+								end
 							end
 						end
 					end
