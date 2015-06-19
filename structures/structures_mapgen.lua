@@ -116,33 +116,40 @@ local function mapgen_generate (minp, maxp, seed)
 
 	-- if a city is not already planned for this area, generate one
 	if not structures.mapgen_areas[area_index].structures then
-		structures.mapgen_areas[area_index].structures = {}
-
 		-- first obtain a list of acceptable groups, then choose a random entry from it
 		local groups_id = {}
 		for i, entry in ipairs(structures.mapgen_groups) do
-			-- check if this area is located in the corect biome
-			-- only relevant if the mapgen can report biomes, assume true if not
-			local has_biome = false
-			local biomes = minetest.get_mapgen_object("biomemap")
-			if not biomes or #biomes == 0 or not entry.biomes or #entry.biomes == 0 then
-				has_biome = true
-			else
-				for _, biome1 in ipairs(biomes) do
-					for _, biome2 in ipairs(entry.biomes) do
-						if biome1 == biome2 then
-							has_biome = true
+			-- check if this group's height intersect the vertical position of this chunk
+			if minp.y <= entry.height_max and maxp.y >= entry.height_min then
+				-- only activate this area if this chunk intersects the height of any group
+				-- this prevents someone who explores an area at say height -1000 making towns never spawn at the same X and Z positions if they're later explored at height 0
+				-- since the chunk is lower or higher than the position of any group, there's no risk of generating a spot in a potential town before its buildings are planned, so this is okay
+				structures.mapgen_areas[area_index].structures = {}
+
+				-- check if this group is located in an allowed biome
+				-- only relevant if the mapgen can report biomes, assume true if not
+				-- note that like all things, the biome must be detected from the first chunk that runs in this area and activates it, meaning that success might be probabilistic
+				local has_biome = false
+				local biomes = minetest.get_mapgen_object("biomemap")
+				if not biomes or #biomes == 0 or not entry.biomes or #entry.biomes == 0 then
+					has_biome = true
+				else
+					for _, biome1 in ipairs(biomes) do
+						for _, biome2 in ipairs(entry.biomes) do
+							if biome1 == biome2 then
+								has_biome = true
+							end
+							-- stop looping if we found a matching biome
+							if has_biome then break end
 						end
 						-- stop looping if we found a matching biome
 						if has_biome then break end
 					end
-					-- stop looping if we found a matching biome
-					if has_biome then break end
 				end
-			end
-			if has_biome then
-				-- add this group to the list of possible groups
-				table.insert(groups_id, i)
+				if has_biome then
+					-- add this group to the list of possible groups
+					table.insert(groups_id, i)
+				end
 			end
 		end
 
@@ -181,67 +188,71 @@ local function mapgen_generate (minp, maxp, seed)
 	if area.structures then
 		local group_id = area.group
 		local group = structures.mapgen_groups[group_id]
-		local heightmap = minetest.get_mapgen_object("heightmap")
 
-		for i, structure in pairs(area.structures) do
-			if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
-			structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
-			structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
-				-- schedule structure creation to execute after the spawn delay
-				minetest.after(structures.mapgen_delay * i, function()
-					-- note 1: since the I/O function doesn't include the start and end nodes, decrease start position by 1 to get the right spot
-					-- note 2: the X and Z positions of the structure represent the full position, but Y only represents the offset, since we can only scan the heightmap and determine real height here
-					-- determine the corners of the structure's cube, X and Z
-					local pos_start = {x = structure.pos.x - 1, z = structure.pos.z - 1}
-					local pos_end = {x = pos_start.x + structure.size.x + 1, z = pos_start.z + structure.size.z + 1}
+		-- only advance if this chunk intersects a height where buildings might exist
+		if minp.y <= group.height_max and maxp.y >= group.height_min then
+			local heightmap = minetest.get_mapgen_object("heightmap")
 
-					-- get the height at each corner, and choose that of the lowest corner
-					local height = nil
-					local heights = {}
-					table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_start.x, pos_start.z))
-					table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_start.x, pos_end.z))
-					table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_end.x, pos_start.z))
-					table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_end.x, pos_end.z))
-					for _, h in ipairs(heights) do
-						if not height or h < height then
-							height = h
+			for i, structure in pairs(area.structures) do
+				if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
+				structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
+				structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
+					-- schedule structure creation to execute after the spawn delay
+					minetest.after(structures.mapgen_delay * i, function()
+						-- note 1: since the I/O function doesn't include the start and end nodes, decrease start position by 1 to get the right spot
+						-- note 2: the X and Z positions of the structure represent the full position, but Y only represents the offset, since we can only scan the heightmap and determine real height here
+						-- determine the corners of the structure's cube, X and Z
+						local pos_start = {x = structure.pos.x - 1, z = structure.pos.z - 1}
+						local pos_end = {x = pos_start.x + structure.size.x + 1, z = pos_start.z + structure.size.z + 1}
+
+						-- get the height at each corner, and choose that of the lowest corner
+						local height = nil
+						local heights = {}
+						table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_start.x, pos_start.z))
+						table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_start.x, pos_end.z))
+						table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_end.x, pos_start.z))
+						table.insert(heights, calculate_heightmap_pos(heightmap, minp, maxp, pos_end.x, pos_end.z))
+						for _, h in ipairs(heights) do
+							if not height or h < height then
+								height = h
+							end
 						end
-					end
 
-					if height then
-						-- if flatness is enabled for this structure, limit its height offset from the first structure
-						if structure.flatness and structure.flatness > 0 and area.first_height then
-							height = calculate_lerp(height, area.first_height, structure.flatness)
-						end
-						-- determine the corners of the structure's cube, Y
-						pos_start.y = height + structure.pos.y - 1
-						pos_end.y = pos_start.y + structure.size.y + 1
+						if height then
+							-- if flatness is enabled for this structure, limit its height offset from the first structure
+							if structure.flatness and structure.flatness > 0 and area.first_height then
+								height = calculate_lerp(height, area.first_height, structure.flatness)
+							end
+							-- determine the corners of the structure's cube, Y
+							pos_start.y = height + structure.pos.y - 1
+							pos_end.y = pos_start.y + structure.size.y + 1
 
-						-- only spawn this structure if it's within the allowed height limits
-						if height >= group.height_min and height <= group.height_max then
-							-- execute the structure's pre-spawn function if one is present, and abort spawning if it returns false
-							local spawn = true
-							if group.spawn_structure_pre then spawn = group.spawn_structure_pre(structure.name, i, pos_start, pos_end, structure.size, structure.angle) end
-							if spawn then
-								-- import the structure
-								io_area_import(pos_start, pos_end, structure.angle, structure.name, false)
+							-- only spawn this structure if it's within the allowed height limits
+							if height >= group.height_min and height <= group.height_max then
+								-- execute the structure's pre-spawn function if one is present, and abort spawning if it returns false
+								local spawn = true
+								if group.spawn_structure_pre then spawn = group.spawn_structure_pre(structure.name, i, pos_start, pos_end, structure.size, structure.angle) end
+								if spawn then
+									-- import the structure
+									io_area_import(pos_start, pos_end, structure.angle, structure.name, false)
 
-								-- execute the structure's post-spawn function if one is present
-								if group.spawn_structure_post then group.spawn_structure_post(structure.name, i, pos_start, pos_end, structure.size, structure.angle) end
+									-- execute the structure's post-spawn function if one is present
+									if group.spawn_structure_post then group.spawn_structure_post(structure.name, i, pos_start, pos_end, structure.size, structure.angle) end
 
-								-- record the height of the first structure
-								if not structures.mapgen_areas[area_index].first_height then
-									structures.mapgen_areas[area_index].first_height = height
+									-- record the height of the first structure
+									if not structures.mapgen_areas[area_index].first_height then
+										structures.mapgen_areas[area_index].first_height = height
+									end
 								end
 							end
 						end
-					end
 
-					-- remove this structure from the list
-					if not structures.mapgen_keep_structures then
-						structures.mapgen_areas[area_index].structures[i] = nil
-					end
-				end)
+						-- remove this structure from the list
+						if not structures.mapgen_keep_structures then
+							structures.mapgen_areas[area_index].structures[i] = nil
+						end
+					end)
+				end
 			end
 		end
 	end
