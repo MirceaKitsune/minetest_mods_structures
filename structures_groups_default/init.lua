@@ -5,8 +5,6 @@ local path_schematics = minetest.get_modpath("structures_groups_default").."/sch
 -- #1 - Settings
 
 structures.mapgen_delay = 0.25
-structures.mapgen_keep_areas = true
-structures.mapgen_keep_structures = false
 structures.mapgen_area_multiply = 1
 
 -- #2 - Functions
@@ -31,9 +29,9 @@ end
 
 structures:register_group({
 	name = "default_town",
-	biomes = {1, 2},
-	height_min = 2,
-	height_max = 20,
+	biomes = nil,
+	height_min = 5,
+	height_max = 50,
 	buildings = {
 		{
 			name = path_schematics.."default_town_house_tiny_1.mts",
@@ -165,7 +163,7 @@ structures:register_group({
 			layer = 0,
 			count = 50,
 			offset = -8,
-			flatness = 0.8,
+			flatness = 0.85,
 			branch_min = 5,
 		},
 	},

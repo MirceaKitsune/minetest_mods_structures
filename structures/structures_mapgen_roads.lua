@@ -4,7 +4,7 @@
 -- Local functions - Branch
 
 -- determines the distance of an end point branching from its starting point
-local function branch_size (length_start, length_end, axis, size, rectangles, entry)
+local function mapgen_roads_branch_size (length_start, length_end, axis, size, rectangles, entry)
 	local dist = 0
 	local dist_scan = math.abs(length_start - length_end)
 	local size_min = size * entry.branch_min
@@ -60,7 +60,7 @@ local function branch_size (length_start, length_end, axis, size, rectangles, en
 end
 
 -- decides which shape and which angle an intersection has, based on the roads it connects
-local function branch_draw_intersection(paths, entry)
+local function mapgen_roads_branch_draw_intersection(paths, entry)
 	-- intersection shapes are assumed to start down-up and left-right at 0 angle
 	-- directions: 1 = left, 2 = up, 3 = right, 4 = down
 
@@ -123,14 +123,14 @@ local function branch_draw_intersection(paths, entry)
 end
 
 -- obtains the position and rotation of all road segments between the given points
-local function branch_draw (point_start, points_end, size_h, size_v, entry)
+local function mapgen_roads_branch_draw (point_start, points_end, size_h, size_v, entry)
 	local new_scheme = {}
 	local pos_start = {x = point_start.x, z = point_start.z}
 	local size = {x = size_h, y = size_v, z = size_h}
 
 	-- draw the intersection at the starting point
 	local point_start_pos = {x = pos_start.x, y = entry.offset, z = pos_start.z}
-	local point_start_name, point_start_angle = branch_draw_intersection(point_start.paths, entry)
+	local point_start_name, point_start_angle = mapgen_roads_branch_draw_intersection(point_start.paths, entry)
 	table.insert(new_scheme, {name = point_start_name, pos = point_start_pos, angle = point_start_angle, size = size, flatness = entry.flatness})
 
 	-- loop through the end points if any
@@ -169,7 +169,7 @@ local function branch_draw (point_start, points_end, size_h, size_v, entry)
 end
 
 -- calculates the branching of end points from starting points
-local function branch (points, mins, maxs, size, limit, schemes, rectangles, entry)
+local function mapgen_roads_branch (points, mins, maxs, size, limit, schemes, rectangles, entry)
 	local new_points = {}
 	local new_limit = limit
 
@@ -183,7 +183,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, ent
 		-- directions: 1 = left, 2 = up, 3 = right, 4 = down
 		if point.paths[1] == false and new_limit > 0 then
 			-- create a new point to the left
-			local distance = branch_size(point.x - 1, mins.x, point.z, size_h, rectangles, entry)
+			local distance = mapgen_roads_branch_size(point.x - 1, mins.x, point.z, size_h, rectangles, entry)
 			if distance ~= nil then
 				point.paths[1] = true
 				new_limit = new_limit - 1
@@ -202,7 +202,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, ent
 		end
 		if point.paths[2] == false and new_limit > 0 then
 			-- create a new point upward
-			local distance = branch_size(point.z + size_h, maxs.z, point.x, size_h, rectangles, entry)
+			local distance = mapgen_roads_branch_size(point.z + size_h, maxs.z, point.x, size_h, rectangles, entry)
 			if distance ~= nil then
 				point.paths[2] = true
 				new_limit = new_limit - 1
@@ -221,7 +221,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, ent
 		end
 		if point.paths[3] == false and limit > 0 then
 			-- create a new point to the right
-			local distance = branch_size(point.x + size_h, maxs.x, point.z, size_h, rectangles, entry)
+			local distance = mapgen_roads_branch_size(point.x + size_h, maxs.x, point.z, size_h, rectangles, entry)
 			if distance ~= nil then
 				point.paths[3] = true
 				new_limit = new_limit - 1
@@ -240,7 +240,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, ent
 		end
 		if point.paths[4] == false and new_limit > 0 then
 			-- create a new point downward
-			local distance = branch_size(point.z - 1, mins.z, point.x, size_h, rectangles, entry)
+			local distance = mapgen_roads_branch_size(point.z - 1, mins.z, point.x, size_h, rectangles, entry)
 			if distance ~= nil then
 				point.paths[4] = true
 				new_limit = new_limit - 1
@@ -259,7 +259,7 @@ local function branch (points, mins, maxs, size, limit, schemes, rectangles, ent
 		end
 
 		-- get the structures for this piece of road design, and add them to the schemes table
-		local new_scheme = branch_draw(point, new_points_this, size_h, size_v, entry)
+		local new_scheme = mapgen_roads_branch_draw(point, new_points_this, size_h, size_v, entry)
 		for v, road in ipairs(new_scheme) do
 			table.insert(schemes, road)
 		end
@@ -298,7 +298,7 @@ function mapgen_roads_get (pos_start, pos_end, roads)
 		while (#points > 0) do
 			-- branch the existing points, then prepare the new ones for branching in the next loop iteration
 			-- this loop ends when no new points are created and all existing points were handles
-			local new_points, new_limit = branch(points, mins, maxs, size, limit, schemes, rectangles, entry)
+			local new_points, new_limit = mapgen_roads_branch(points, mins, maxs, size, limit, schemes, rectangles, entry)
 			points = new_points
 			limit = new_limit
 		end

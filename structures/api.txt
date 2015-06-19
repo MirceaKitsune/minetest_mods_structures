@@ -1,8 +1,6 @@
 * Settings:
 
 structures.mapgen_delay = 0.1: Spawning is delayed by this many seconds per structure. Higher values give more time for other mapgen operations to finish and reduce lag, but cause towns to appear more slowly. Example: If the delay is 0.1 and a town has 1000 structures, it will take the entire town 100 seconds to spawn.
-structures.mapgen_keep_areas = true: Whether to persist the mapgen area list to a text file. Enabling this assures that virtual areas are persisted between server restarts, allowing towns to resume spawning after the server is back up.
-structures.mapgen_keep_structures = false: Whether to keep structures in the table after they have been placed by on_generate. Enabling this uses more resources and may cause overlapping schematics to be spawned multiple times, but reduces the chances of structures failing to spawn.
 structures.mapgen_area_multiply = 1: Multiply the size of the virtual area by this amount. Larger values decrease town frequency, but give more room for towns to be arranged in.
 
 * Main functions and values:

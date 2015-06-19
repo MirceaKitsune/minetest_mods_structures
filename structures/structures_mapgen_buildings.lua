@@ -4,7 +4,7 @@
 -- Local functions - Draw
 
 -- obtains the position and rotation of all building parts
-local function draw (pos, size, angle, floors, entry)
+local function mapgen_buildings_draw (pos, size, angle, floors, entry)
 	local new_scheme = {}
 
 	if floors == 0 then
@@ -187,7 +187,7 @@ function mapgen_buildings_get (pos_start, pos_end, rectangles, buildings)
 
 		-- only if this building was found in the loop above
 		if found_pos == true then
-			local new_scheme = draw(pos, size, angle, floors, entry)
+			local new_scheme = mapgen_buildings_draw(pos, size, angle, floors, entry)
 			for v, building in ipairs(new_scheme) do
 				table.insert(schemes, building)
 			end
