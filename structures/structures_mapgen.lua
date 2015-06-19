@@ -140,7 +140,7 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 		pos_end.y = pos_start.y + structure.size.y + 1
 
 		-- only spawn this structure if it's within the allowed height limits
-		if height >= group.height_min and height <= group.height_max then
+		if height >= group.height_min and height + structure.size.y <= group.height_max + group.size_vertical then
 			-- execute the structure's pre-spawn function if one is present, and abort spawning if it returns false
 			local spawn = true
 			if group.spawn_structure_pre then spawn = group.spawn_structure_pre(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
@@ -176,9 +176,9 @@ local function mapgen_generate (minp, maxp, seed)
 	if not area.structures then
 		-- first obtain a list of acceptable groups, then choose a random entry from it
 		local groups_id = {}
-		for i, entry in ipairs(structures.mapgen_groups) do
+		for i, group in ipairs(structures.mapgen_groups) do
 			-- check if this group's height intersect the vertical position of this chunk
-			if minp.y <= entry.height_max and maxp.y >= entry.height_min then
+			if minp.y <= group.height_max + group.size_vertical and maxp.y >= group.height_min then
 				-- only activate this area if this chunk intersects the height of any group
 				-- this prevents someone who explores an area at say height -1000 making towns never spawn at the same X and Z positions if they're later explored at height 0
 				-- since the chunk is lower or higher than the position of any group, there's no risk of generating a spot in a potential town before its buildings are planned, so this is okay
@@ -189,11 +189,11 @@ local function mapgen_generate (minp, maxp, seed)
 				-- note that like all things, the biome must be detected from the first chunk that runs in this area and activates it, meaning that success might be probabilistic
 				local has_biome = false
 				local biomes = minetest.get_mapgen_object("biomemap")
-				if not biomes or #biomes == 0 or not entry.biomes or #entry.biomes == 0 then
+				if not biomes or #biomes == 0 or not group.biomes or #group.biomes == 0 then
 					has_biome = true
 				else
 					for _, biome1 in ipairs(biomes) do
-						for _, biome2 in ipairs(entry.biomes) do
+						for _, biome2 in ipairs(group.biomes) do
 							if biome1 == biome2 then
 								has_biome = true
 							end
@@ -248,7 +248,7 @@ local function mapgen_generate (minp, maxp, seed)
 		local group = structures.mapgen_groups[group_id]
 
 		-- only advance if this chunk intersects a height where buildings might exist
-		if minp.y <= group.height_max and maxp.y >= group.height_min then
+		if minp.y <= group.height_max + group.size_vertical and maxp.y >= group.height_min then
 			local heightmap = minetest.get_mapgen_object("heightmap")
 
 			for i, structure in pairs(area.structures) do
