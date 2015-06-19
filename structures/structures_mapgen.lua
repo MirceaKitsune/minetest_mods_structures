@@ -129,9 +129,11 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 	end
 
 	if height then
-		-- if flatness is enabled for this structure, limit its height offset from the first structure
-		if structure.flatness and structure.flatness > 0 and area.first_height then
+		-- if flatness is enabled for this structure, center it toward the position of the first structure
+		-- additionally, bound between minimum and maximum height rather than letting the structure not spawn, to prevent road segments getting cut if the road gets too high or low
+		if structure.flatness and area.first_height then
 			height = calculate_lerp(height, area.first_height, structure.flatness)
+			height = math.max(group.height_min, math.min(group.height_max, height))
 		end
 		-- determine the corners of the structure's cube, Y
 		pos_start.y = height + structure.pos.y - 1
