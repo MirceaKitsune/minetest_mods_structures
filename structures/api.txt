@@ -15,6 +15,8 @@ structures:register_group({...}): The function used to define a structure group.
 		name = {"path/house_foo.mts", "path/house_bar.mts"}: When defined like this, a random schematic is chosen from the list. ALL SCHEMATICS MUST HAVE THE SAME SIZE!
 		name_start = "path/house_start.mts": Only used if this building has multiple floors. This is the schematic of the bottom most structure. MUST HAVE THE SAME HORIZONTAL SIZE AS name AND name_end!
 		name_end = "path/house_start.mts": Only used if this building has multiple floors. This is the schematic of the top most structure. MUST HAVE THE SAME HORIZONTAL SIZE AS name AND name_start!
+		replacements = {...}: A list of nodes to be replaced with other nodes before the structure is spawned. See the documentation for minetest.place_schematic on how to use this.
+		force = true: If false, "air" and "ignore" nodes aren't placed from the schematic. Disable this if you want the structure to merge with other nodes it intersects, rather than the perimeter around it being cleared first.
 		count = 10: The number of structures of this type to be spawned. This determines both the probability of the structure, as well as the horizontal scale of the group.
 		layer = 0: The collision layer this structure is located on. Structures will only align with each other if part of the same layer, and cut through one another if not. This is typically useful for underground passages or suspended road systems.
 		offset = 0: Number of nodes by which to deviate this structure vertically. Use a positive value to lift the structure, negative to bury it. Typically useful if the building has a basement, in which case you'll want the basement's height as a negative value.
@@ -27,6 +29,8 @@ structures:register_group({...}): The function used to define a structure group.
 		name_P = "path/road_P.mts": The P segment of this road (connects down).
 		name_T = "path/road_T.mts": The T segment of this road (connects left, right and up).
 		name_X = "path/road_X.mts": The X segment of this road (connects all four directions).
+		replacements = {...}: Same as for buildings.
+		force = true: Same as for buildings.
 		count = 10: Same as for buildings.
 		layer = 0: Same as for buildings.
 		offset = 0: Same as for buildings.

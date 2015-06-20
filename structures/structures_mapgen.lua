@@ -146,7 +146,7 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 			if group.spawn_structure_pre then spawn = group.spawn_structure_pre(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
 			if spawn then
 				-- import the structure
-				io_area_import(pos_start, pos_end, structure.angle, structure.name, false)
+				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, false)
 
 				-- execute the structure's post-spawn function if one is present
 				if group.spawn_structure_post then group.spawn_structure_post(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
