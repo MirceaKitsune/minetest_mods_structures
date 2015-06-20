@@ -1,5 +1,7 @@
 -- Default town for the Structures mod
 
+structures_groups_default = {}
+
 local path_schematics = minetest.get_modpath("structures_groups_default").."/schematics/"
 
 -- #1 - Settings
@@ -10,7 +12,7 @@ structures.mapgen_area_multiply = 1
 -- #2 - Functions
 
 -- set the desired metadata for nodes in this area
-local function set_signs (name, number, minp, maxp, group_name)
+local function set_metadata (name, number, minp, maxp, group_name)
 	-- go through each node in the given area
 	local nodes = minetest.find_nodes_in_area(minp, maxp, {"default:sign_wall",})
 	for _, node in ipairs(nodes) do
@@ -22,6 +24,48 @@ local function set_signs (name, number, minp, maxp, group_name)
 		local s = number..", "..name..", "..group_name
 		meta:set_string("text", s)
 		meta:set_string("infotext", s)
+	end
+end
+
+-- if the Creatures mod and its default creatures are enabled, place some mobs in houses
+local function set_creatures_races_default (name, number, minp, maxp, group_name)
+	-- check if the mod exists
+	if not creatures or not creatures_races_default then
+		return
+	end
+
+	-- probability and number of mobs to spawn
+	local count = math.random(-2, 2)
+	if count <= 0 then
+		return
+	end
+	-- find suitable nodes on which mobs may spawn
+	local nodes = minetest.find_nodes_in_area_under_air(minp, maxp, {"group:crumbly", "group:cracky", "group:choppy"})
+	if not nodes or #nodes == 0 then
+		return
+	end
+	-- create a list of mobs that may spawn here
+	local mobs = {
+		"creatures_races_default:human_male",
+		"creatures_races_default:human_female",
+		"creatures_races_default:anthro_fox_male",
+		"creatures_races_default:anthro_fox_female",
+		"creatures_races_default:anthro_wolf_female",
+		"creatures_races_default:anthro_wolf_male",
+		"creatures_races_default:anthro_leopard_female",
+		"creatures_races_default:anthro_leopard_male",
+		"creatures_races_default:anthro_rabbit_female",
+		"creatures_races_default:anthro_rabbit_male",
+		"creatures_races_default:anthro_squirrel_female",
+		"creatures_races_default:anthro_squirrel_male",
+	}
+
+	-- execute the spawn
+	for i = 1, count do
+		local mob = mobs[math.random(1, #mobs)]
+		local node = nodes[math.random(1, #nodes)]
+		node.y = node.y + 1
+		creatures:spawn(mob, node)
 	end
 end
 
@@ -196,6 +240,7 @@ structures:register_group({
 		},
 	},
 	spawn_structure_post = function(name, number, minp, maxp, size, angle)
-		set_signs (name, number, minp, maxp, "default_town")
+		set_metadata(name, number, minp, maxp, "default_town")
+		set_creatures_races_default(name, number, minp, maxp, "default_town")
 	end,
 })
