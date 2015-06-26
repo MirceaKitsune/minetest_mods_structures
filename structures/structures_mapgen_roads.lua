@@ -279,7 +279,23 @@ function mapgen_roads_get (pos_start, pos_end, roads)
 	local schemes = {}
 	local rectangles = {}
 
+	-- roads that spawn first may decrease the probability of following roads
+	-- so instead of looping through the road table directly, create a list of indexes and randomize it, then loop through that
+	local instances = {}
+	-- first generate a list of indexes for all roads, an entry for each time a starting intersection point will be spawned
 	for i, entry in ipairs(roads) do
+		-- spawn this road based on its probability divided by branches
+		local count = math.floor(entry.count / entry.branches)
+		for x = 1, count do
+			table.insert(instances, i)
+		end
+	end
+	-- now randomize the table so road instances won't be spawned in an uniform order
+	calculate_table_shuffle(instances)
+
+	for i, instance in ipairs(instances) do
+		local entry = roads[instance]
+
 		-- if the name is a table, choose a random schematic from it
 		entry.name_I = calculate_entry(entry.name_I)
 		entry.name_L = calculate_entry(entry.name_L)
@@ -290,8 +306,8 @@ function mapgen_roads_get (pos_start, pos_end, roads)
 		-- get the size of this road
 		local size = io_get_size(0, entry.name_I)
 
-		-- initialize the road network with a starting point
-		local limit = entry.count - 1
+		-- initialize this road network with a starting point
+		local limit = entry.branches - 1
 		local points = {{x = math.random(mins.x, maxs.x - size.x), z = math.random(mins.z, maxs.z - size.z), paths = {false, false, false, false}}}
 		table.insert(rectangles, {start_x = points[1].x, start_z = points[1].z, end_x = points[1].x + size.x - 1, end_z = points[1].z + size.z - 1, layer = entry.layer})
 

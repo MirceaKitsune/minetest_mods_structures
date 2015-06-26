@@ -236,6 +236,7 @@ structures:register_group({
 			count = 50,
 			offset = -8,
 			flatness = 0.85,
+			branches = 5,
 			branch_min = 5,
 		},
 	},

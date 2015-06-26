@@ -31,10 +31,11 @@ structures:register_group({...}): The function used to define a structure group.
 		name_X = "path/road_X.mts": The X segment of this road (connects all four directions).
 		replacements = {...}: Same as for buildings.
 		force = true: Same as for buildings.
-		count = 10: Same as for buildings.
+		count = 10: Same as for buildings. In the case of roads, this represents the total number of intersections that will exist in the town.
 		layer = 0: Same as for buildings.
 		offset = 0: Same as for buildings.
 		flatness = 0: Same as for buildings. For roads you will almost always want this on.
+		branches = 5: How many times each starting point will branch into new intersections. The number of starting points is (count / branches).
 		branch_min = 1: Minimum number of segments after which an intersection can occur. Higher values result in rarer roads.
 	group.spawn_group = function(mins, maxs, perlin) ... end: Executes after the group and its properties have been chosen, and before the structures are planned and spawned. If this function exists and doesn't return true, spawning the group is aborted. Parameters:
 		mins = {...}: The start corner of the group.
