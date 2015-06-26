@@ -292,7 +292,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 end)
 
 -- save and load mapgen areas to and from file
-local file = io.open(minetest:get_worldpath().."/mapgen_areas.txt", "r")
+local file = io.open(minetest:get_worldpath().."/areas.txt", "r")
 if file then
 	local table = minetest.deserialize(file:read("*all"))
 	if type(table) == "table" then
@@ -304,7 +304,7 @@ if file then
 end
 
 local function save_areas()
-	local file = io.open(minetest:get_worldpath().."/mapgen_areas.txt", "w")
+	local file = io.open(minetest:get_worldpath().."/areas.txt", "w")
 	if file then
 		file:write(minetest.serialize(structures.mapgen_areas))
 		file:close()
