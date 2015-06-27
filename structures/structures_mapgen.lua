@@ -146,10 +146,11 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 	end
 
 	if height then
-		-- if flatness is enabled for this structure, center it toward the position of the first structure
-		-- additionally, bound between minimum and maximum height rather than letting the structure not spawn, to prevent road segments getting cut if the road gets too high or low
-		if structure.flatness and area.first_height then
-			height = calculate_lerp(height, area.first_height, structure.flatness)
+		-- if chaining is enabled for this structure, center it toward the position of the first structure
+		-- additionally, bound between minimum and maximum height rather than letting the structure not spawn, to prevent road segments getting cut if the road gets too high or too low
+		local link = structure.chaining and structure.chaining.link
+		if link and area.chain[link] then
+			height = calculate_lerp(height, area.chain[link], structure.chaining.flatness)
 			height = math.max(group.height_min, math.min(group.height_max, height))
 		end
 		-- determine the corners of the structure's cube, Y
@@ -168,9 +169,9 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 				-- execute the structure's post-spawn function if one is present
 				if group.spawn_structure_post then group.spawn_structure_post(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
 
-				-- record the height of the first structure
-				if not structures.mapgen_areas[area_index].first_height then
-					structures.mapgen_areas[area_index].first_height = height
+				-- record the height of the first structure in the chain
+				if link and not structures.mapgen_areas[area_index].chain[link] then
+					structures.mapgen_areas[area_index].chain[link] = height
 				end
 			end
 		end
@@ -200,6 +201,7 @@ local function mapgen_generate (minp, maxp, seed)
 				-- this prevents someone who explores an area at say height -1000 making towns never spawn at the same X and Z positions if they're later explored at height 0
 				-- since the chunk is lower or higher than the position of any group, there's no risk of generating a spot in a potential town before its buildings are planned, so this is okay
 				structures.mapgen_areas[area_index].structures = {}
+				structures.mapgen_areas[area_index].chain = {}
 
 				-- check if this group is located in an allowed biome
 				-- only relevant if the mapgen can report biomes, assume true if not

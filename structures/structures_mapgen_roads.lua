@@ -131,14 +131,17 @@ local function mapgen_roads_branch_draw_intersection(paths, entry)
 end
 
 -- obtains the position and rotation of all road segments between the given points
-local function mapgen_roads_branch_draw (point_start, points_end, size, entry)
+local function mapgen_roads_branch_draw (point_start, points_end, size, link, entry)
 	local new_scheme = {}
 	local pos_start = {x = point_start.x, z = point_start.z}
+
+	-- chaining settings, containing the id of structures to chain to and the amount of flatness
+	local chaining = {link = link, flatness = entry.flatness}
 
 	-- draw the intersection at the starting point
 	local point_start_pos = {x = pos_start.x, y = entry.offset, z = pos_start.z}
 	local point_start_name, point_start_angle = mapgen_roads_branch_draw_intersection(point_start.paths, entry)
-	table.insert(new_scheme, {name = point_start_name, pos = point_start_pos, angle = point_start_angle, size = size, replacements = entry.replacements, force = entry.force, flatness = entry.flatness})
+	table.insert(new_scheme, {name = point_start_name, pos = point_start_pos, angle = point_start_angle, size = size, replacements = entry.replacements, force = entry.force, chaining = chaining})
 
 	-- loop through the end points if any
 	for _, point_end in ipairs(points_end) do
@@ -149,25 +152,25 @@ local function mapgen_roads_branch_draw (point_start, points_end, size, entry)
 			-- the point is left
 			for w = pos_start.x - size.x, pos_end.x + size.x, -size.x do
 				local pos = {x = w, y = entry.offset, z = pos_start.z}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 90, size = size, replacements = entry.replacements, force = entry.force, flatness = entry.flatness})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 90, size = size, replacements = entry.replacements, force = entry.force, chaining = chaining})
 			end
 		elseif pos_start.x < pos_end.x then
 			-- the point is right
 			for w = pos_start.x + size.x, pos_end.x - size.x, size.x do
 				local pos = {x = w, y = entry.offset, z = pos_start.z}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 270, size = size, replacements = entry.replacements, force = entry.force, flatness = entry.flatness})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 270, size = size, replacements = entry.replacements, force = entry.force, chaining = chaining})
 			end
 		elseif pos_start.z > pos_end.z then
 			-- the point is down
 			for w = pos_start.z - size.z, pos_end.z + size.z, -size.z do
 				local pos = {x = pos_start.x, y = entry.offset, z = w}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 180, size = size, replacements = entry.replacements, force = entry.force, flatness = entry.flatness})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 180, size = size, replacements = entry.replacements, force = entry.force, chaining = chaining})
 			end
 		elseif pos_start.z < pos_end.z then
 			-- the point is up
 			for w = pos_start.z + size.z, pos_end.z - size.z, size.z do
 				local pos = {x = pos_start.x, y = entry.offset, z = w}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 0, size = size, replacements = entry.replacements, force = entry.force, flatness = entry.flatness})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 0, size = size, replacements = entry.replacements, force = entry.force, chaining = chaining})
 			end
 		end
 	end
@@ -176,7 +179,7 @@ local function mapgen_roads_branch_draw (point_start, points_end, size, entry)
 end
 
 -- calculates the branching of end points from starting points
-local function mapgen_roads_branch (points, mins, maxs, size, branches, schemes, rectangles, entry)
+local function mapgen_roads_branch (points, mins, maxs, size, branches, link, entry, schemes, rectangles)
 	local new_points = {}
 	local new_branches = branches
 
@@ -265,7 +268,7 @@ local function mapgen_roads_branch (points, mins, maxs, size, branches, schemes,
 
 		if point.paths[1] or point.paths[2] or point.paths[3] or point.paths[4] then
 			-- get the structures for this piece of road design, and add them to the schemes table
-			local new_scheme = mapgen_roads_branch_draw(point, new_points_this, size, entry)
+			local new_scheme = mapgen_roads_branch_draw(point, new_points_this, size, link, entry)
 			for _, road in ipairs(new_scheme) do
 				table.insert(schemes, road)
 			end
@@ -317,7 +320,7 @@ function mapgen_roads_get (pos_start, pos_end, roads)
 				table.insert(start_areas[i], {start_x = pos_x, start_z = pos_z, end_x = pos_x + start_areas_size_x - 1, end_z = pos_z + start_areas_size_z - 1})
 			end
 		end
-		-- additionally shuffle the instances table, to an uniform road order
+		-- additionally shuffle the instances table, to avoid an uniform road order
 		calculate_table_shuffle(instances[i])
 	end
 
@@ -351,14 +354,14 @@ function mapgen_roads_get (pos_start, pos_end, roads)
 	end
 
 	-- step 4: loop through all starting segments and begin creating the actual roads
-	for _, segment in ipairs(start_segments) do
+	for i, segment in ipairs(start_segments) do
 		-- begin from the position and number of branches of the starting segment
 		local points = {{x = segment.pos.x, z = segment.pos.z, paths = {false, false, false, false}}}
 		local branches = segment.entry.branch_count - 1
 		while (#points > 0) do
 			-- branch the existing points, then prepare the new ones for branching in the next loop iteration
 			-- this loop ends when no new points are created and all existing points were handled
-			points, branches = mapgen_roads_branch(points, mins, maxs, segment.size, branches, schemes, rectangles, segment.entry)
+			points, branches = mapgen_roads_branch(points, mins, maxs, segment.size, branches, i, segment.entry, schemes, rectangles)
 		end
 	end
 

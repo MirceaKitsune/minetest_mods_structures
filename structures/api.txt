@@ -20,7 +20,6 @@ structures:register_group({...}): The function used to define a structure group.
 		count = 10: The number of structures of this type to be spawned. This determines both the probability of the structure, as well as the horizontal scale of the group.
 		layers = {1, ...}: Structures will only align with each other if part of the same layer, and cut through one another if not. This is typically useful for underground passages or suspended roads systems. Every structure must be on at least one layer, while layers start from 1 and must always be in numerical order!
 		offset = 0: Number of nodes by which to deviate this structure vertically. Use a positive value to lift the structure, negative to bury it. Typically useful if the building has a basement, in which case you'll want the basement's height as a negative value.
-		flatness = 0: How much structures of this type center toward the height of the first structure that spawned, used to limit height differences. Ranges between 0 and 1. Only works for structures that don't have multiple floors.
 		floors_min = 0: If this building has multiple floors, this represents the minimum amount. When this is greater than zero, name_start and name_end must also be specified!
 		floors_max = 0: If this building has multiple floors, this represents the maximum amount. When this is greater than zero, name_start and name_end must also be specified!
 	roads = {{...}, {...}}: The table that contains this group's roads, each building defined in a sub-table. Parameters:
@@ -34,7 +33,7 @@ structures:register_group({...}): The function used to define a structure group.
 		count = 10: Same as for buildings. In the case of roads, this represents the total number of intersections that will exist in the town.
 		layer = 0: Same as for buildings.
 		offset = 0: Same as for buildings.
-		flatness = 0: Same as for buildings. For roads you will almost always want this on.
+		flatness = 1: Amount by which road segments will center to the height of the starting point they branched from. A high value is generally recommended, to avoid excessive height differences between road parts.
 		branch_count = 5: How many times each starting point will branch into new intersections. The number of starting points is (count / branches).
 		branch_min = 1: Minimum number of segments over which an intersection can occur. Higher values result in rarer roads.
 		branch_max = 10: Maximum number of segments under which an intersection can occur. Higher values result in rarer roads.
