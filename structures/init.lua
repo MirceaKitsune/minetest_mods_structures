@@ -14,6 +14,18 @@ local CONNECT_TIME = 1
 
 -- Global functions - Calculate
 
+-- checks if two tables contain a matching entry
+function calculate_matching (table1, table2)
+	for _, entry1 in ipairs(table1) do
+		for _, entry2 in ipairs(table2) do
+			if entry1 == entry2 then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 -- calculates the linear interpolation between two numbers
 function calculate_lerp (value_start, value_end, control)
 	return (1 - control) * value_start + control * value_end

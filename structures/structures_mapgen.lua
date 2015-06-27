@@ -14,12 +14,13 @@ structures.mapgen_area_size = 0
 
 -- returns the size of this group in nodes
 local function mapgen_group_size (id)
-	local scale_horizontal = 0
-	local scale_vertical = 0
-	local num = 0
+	-- not indexed by layers
+	local scale_vertical = {size = 0}
+	-- indexed by layers
+	local scale_horizontal = {}
 
 	-- loop through buildings
-	for i, entry in ipairs(structures.mapgen_groups[id].buildings) do
+	for _, entry in ipairs(structures.mapgen_groups[id].buildings) do
 		-- if the name is a table, choose a random schematic from it
 		entry.name = calculate_entry(entry.name)
 		entry.name_start = calculate_entry(entry.name_start)
@@ -35,20 +36,24 @@ local function mapgen_group_size (id)
 
 		if size ~= nil then
 			-- add the estimated horizontal scale of buildings
-			scale_horizontal = scale_horizontal + math.ceil((size.x + size.z) / 2) * entry.count
+			for _, layer in ipairs(entry.layers) do
+				if not scale_horizontal[layer] then
+					scale_horizontal[layer] = {size = 0, count = 0}
+				end
+				scale_horizontal[layer].size = scale_horizontal[layer].size + math.ceil((size.x + size.z) / 2) * entry.count
+				scale_horizontal[layer].count = scale_horizontal[layer].count + entry.count
+			end
 
 			-- if this is the tallest structure, use its vertical size plus offset
 			local height = size.y + entry.offset
-			if height > scale_vertical then
-				scale_vertical = height
+			if height > scale_vertical.size then
+				scale_vertical.size = height
 			end
-
-			num = num + entry.count
 		end
 	end
 
 	-- loop through roads
-	for i, entry in ipairs(structures.mapgen_groups[id].roads) do
+	for _, entry in ipairs(structures.mapgen_groups[id].roads) do
 		-- if the name is a table, choose a random schematic from it
 		entry.name_I = calculate_entry(entry.name_I)
 		entry.name_L = calculate_entry(entry.name_L)
@@ -59,22 +64,34 @@ local function mapgen_group_size (id)
 
 		if size ~= nil then
 			-- add the estimated horizontal scale of roads
-			scale_horizontal = scale_horizontal + math.ceil((size.x + size.z) / 2) * entry.count
+			for _, layer in ipairs(entry.layers) do
+				if not scale_horizontal[layer] then
+					scale_horizontal[layer] = {size = 0, count = 0}
+				end
+				scale_horizontal[layer].size = scale_horizontal[layer].size + math.ceil((size.x + size.z) / 2) * entry.count
+				scale_horizontal[layer].count = scale_horizontal[layer].count + entry.count
+			end
 
 			-- if this is the tallest structure, use its vertical size plus offset
 			local height = size.y + entry.offset
-			if height > scale_vertical then
-				scale_vertical = height
+			if height > scale_vertical.size then
+				scale_vertical.size = height
 			end
-
-			num = num + entry.count
 		end
 	end
 
-	-- divide horizontal space by the square root of total buildings to get the proper row / column sizes
-	scale_horizontal = math.ceil(scale_horizontal / math.sqrt(num))
+	-- extract the largest layer
+	local scale_vertical_largest = scale_vertical.size
+	local scale_horizontal_largest = 0
+	for _, scale in ipairs(scale_horizontal) do
+		-- divide horizontal space by the square root of total buildings to get the proper row / column sizes
+		local size = math.ceil(scale.size / math.sqrt(scale.count))
+		if size > scale_horizontal_largest then
+			scale_horizontal_largest = size
+		end
+	end
 
-	return scale_horizontal, scale_vertical
+	return scale_horizontal_largest, scale_vertical_largest
 end
 
 -- returns the index of the virtual area addressed by the given position

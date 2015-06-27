@@ -10,6 +10,7 @@ structures.IO_ignore = {"ignore", "air", "structures:manager_disabled", "structu
 
 -- gets the size of a structure file
 function io_get_size (angle, filename)
+	if not filename or filename == "" then return nil end
 	-- obtain size from the serialized schematic in lua format
 	-- since the table is returned as a string, use loadstring to activate it like a piece of lua code
 	local file = minetest.serialize_schematic(filename, "lua", {})
@@ -65,7 +66,7 @@ end
 
 -- export structure to a schematic
 function io_area_export (pos, ends, filename)
-	if ends == nil then return end
+	if ends == nil or not filename or filename == "" then return end
 	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
 	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
 
@@ -89,7 +90,7 @@ end
 
 -- import structure from a schematic
 function io_area_import (pos, ends, angle, filename, replacements, force, check_bounds)
-	if ends == nil then return end
+	if ends == nil or not filename or filename == "" then return end
 	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
 	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
 

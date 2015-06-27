@@ -48,7 +48,7 @@ function mapgen_buildings_get (pos_start, pos_end, rectangles, buildings)
 	if #new_rectangles == 0 then
 		local center_x = math.floor((pos_start.x + pos_end.x) / 2)
 		local center_z = math.floor((pos_start.z + pos_end.z) / 2)
-		table.insert(new_rectangles, {start_x = center_x, start_z = center_z, end_x = center_x, end_z = center_z, layer = nil})
+		table.insert(new_rectangles, {start_x = center_x, start_z = center_z, end_x = center_x, end_z = center_z, layers = nil})
 	end
 
 	-- although the group size tries to match the number of structures, buildings that spawn first may still decrease the probability of following buildings
@@ -64,7 +64,7 @@ function mapgen_buildings_get (pos_start, pos_end, rectangles, buildings)
 	-- now randomize the table so building instances won't be spawned in an uniform order
 	calculate_table_shuffle(instances)
 
-	for i, instance in ipairs(instances) do
+	for _, instance in ipairs(instances) do
 		local entry = buildings[instance]
 
 		-- if the name is a table, choose a random schematic from it
@@ -104,7 +104,7 @@ function mapgen_buildings_get (pos_start, pos_end, rectangles, buildings)
 		-- loop 1: go through the recrangles we want to place this building next to
 		for w, rectangle1 in ipairs(new_rectangles) do
 			-- only if it's a rectangle on the same layer
-			if not (rectangle1.layer and entry.layer and rectangle1.layer ~= entry.layer) then
+			if calculate_matching(rectangle1.layers, entry.layers) then
 				-- there are two ways to attempt placing this building around the rectangle: under it or right of it
 				local pos_under = {x = rectangle1.start_x, z = rectangle1.end_z + 1}
 				local pos_right = {x = rectangle1.end_x + 1, z = rectangle1.start_z}
@@ -118,7 +118,7 @@ function mapgen_buildings_get (pos_start, pos_end, rectangles, buildings)
 				-- loop 2: go through the recrangles that might intersect this building here
 				for v, rectangle2 in ipairs(new_rectangles) do
 					-- only if it's a rectangle on the same layer, and not the rectangle this building is next to
-					if not (rectangle2.layer and entry.layer and rectangle2.layer ~= entry.layer) and v ~= w then
+					if calculate_matching(rectangle2.layers, entry.layers) and v ~= w then
 						-- check under
 						if found_under == true and
 						pos_under.x <= rectangle2.end_x and pos_under.x + size.x >= rectangle2.start_x and
@@ -188,12 +188,12 @@ function mapgen_buildings_get (pos_start, pos_end, rectangles, buildings)
 		-- only if this building was found in the loop above
 		if found_pos == true then
 			local new_scheme = mapgen_buildings_draw(pos, size, angle, floors, entry)
-			for v, building in ipairs(new_scheme) do
+			for _, building in ipairs(new_scheme) do
 				table.insert(schemes, building)
 			end
 
 			-- add this building's corners to the rectangle list
-			local rectangle = {start_x = pos.x, start_z = pos.z, end_x = pos.x + size.x - 1, end_z = pos.z + size.z - 1, layer = entry.layer}
+			local rectangle = {start_x = pos.x, start_z = pos.z, end_x = pos.x + size.x - 1, end_z = pos.z + size.z - 1, layers = entry.layers}
 			table.insert(new_rectangles, rectangle)
 		end
 	end

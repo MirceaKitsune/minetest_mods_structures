@@ -14,7 +14,7 @@ local function mapgen_roads_branch_size (length_start, length_end, axis, size, r
 
 	-- scan the rectangles of other roads and detect if this segment would intersect any
 	for _, rectangle in ipairs(rectangles) do
-		if not (rectangle.layer and entry.layer and rectangle.layer ~= entry.layer) and
+		if calculate_matching(rectangle.layers, entry.layers) and
 		((axis + size_segment - 1 >= rectangle.start_x and axis <= rectangle.end_x) or
 		(axis + size_segment - 1 >= rectangle.start_z and axis <= rectangle.end_z)) then
 			local dist_limit_x = dist_scan
@@ -36,7 +36,7 @@ local function mapgen_roads_branch_size (length_start, length_end, axis, size, r
 			end
 
 			-- if scan distance cuts through this road, limit it to the intersection point
-			dist_limit = math.min(dist_limit_x, dist_limit_z)
+			local dist_limit = math.min(dist_limit_x, dist_limit_z)
 			if dist_limit < dist_scan then
 				dist_scan = dist_limit
 			end
@@ -198,10 +198,10 @@ local function mapgen_roads_branch (points, mins, maxs, size, branches, schemes,
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = {start_x = new_point.x + size.x, start_z = new_point.z, end_x = point.x - 1, end_z = point.z + size.z - 1, layer = entry.layer}
+				local new_rectangle = {start_x = new_point.x + size.x, start_z = new_point.z, end_x = point.x - 1, end_z = point.z + size.z - 1, layers = entry.layers}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size.x - 1, end_z = new_point.z + size.z - 1, layer = entry.layer}
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size.x - 1, end_z = new_point.z + size.z - 1, layers = entry.layers}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -217,10 +217,10 @@ local function mapgen_roads_branch (points, mins, maxs, size, branches, schemes,
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = {start_x = point.x, start_z = point.z + size.z, end_x = new_point.x + size.x - 1, end_z = new_point.z - 1, layer = entry.layer}
+				local new_rectangle = {start_x = point.x, start_z = point.z + size.z, end_x = new_point.x + size.x - 1, end_z = new_point.z - 1, layers = entry.layers}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size.x - 1, end_z = new_point.z + size.z - 1, layer = entry.layer}
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size.x - 1, end_z = new_point.z + size.z - 1, layers = entry.layers}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -236,10 +236,10 @@ local function mapgen_roads_branch (points, mins, maxs, size, branches, schemes,
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = {start_x = point.x + size.x, start_z = point.z, end_x = new_point.x - 1, end_z = new_point.z + size.z - 1, layer = entry.layer}
+				local new_rectangle = {start_x = point.x + size.x, start_z = point.z, end_x = new_point.x - 1, end_z = new_point.z + size.z - 1, layers = entry.layers}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size.x - 1, end_z = new_point.z + size.z - 1, layer = entry.layer}
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size.x - 1, end_z = new_point.z + size.z - 1, layers = entry.layers}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -255,10 +255,10 @@ local function mapgen_roads_branch (points, mins, maxs, size, branches, schemes,
 				table.insert(new_points_this, new_point)
 
 				-- add road rectangle
-				local new_rectangle = {start_x = new_point.x, start_z = new_point.z + size.z, end_x = point.x + size.x - 1, end_z = point.z - 1, layer = entry.layer}
+				local new_rectangle = {start_x = new_point.x, start_z = new_point.z + size.z, end_x = point.x + size.x - 1, end_z = point.z - 1, layers = entry.layers}
 				table.insert(rectangles, new_rectangle)
 				-- add intersection rectangle
-				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size.x - 1, end_z = new_point.z + size.z - 1, layer = entry.layer}
+				local new_rectangle_intersection = {start_x = new_point.x, start_z = new_point.z, end_x = new_point.x + size.x - 1, end_z = new_point.z + size.z - 1, layers = entry.layers}
 				table.insert(rectangles, new_rectangle_intersection)
 			end
 		end
@@ -286,52 +286,68 @@ function mapgen_roads_get (pos_start, pos_end, roads)
 	local schemes = {}
 	local rectangles = {}
 
-	-- step 1: create a list of indexes from the roads table, and randomize it to avoid an uniform road order
+	-- step 1: create a list of indexes from the roads table
+	-- note: the instances table is indexed by layer
 	local instances = {}
 	for i, entry in ipairs(roads) do
-		-- spawn this road based on its probability divided by branches
-		local count = math.floor(entry.count / entry.branch_count)
-		for x = 1, count do
-			table.insert(instances, i)
+		for _, layer in ipairs(entry.layers) do
+			if not instances[layer] then
+				instances[layer] = {}
+			end
+			-- spawn this road based on its probability divided by branches
+			local count = math.floor(entry.count / entry.branch_count)
+			for x = 1, count do
+				table.insert(instances[layer], i)
+			end
 		end
 	end
-	calculate_table_shuffle(instances)
 
-	-- step 2: split the area across which the city spans into multiple sub-areas of equal size, based on the number of road instances
-	local start_areas_size_x = math.floor((maxs.x - mins.x) / math.sqrt(#instances))
-	local start_areas_size_z = math.floor((maxs.z - mins.z) / math.sqrt(#instances))
+	-- step 2: split the zone across which the city spans into multiple areas of equal size, based on the number of road instances
+	-- note: the start_areas table is indexed by layer
 	local start_areas = {}
-	for pos_x = mins.x, maxs.x - start_areas_size_x, start_areas_size_x do
-		for pos_z = mins.z, maxs.z - start_areas_size_z, start_areas_size_z do
-			table.insert(start_areas, {start_x = pos_x, start_z = pos_z, end_x = pos_x + start_areas_size_x - 1, end_z = pos_z + start_areas_size_z - 1})
+	for i, layer in ipairs(instances) do
+		if not start_areas[i] then
+			start_areas[i] = {}
 		end
+		-- divide the town's area by the square root of the total number of start points
+		local start_areas_size_x = math.floor((maxs.x - mins.x) / math.sqrt(#layer))
+		local start_areas_size_z = math.floor((maxs.z - mins.z) / math.sqrt(#layer))
+		for pos_x = mins.x, maxs.x - start_areas_size_x, start_areas_size_x do
+			for pos_z = mins.z, maxs.z - start_areas_size_z, start_areas_size_z do
+				table.insert(start_areas[i], {start_x = pos_x, start_z = pos_z, end_x = pos_x + start_areas_size_x - 1, end_z = pos_z + start_areas_size_z - 1})
+			end
+		end
+		-- additionally shuffle the instances table, to an uniform road order
+		calculate_table_shuffle(instances[i])
 	end
 
 	-- step 3: loop through all road instances and create a starting point in a randomly chosen area
 	local start_segments = {}
-	for _, instance in ipairs(instances) do
-		-- check that we still have areas left
-		if #start_areas == 0 then
-			break
+	for i, layer in ipairs(instances) do
+		for _, instance in ipairs(layer) do
+			-- check that we still have areas left
+			if #start_areas[i] == 0 then
+				break
+			end
+			-- get the properties of this road
+			local entry = roads[instance]
+			entry.name_I = calculate_entry(entry.name_I)
+			entry.name_L = calculate_entry(entry.name_L)
+			entry.name_P = calculate_entry(entry.name_P)
+			entry.name_T = calculate_entry(entry.name_T)
+			entry.name_x = calculate_entry(entry.name_x)
+			local size = io_get_size(0, calculate_entry(entry.name_I))
+			-- now create the starting point in an available area
+			local area_index = math.random(1, #start_areas[i])
+			local area = start_areas[i][area_index]
+			local pos_x = math.random(area.start_x, area.end_x - size.x)
+			local pos_z = math.random(area.start_z, area.end_z - size.z)
+			table.insert(start_segments, {pos = {x = pos_x, z = pos_z}, size = size, entry = entry})
+			-- all starting points must be present in the rectangles table before branching begins, so they can be detected when calculating branches
+			table.insert(rectangles, {start_x = pos_x, start_z = pos_z, end_x = pos_x + size.x - 1, end_z = pos_z + size.z - 1, layers = entry.layers})
+			-- remove the area from the table so it's not chosen by a future road instance
+			table.remove(start_areas[i], area_index)
 		end
-		-- get the properties of this road
-		local entry = roads[instance]
-		entry.name_I = calculate_entry(entry.name_I)
-		entry.name_L = calculate_entry(entry.name_L)
-		entry.name_P = calculate_entry(entry.name_P)
-		entry.name_T = calculate_entry(entry.name_T)
-		entry.name_x = calculate_entry(entry.name_x)
-		local size = io_get_size(0, calculate_entry(entry.name_I))
-		-- now create the starting point in an available area
-		local area_index = math.random(1, #start_areas)
-		local area = start_areas[area_index]
-		local pos_x = math.random(area.start_x, area.end_x - size.x)
-		local pos_z = math.random(area.start_z, area.end_z - size.z)
-		table.insert(start_segments, {pos = {x = pos_x, z = pos_z}, size = size, entry = entry})
-		-- all starting points must be present in the rectangles table before branching begins, so they can be detected when calculating branches
-		table.insert(rectangles, {start_x = pos_x, start_z = pos_z, end_x = pos_x + size.x - 1, end_z = pos_z + size.z - 1, layer = entry.layer})
-		-- remove the area from the table so it's not chosen by a future road instance
-		table.remove(start_areas, area_index)
 	end
 
 	-- step 4: loop through all starting segments and begin creating the actual roads
