@@ -1,7 +1,7 @@
 Structures mod by MirceaKitsune
 Authors of media and source files:
 
-MirceaKitsune (WTFPL):
+MirceaKitsune (LGPL):
   *.lua (source code)
 
 MirceaKitsune (WTFPL):
