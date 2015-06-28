@@ -73,7 +73,7 @@ local function mapgen_roads_branch_draw_intersection(paths, entry)
 	-- directions: 1 = left, 2 = up, 3 = right, 4 = down
 
 	-- intersections that connect to 4 point (X shape), default
-	local name = entry.name_x
+	local name = entry.name_X
 	local angle = 90 * math.random(0, 3)
 
 	-- intersections that connect to 1 point (P shape)
@@ -338,7 +338,7 @@ function mapgen_roads_get (pos_start, pos_end, roads)
 			entry.name_L = calculate_entry(entry.name_L)
 			entry.name_P = calculate_entry(entry.name_P)
 			entry.name_T = calculate_entry(entry.name_T)
-			entry.name_x = calculate_entry(entry.name_x)
+			entry.name_X = calculate_entry(entry.name_X)
 			local size = io_get_size(0, calculate_entry(entry.name_I))
 			-- now create the starting point in an available area
 			local area_index = math.random(1, #start_areas[i])
