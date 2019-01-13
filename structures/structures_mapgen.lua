@@ -163,6 +163,15 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 			local spawn = true
 			if group.spawn_structure_pre then spawn = group.spawn_structure_pre(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
 			if spawn then
+				-- clear the area above this structure
+				-- TODO: for buildings with multiple floors, this should only be done once for the top segment, rather than for each segment
+				if structures.mapgen_structure_roof > 0 and structure.force == true then
+					local height_clear = math.floor(structure.size.y * structures.mapgen_structure_roof)
+					local pos_clear_start = {x = pos_start.x, y = pos_end.y - 1, z = pos_start.z}
+					local pos_clear_end = {x = pos_end.x, y = pos_end.y + height_clear, z = pos_end.z}
+					io_area_fill(pos_clear_start, pos_clear_end, nil)
+				end
+
 				-- import the structure
 				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, false)
 

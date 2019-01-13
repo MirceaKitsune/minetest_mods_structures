@@ -34,7 +34,7 @@ function io_get_size (angle, filename)
 	return size
 end
 
--- fills the marked aream, ignored objects are not affected
+-- fills the marked area, ignored objects are not affected
 function io_area_fill (pos, ends, node)
 	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
 	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
