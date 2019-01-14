@@ -1,8 +1,7 @@
 * Settings:
 
-structures.mapgen_delay = 5: If greated than 0, an additional spawn request is called after this many seconds, starting the moment the area around structure was generated. This is necessary to correct post-mapgen operations which may cause structures to break. Higher values give more time for other mapgen operations to finish, but cause the corrections to appear later.
 structures.mapgen_area_multiply = 1: Multiply the size of the virtual area by this amount. Larger values decrease town frequency, but give more room for towns to be arranged in.
-structures.mapgen_structure_clear = 10: Clear this many nodes above terrain for spawned structures. Used to reduce the risk of tree parts being left in the air as structures cut through them. Only used if the structure's "base" field is set a node and its "force" flag is true.
+structures.mapgen_structure_clear = 10: Clear this many nodes above terrain for spawned structures. Used to reduce the tree parts being left in the air as structures cut through them, should be as high as the tallest tree. Only used if the structure's "base" field is set a node and its "force" flag is true.
 
 * Main functions and values:
 
