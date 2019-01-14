@@ -12,6 +12,17 @@ structures.mapgen_area_size = 0
 
 -- Local functions
 
+-- saves mapgen areas to the file
+local function mapgen_save_areas()
+	local file = io.open(minetest:get_worldpath().."/areas.txt", "w")
+	if file then
+		file:write(minetest.serialize(structures.mapgen_areas))
+		file:close()
+	else
+		minetest.log("error", "Can't save mapgen areas to file")
+	end
+end
+
 -- returns the size of this group in nodes
 local function mapgen_group_size (id)
 	-- not indexed by layers
@@ -119,6 +130,7 @@ local function mapgen_generate_area (pos)
 		minp = area_minp,
 		maxp = area_maxp,
 	}
+	mapgen_save_areas()
 	return index
 end
 
@@ -206,6 +218,19 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 	end
 end
 
+-- handles spawning the given structures inside an area
+local function mapgen_generate_spawn_in (area_index, minp, maxp, heightmap)
+	local area = structures.mapgen_areas[area_index]
+
+	for i, structure in pairs(area.structures) do
+		if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
+		structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
+		structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
+			mapgen_generate_spawn(i, area_index, minp, maxp, heightmap)
+		end
+	end
+end
+
 -- main mapgen function, plans or spawns the town
 local function mapgen_generate (minp, maxp, seed)
 	local pos = {
@@ -227,6 +252,7 @@ local function mapgen_generate (minp, maxp, seed)
 				-- since the chunk is lower or higher than the position of any group, there's no risk of generating a spot in a potential town before its buildings are planned, so this is okay
 				structures.mapgen_areas[area_index].structures = {}
 				structures.mapgen_areas[area_index].chain = {}
+				mapgen_save_areas()
 
 				-- check if this group is located in an allowed biome
 				-- only relevant if the mapgen can report biomes, assume true if not
@@ -283,11 +309,14 @@ local function mapgen_generate (minp, maxp, seed)
 			for _, road in ipairs(schemes_roads) do
 				table.insert(area.structures, road)
 			end
+
+			-- store the updated area with the new structures
+			mapgen_save_areas()
 		end
 	end
 
 	-- if a city is planned for this area and there are valid structures, create the structures touched by this mapblock
-	if area.structures then
+	if area.structures and area.group then
 		local group_id = area.group
 		local group = structures.mapgen_groups[group_id]
 
@@ -295,16 +324,15 @@ local function mapgen_generate (minp, maxp, seed)
 		if minp.y <= group.height_max + group.size_vertical and maxp.y >= group.height_min then
 			local heightmap = minetest.get_mapgen_object("heightmap")
 
-			-- schedule structure creation to execute after the spawn delay
-			minetest.after(structures.mapgen_delay, function()
-				for i, structure in pairs(area.structures) do
-					if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
-					structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
-					structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
-						mapgen_generate_spawn(i, area_index, minp, maxp, heightmap)
-					end
-				end
-			end)
+			-- spawn this structure immediately
+			mapgen_generate_spawn_in(area_index, minp, maxp, heightmap)
+
+			-- schedule the additional delayed spawn
+			if structures.mapgen_delay and structures.mapgen_delay > 0 then
+				minetest.after(structures.mapgen_delay, function()
+					mapgen_generate_spawn_in(area_index, minp, maxp, heightmap)
+				end)
+			end
 		end
 	end
 end
@@ -335,7 +363,7 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	mapgen_generate(minp, maxp, seed)
 end)
 
--- save and load mapgen areas to and from file
+-- load mapgen areas from the file on first run
 local file = io.open(minetest:get_worldpath().."/areas.txt", "r")
 if file then
 	local table = minetest.deserialize(file:read("*all"))
@@ -346,26 +374,3 @@ if file then
 	end
 	file:close()
 end
-
-local function save_areas()
-	local file = io.open(minetest:get_worldpath().."/areas.txt", "w")
-	if file then
-		file:write(minetest.serialize(structures.mapgen_areas))
-		file:close()
-	else
-		minetest.log("error", "Can't save mapgen areas to file")
-	end
-end
-
-local save_areas_timer = 0
-minetest.register_globalstep(function(dtime)
-	save_areas_timer = save_areas_timer + dtime
-	if save_areas_timer > 10 then
-		save_areas_timer = 0
-		save_areas()
-	end
-end)
-
-minetest.register_on_shutdown(function()
-	save_areas()
-end)
