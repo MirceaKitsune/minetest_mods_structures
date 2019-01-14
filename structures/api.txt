@@ -1,6 +1,6 @@
 * Settings:
 
-structures.mapgen_delay = 0.1: Spawning is delayed by this many seconds per structure. Higher values give more time for other mapgen operations to finish and reduce lag, but cause towns to appear more slowly. Example: If the delay is 0.1 and a town has 1000 structures, it will take the entire town 100 seconds to spawn.
+structures.mapgen_delay = 1: Spawning is delayed by this many seconds for structures, starting the moment the area around structure was generated. Higher values give more time for other mapgen operations to finish and reduce lag, but cause buildings to appear later.
 structures.mapgen_area_multiply = 1: Multiply the size of the virtual area by this amount. Larger values decrease town frequency, but give more room for towns to be arranged in.
 structures.mapgen_structure_roof = 1: Clear the area above a spawned structure by this much of the structure's height. This prevents shorter structures from being buried on rough terrain. Only used if the structure's "force" flag is true! Example: If a structure is 10 nodes tall, 1 clears 10 nodes above it, 0.5 clears 5 nodes, 2 clears 20 nodes.
 

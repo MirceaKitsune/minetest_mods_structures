@@ -185,9 +185,6 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 			end
 		end
 	end
-
-	-- remove this structure from the list
-	structures.mapgen_areas[area_index].structures[structure_index] = nil
 end
 
 -- main mapgen function, plans or spawns the town
@@ -279,16 +276,16 @@ local function mapgen_generate (minp, maxp, seed)
 		if minp.y <= group.height_max + group.size_vertical and maxp.y >= group.height_min then
 			local heightmap = minetest.get_mapgen_object("heightmap")
 
-			for i, structure in pairs(area.structures) do
-				if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
-				structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
-				structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
-					-- schedule structure creation to execute after the spawn delay
-					minetest.after(structures.mapgen_delay * i, function()
+			-- schedule structure creation to execute after the spawn delay
+			minetest.after(structures.mapgen_delay, function()
+				for i, structure in pairs(area.structures) do
+					if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
+					structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
+					structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
 						mapgen_generate_spawn(i, area_index, minp, maxp, heightmap)
-					end)
+					end
 				end
-			end
+			end)
 		end
 	end
 end
