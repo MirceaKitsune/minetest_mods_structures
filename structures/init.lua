@@ -88,18 +88,18 @@ end
 -- Local functions - Formspec
 
 local function make_formspec (file, io_angle, area_size, area_nodes)
-		local formspec="size[6,4]"..
-			default.gui_bg..
-			default.gui_bg_img..
-			default.gui_slots..
-			"field[0,0;4,2;file;File;"..file.."]"..
-			"field[4,0;2,2;io_angle;Import angle;"..io_angle.."]"..
-			"label[0,1;Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes.."]"..
-			"button[0,2;2,1;io_import;Import]"..
-			"button[2,2;2,1;io_export;Export]"..
-			"button[4,2;2,1;io_clear;Clear]"..
-			"button_exit[0,3;6,1;exit;OK]"
-		return formspec
+	local formspec="size[6,4]"..
+		default.gui_bg..
+		default.gui_bg_img..
+		default.gui_slots..
+		"field[0,0;4,2;file;File;"..file.."]"..
+		"field[4,0;2,2;io_angle;Import angle;"..io_angle.."]"..
+		"label[0,1;Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes.."]"..
+		"button[0,2;2,1;io_import;Import]"..
+		"button[2,2;2,1;io_export;Export]"..
+		"button[4,2;2,1;io_clear;Clear]"..
+		"button_exit[0,3;6,1;exit;OK]"
+	return formspec
 end
 
 local function make_formspec_size (pos)
@@ -111,7 +111,7 @@ local function make_formspec_size (pos)
 	size.x = size.x - 1
 	size.y = size.y - 1
 	size.z = size.z - 1
-	s = size.x..","..size.y..","..size.z.."\n"
+	-- local s = size.x..","..size.y..","..size.z.."\n"
 
 	return size
 end
@@ -165,10 +165,10 @@ end
 
 -- search for in-line markers on the X / Y / Z axes within radius and return their positions
 function markers_get (pos)
-	pos_markers = {x = nil, y = nil, z = nil}
+	local pos_markers = {x = nil, y = nil, z = nil}
 	-- search X
 	for search = pos.x - CONNECT_DISTANCE, pos.x + CONNECT_DISTANCE do
-		pos_search = {x = search, y = pos.y, z = pos.z}
+		local pos_search = {x = search, y = pos.y, z = pos.z}
 		if minetest.env:get_node(pos_search).name == "structures:marker" then
 			pos_markers.x = pos_search.x
 			break
@@ -176,7 +176,7 @@ function markers_get (pos)
 	end
 	-- search Y
 	for search = pos.y - CONNECT_DISTANCE, pos.y + CONNECT_DISTANCE do
-		pos_search = {x = pos.x, y = search, z = pos.z}
+		local pos_search = {x = pos.x, y = search, z = pos.z}
 		if minetest.env:get_node(pos_search).name == "structures:marker" then
 			pos_markers.y = pos_search.y
 			break
@@ -184,7 +184,7 @@ function markers_get (pos)
 	end
 	-- search Z
 	for search = pos.z - CONNECT_DISTANCE, pos.z + CONNECT_DISTANCE do
-		pos_search = {x = pos.x, y = pos.y, z = search}
+		local pos_search = {x = pos.x, y = pos.y, z = search}
 		if minetest.env:get_node(pos_search).name == "structures:marker" then
 			pos_markers.z = pos_search.z
 			break
@@ -248,14 +248,20 @@ minetest.register_node("structures:manager_enabled", {
 		end
 
 		local meta = minetest.env:get_meta(pos)
-		meta:set_string("file", fields.file)
-		meta:set_float("io_angle", fields.io_angle)
-		meta:set_string("formspec", make_formspec(fields.file, fields.io_angle, make_formspec_size(pos), make_formspec_nodes(pos)))
+		if fields.file then
+			meta:set_string("file", fields.file)
+		end
+		if fields.io_angle then
+			meta:set_float("io_angle", fields.io_angle)
+		end
+		if fields.file and fields.io_angle then
+			meta:set_string("formspec", make_formspec(fields.file, fields.io_angle, make_formspec_size(pos), make_formspec_nodes(pos)))
+		end
 
 		if fields.io_export then
-			io_area_export(pos, markers_get(pos), fields.file)
+			io_area_export(pos, markers_get(pos), fields.file..".mts")
 		elseif fields.io_import then
-			io_area_import(pos, markers_get(pos), tonumber(fields.io_angle), fields.file, {}, true, true)
+			io_area_import(pos, markers_get(pos), tonumber(fields.io_angle), fields.file..".mts", {}, true, true)
 		elseif fields.io_clear then
 			io_area_fill(pos, markers_get(pos), nil)
 		end
