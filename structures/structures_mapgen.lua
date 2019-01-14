@@ -140,6 +140,7 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 	local structure = area.structures[structure_index]
 	local group_id = area.group
 	local group = structures.mapgen_groups[group_id]
+	local link = structure.chaining and structure.chaining.link
 	-- note 1: since the I/O function doesn't include the start and end nodes, decrease start position by 1 to get the right spot
 	-- note 2: the X and Z positions of the structure represent the full position, but Y only represents the offset, since we can only scan the heightmap and determine real height here
 	-- determine the corners of the structure's cube, X and Z
@@ -167,8 +168,11 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 		height_average = math.floor((height_lowest + height_highest) / 2)
 	end
 
-	local link = structure.chaining and structure.chaining.link
-	if height_average and (height_highest - height_lowest <= group.tolerance or (link and area.chain[link])) then
+	-- calculate the maximum terrain noise level allowed for this structure based on its width
+	-- does not apply to linked road segments, othewise roads would abruptly cut off when a segment no longer meets the noise requirements
+	local tolerance = math.floor(math.max(structure.size.x, structure.size.z) * group.tolerance)
+
+	if height_average and (height_highest - height_lowest <= tolerance or (link and area.chain[link])) then
 		-- if chaining is enabled for this structure, center it toward the position of the first structure
 		-- additionally, bound between minimum and maximum height rather than letting the structure not spawn, to prevent road segments getting cut if the road gets too high or too low
 		if link and area.chain[link] then

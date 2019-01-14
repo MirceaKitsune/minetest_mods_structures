@@ -77,7 +77,7 @@ structures:register_group({
 	biomes = nil,
 	height_min = 5,
 	height_max = 50,
-	tolerance = 10,
+	tolerance = 0.5,
 	buildings = {
 		{
 			name = path_schematics.."default_town_house_tiny_1.mts",
