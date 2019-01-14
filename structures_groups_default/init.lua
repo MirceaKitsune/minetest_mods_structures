@@ -8,7 +8,7 @@ local path_schematics = minetest.get_modpath("structures_groups_default").."/sch
 
 structures.mapgen_delay = 1
 structures.mapgen_area_multiply = 1.5
-structures.mapgen_structure_roof = 1
+structures.mapgen_structure_clear = 10
 
 -- #2 - Functions
 
