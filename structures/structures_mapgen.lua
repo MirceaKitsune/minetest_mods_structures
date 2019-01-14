@@ -167,10 +167,10 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 		height_average = math.floor((height_lowest + height_highest) / 2)
 	end
 
-	if height_average then
+	local link = structure.chaining and structure.chaining.link
+	if height_average and (height_highest - height_lowest <= group.tolerance or (link and area.chain[link])) then
 		-- if chaining is enabled for this structure, center it toward the position of the first structure
 		-- additionally, bound between minimum and maximum height rather than letting the structure not spawn, to prevent road segments getting cut if the road gets too high or too low
-		local link = structure.chaining and structure.chaining.link
 		if link and area.chain[link] then
 			height_average = calculate_lerp(height_average, area.chain[link], structure.chaining.flatness)
 			height_average = math.max(group.height_min, math.min(group.height_max, height_average))
