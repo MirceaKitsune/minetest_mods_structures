@@ -134,9 +134,10 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 	local pos_start = {x = structure.pos.x - 1, z = structure.pos.z - 1}
 	local pos_end = {x = pos_start.x + structure.size.x + 1, z = pos_start.z + structure.size.z + 1}
 
-	-- get the height at each valid point and note down the lowest and highest elevations
+	-- get the height at each valid point and note down the lowest, highest, and average elevations
 	local height_lowest = nil
 	local height_highest = nil
+	local height_average = nil
 	for px = pos_start.x, pos_end.x do
 		for pz = pos_start.z, pos_end.z do
 			local height = calculate_heightmap_pos(heightmap, minp, maxp, px, pz)
@@ -150,31 +151,42 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 			end
 		end
 	end
+	if height_lowest and height_highest then
+		height_average = math.floor((height_lowest + height_highest) / 2)
+	end
 
-	if height_lowest then
+	if height_average then
 		-- if chaining is enabled for this structure, center it toward the position of the first structure
 		-- additionally, bound between minimum and maximum height rather than letting the structure not spawn, to prevent road segments getting cut if the road gets too high or too low
 		local link = structure.chaining and structure.chaining.link
 		if link and area.chain[link] then
-			height_lowest = calculate_lerp(height_lowest, area.chain[link], structure.chaining.flatness)
-			height_lowest = math.max(group.height_min, math.min(group.height_max, height_lowest))
+			height_average = calculate_lerp(height_average, area.chain[link], structure.chaining.flatness)
+			height_average = math.max(group.height_min, math.min(group.height_max, height_average))
 		end
 		-- determine the corners of the structure's cube, Y
-		pos_start.y = height_lowest + structure.pos.y - 1
+		pos_start.y = height_average + structure.pos.y - 1
 		pos_end.y = pos_start.y + structure.size.y + 1
 
 		-- only spawn this structure if it's within the allowed height limits
-		if height_lowest >= group.height_min and height_lowest + structure.size.y <= group.height_max + group.size_vertical then
+		if height_average >= group.height_min and height_average + structure.size.y <= group.height_max + group.size_vertical then
 			-- execute the structure's pre-spawn function if one is present, and abort spawning if it returns false
 			local spawn = true
 			if group.spawn_structure_pre then spawn = group.spawn_structure_pre(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
 			if spawn then
+				-- generate the base below this structure
+				if structure.base then
+					local pos_base_start = {x = pos_start.x, y = height_lowest, z = pos_start.z}
+					local pos_base_end = {x = pos_end.x, y = pos_start.y + 1, z = pos_end.z}
+					if pos_base_end.y > pos_base_start.y + 1 then
+						io_area_fill(pos_base_start, pos_base_end, structure.base)
+					end
+				end
+
 				-- clear the terrain above this structure
-				-- TODO: for buildings with multiple floors, this should only be done once for the top segment, rather than for each segment
-				if structure.force == true then
+				if structure.base and structure.force then
 					local pos_clear_start = {x = pos_start.x, y = pos_end.y - 1, z = pos_start.z}
 					local pos_clear_end = {x = pos_end.x, y = height_highest + structures.mapgen_structure_clear, z = pos_end.z}
-					if pos_clear_end.y > pos_clear_start.y then
+					if pos_clear_end.y > pos_clear_start.y + 1 then
 						io_area_fill(pos_clear_start, pos_clear_end, nil)
 					end
 				end
@@ -187,7 +199,7 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 
 				-- record the height of the first structure in the chain
 				if link and not structures.mapgen_areas[area_index].chain[link] then
-					structures.mapgen_areas[area_index].chain[link] = height_lowest
+					structures.mapgen_areas[area_index].chain[link] = height_average
 				end
 			end
 		end

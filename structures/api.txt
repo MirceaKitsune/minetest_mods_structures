@@ -2,7 +2,7 @@
 
 structures.mapgen_delay = 1: Spawning is delayed by this many seconds for structures, starting the moment the area around structure was generated. Higher values give more time for other mapgen operations to finish and reduce lag, but cause buildings to appear later.
 structures.mapgen_area_multiply = 1: Multiply the size of the virtual area by this amount. Larger values decrease town frequency, but give more room for towns to be arranged in.
-structures.mapgen_structure_clear = 10: Clear this many nodes above terrain for spawned structures. Used to reduce the risk of tree parts being left in the air as structures cut through them. Only used if the structure's "force" flag is true.
+structures.mapgen_structure_clear = 10: Clear this many nodes above terrain for spawned structures. Used to reduce the risk of tree parts being left in the air as structures cut through them. Only used if the structure's "base" field is set a node and its "force" flag is true.
 
 * Main functions and values:
 
@@ -16,6 +16,7 @@ structures:register_group({...}): The function used to define a structure group.
 		name = {"path/house_foo.mts", "path/house_bar.mts"}: When defined like this, a random schematic is chosen from the list. ALL SCHEMATICS MUST HAVE THE SAME SIZE!
 		name_start = "path/house_start.mts": Only used if this building has multiple floors. This is the schematic of the bottom most structure. MUST HAVE THE SAME HORIZONTAL SIZE AS name AND name_end!
 		name_end = "path/house_start.mts": Only used if this building has multiple floors. This is the schematic of the top most structure. MUST HAVE THE SAME HORIZONTAL SIZE AS name AND name_start!
+		base = "default:dirt": The area under each structure is filled with this type of node to generate the foundation. Can be nil to disable base generation.
 		replacements = {...}: A list of nodes to be replaced with other nodes before the structure is spawned. See the documentation for minetest.place_schematic on how to use this.
 		force = true: If false, "air" and "ignore" nodes aren't placed from the schematic. Disable this if you want the structure to merge with other nodes it intersects, rather than the perimeter around it being cleared first.
 		count = 10: The number of structures of this type to be spawned. This determines both the probability of the structure, as well as the horizontal scale of the group.
@@ -29,6 +30,7 @@ structures:register_group({...}): The function used to define a structure group.
 		name_P = "path/road_P.mts": The P segment of this road (connects down).
 		name_T = "path/road_T.mts": The T segment of this road (connects left, right and up).
 		name_X = "path/road_X.mts": The X segment of this road (connects all four directions).
+		base = "default:dirt": Same as for buildings.
 		replacements = {...}: Same as for buildings.
 		force = true: Same as for buildings.
 		count = 10: Same as for buildings. In the case of roads, this represents the total number of intersections that will exist in the town.

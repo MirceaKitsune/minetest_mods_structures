@@ -80,6 +80,7 @@ structures:register_group({
 	buildings = {
 		{
 			name = path_schematics.."default_town_house_tiny_1.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -90,6 +91,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_house_tiny_2.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -100,6 +102,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_house_tiny_3.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -110,6 +113,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_house_small.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -120,6 +124,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_house_medium.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -130,6 +135,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_house_large_1.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -140,6 +146,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_house_large_2.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -152,6 +159,7 @@ structures:register_group({
 			name = path_schematics.."default_town_hotel.mts",
 			name_start = path_schematics.."default_town_hotel_start.mts",
 			name_end = path_schematics.."default_town_hotel_end.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -162,6 +170,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_tower.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -172,6 +181,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_farm.mts",
+			base = "default:dirt",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -182,6 +192,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_park.mts",
+			base = "default:stone",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -192,6 +203,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_fountain.mts",
+			base = "default:stone",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -202,6 +214,7 @@ structures:register_group({
 		},
 		{
 			name = path_schematics.."default_town_well.mts",
+			base = "default:stone",
 			replacements = {},
 			force = true,
 			layers = {1,},
@@ -218,6 +231,7 @@ structures:register_group({
 			name_P = path_schematics.."default_town_road_P.mts",
 			name_T = path_schematics.."default_town_road_T.mts",
 			name_X = path_schematics.."default_town_road_X.mts",
+			base = "default:sandstone",
 			replacements = {},
 			force = true,
 			layers = {1,},
