@@ -78,6 +78,7 @@ structures:register_group({
 	height_min = 5,
 	height_max = 50,
 	tolerance = 0.5,
+	elevation = 0.5,
 	buildings = {
 		{
 			name = path_schematics.."default_town_house_tiny_1.mts",
