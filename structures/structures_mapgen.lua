@@ -226,6 +226,8 @@ end
 
 -- main mapgen function, plans or spawns the town
 local function mapgen_generate (minp, maxp, seed)
+	if #structures.mapgen_groups == 0 then return end
+
 	local pos = {
 		x = (minp.x + maxp.x) / 2,
 		z = (minp.z + maxp.z) / 2,
