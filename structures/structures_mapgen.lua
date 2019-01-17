@@ -135,7 +135,7 @@ local function mapgen_generate_area (pos)
 end
 
 -- handles spawning the given structure
-local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, heightmap)
+local function mapgen_generate_structure (structure_index, area_index, minp, maxp, heightmap, vm)
 	local area = structures.mapgen_areas[area_index]
 	local structure = area.structures[structure_index]
 	local group_id = area.group
@@ -210,7 +210,7 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 				end
 
 				-- import the structure
-				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, false)
+				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, false, vm)
 
 				-- execute the structure's post-spawn function if one is present
 				if group.spawn_structure_post then group.spawn_structure_post(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
@@ -225,7 +225,7 @@ local function mapgen_generate_spawn (structure_index, area_index, minp, maxp, h
 end
 
 -- main mapgen function, plans or spawns the town
-local function mapgen_generate (minp, maxp, seed)
+local function mapgen_generate (minp, maxp, seed, vm)
 	if #structures.mapgen_groups == 0 then return end
 
 	local pos = {
@@ -324,7 +324,7 @@ local function mapgen_generate (minp, maxp, seed)
 				if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
 				structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
 				structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
-					mapgen_generate_spawn(i, area_index, minp, maxp, heightmap)
+					mapgen_generate_structure(i, area_index, minp, maxp, heightmap, vm)
 				end
 			end
 		end
@@ -353,8 +353,13 @@ end
 
 -- run the map_generate function
 minetest.register_on_generated(function(minp, maxp, seed)
+	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
+
 	-- execute the main generate function
-	mapgen_generate(minp, maxp, seed)
+	mapgen_generate(minp, maxp, seed, vm)
+
+	vm:calc_lighting()
+	vm:write_to_map()
 end)
 
 -- load mapgen areas from the file on first run

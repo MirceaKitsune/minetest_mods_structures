@@ -261,7 +261,7 @@ minetest.register_node("structures:manager_enabled", {
 		if fields.io_export then
 			io_area_export(pos, markers_get(pos), fields.file..".mts")
 		elseif fields.io_import then
-			io_area_import(pos, markers_get(pos), tonumber(fields.io_angle), fields.file..".mts", {}, true, true)
+			io_area_import(pos, markers_get(pos), tonumber(fields.io_angle), fields.file..".mts", {}, true, true, nil)
 		elseif fields.io_clear then
 			io_area_fill(pos, markers_get(pos), nil)
 		end

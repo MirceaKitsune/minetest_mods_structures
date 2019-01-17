@@ -89,7 +89,7 @@ function io_area_export (pos, ends, filename)
 end
 
 -- import structure from a schematic
-function io_area_import (pos, ends, angle, filename, replacements, force, check_bounds)
+function io_area_import (pos, ends, angle, filename, replacements, force, check_bounds, vm)
 	if ends == nil or not filename or filename == "" then return end
 	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
 	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
@@ -111,7 +111,12 @@ function io_area_import (pos, ends, angle, filename, replacements, force, check_
 	if file == nil then return end
 	file:close()
 
-	minetest.place_schematic(pos_start, filename, angle, replacements, force)
+	-- place on vmanip if a vm is given, otherwise just place on the map
+	if vm then
+		minetest.place_schematic_on_vmanip(vm, pos_start, filename, angle, replacements, force)
+	else
+		minetest.place_schematic(pos_start, filename, angle, replacements, force)
+	end
 
 	-- we need to call on_construct for each node that has one, otherwise some nodes won't work correctly and even crash
 	for search_x = pos_start.x, pos_end.x do
