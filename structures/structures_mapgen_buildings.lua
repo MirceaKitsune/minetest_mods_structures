@@ -96,7 +96,7 @@ function mapgen_buildings_get (pos_start, pos_end, rectangles, buildings)
 		local found_pos = false
 
 		-- X and Z positions, Y only represents the offset
-		local pos = {x = pos_start.x, y = entry.offset, z = pos_start.z}
+		local pos = {x = pos_start.x, y = entry.offset + 1, z = pos_start.z}
 
 		-- determine the X and Z position of this building
 		-- first shuffle the rectangles table, to avoid a fixed search order

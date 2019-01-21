@@ -79,16 +79,16 @@ local function mapgen_roads_branch_draw_intersection(paths, entry)
 	-- intersections that connect to 1 point (P shape)
 	if paths[1] == true and paths[2] == false and paths[3] == false and paths[4] == false then
 		name = entry.name_P
-		angle = 90
+		angle = 0
 	elseif paths[1] == false and paths[2] == true and paths[3] == false and paths[4] == false then
 		name = entry.name_P
-		angle = 180
+		angle = 90
 	elseif paths[1] == false and paths[2] == false and paths[3] == true and paths[4] == false then
 		name = entry.name_P
-		angle = 270
+		angle = 180
 	elseif paths[1] == false and paths[2] == false and paths[3] == false and paths[4] == true then
 		name = entry.name_P
-		angle = 0
+		angle = 270
 
 	-- intersections that connect to 2 point (L shape)
 	elseif paths[1] == true and paths[2] == false and paths[3] == false and paths[4] == true then
@@ -107,24 +107,24 @@ local function mapgen_roads_branch_draw_intersection(paths, entry)
 	-- intersections that connect to 2 point (I shape)
 	elseif paths[1] == false and paths[2] == true and paths[3] == false and paths[4] == true then
 		name = entry.name_I
-		angle = 180 * math.random(0, 1)
+		angle = 90 + (180 * math.random(0, 1))
 	elseif paths[1] == true and paths[2] == false and paths[3] == true and paths[4] == false then
 		name = entry.name_I
-		angle = 90 + (180 * math.random(0, 1))
+		angle = 180 * math.random(0, 1)
 
 	-- intersections that connect to 3 point (T shape)
 	elseif paths[1] == true and paths[2] == false and paths[3] == true and paths[4] == true then
 		name = entry.name_T
-		angle = 0
+		angle = 270
 	elseif paths[1] == true and paths[2] == true and paths[3] == false and paths[4] == true then
 		name = entry.name_T
-		angle = 90
+		angle = 0
 	elseif paths[1] == true and paths[2] == true and paths[3] == true and paths[4] == false then
 		name = entry.name_T
-		angle = 180
+		angle = 90
 	elseif paths[1] == false and paths[2] == true and paths[3] == true and paths[4] == true then
 		name = entry.name_T
-		angle = 270
+		angle = 180
 	end
 
 	return name, angle
@@ -139,7 +139,7 @@ local function mapgen_roads_branch_draw (point_start, points_end, size, link, en
 	local chaining = {link = link, flatness = entry.flatness}
 
 	-- draw the intersection at the starting point
-	local point_start_pos = {x = pos_start.x, y = entry.offset, z = pos_start.z}
+	local point_start_pos = {x = pos_start.x, y = entry.offset + 1, z = pos_start.z}
 	local point_start_name, point_start_angle = mapgen_roads_branch_draw_intersection(point_start.paths, entry)
 	table.insert(new_scheme, {name = point_start_name, pos = point_start_pos, angle = point_start_angle, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
 
@@ -151,26 +151,26 @@ local function mapgen_roads_branch_draw (point_start, points_end, size, link, en
 		if pos_start.x > pos_end.x then
 			-- the point is left
 			for w = pos_start.x - size.x, pos_end.x + size.x, -size.x do
-				local pos = {x = w, y = entry.offset, z = pos_start.z}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 90, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
+				local pos = {x = w, y = entry.offset + 1, z = pos_start.z}
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 180, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
 			end
 		elseif pos_start.x < pos_end.x then
 			-- the point is right
 			for w = pos_start.x + size.x, pos_end.x - size.x, size.x do
-				local pos = {x = w, y = entry.offset, z = pos_start.z}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 270, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
+				local pos = {x = w, y = entry.offset + 1, z = pos_start.z}
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 0, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
 			end
 		elseif pos_start.z > pos_end.z then
 			-- the point is down
 			for w = pos_start.z - size.z, pos_end.z + size.z, -size.z do
-				local pos = {x = pos_start.x, y = entry.offset, z = w}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 180, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
+				local pos = {x = pos_start.x, y = entry.offset + 1, z = w}
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 270, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
 			end
 		elseif pos_start.z < pos_end.z then
 			-- the point is up
 			for w = pos_start.z + size.z, pos_end.z - size.z, size.z do
-				local pos = {x = pos_start.x, y = entry.offset, z = w}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 0, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
+				local pos = {x = pos_start.x, y = entry.offset + 1, z = w}
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 90, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
 			end
 		end
 	end

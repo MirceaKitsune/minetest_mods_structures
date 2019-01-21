@@ -191,17 +191,14 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 			local spawn = true
 			if group.spawn_structure_pre then spawn = group.spawn_structure_pre(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
 			if spawn then
-				-- generate the base below this structure
+				-- generate the base and clear the terrain abote this structure
 				if structure.base then
 					local pos_base_start = {x = pos_start.x, y = height_lowest, z = pos_start.z}
 					local pos_base_end = {x = pos_end.x, y = pos_start.y + 1, z = pos_end.z}
 					if pos_base_end.y > pos_base_start.y + 1 then
 						io_area_fill(pos_base_start, pos_base_end, structure.base)
 					end
-				end
 
-				-- clear the terrain above this structure
-				if structure.base and structure.force then
 					local pos_clear_start = {x = pos_start.x, y = pos_end.y - 1, z = pos_start.z}
 					local pos_clear_end = {x = pos_end.x, y = height_highest + structures.mapgen_structure_clear, z = pos_end.z}
 					if pos_clear_end.y > pos_clear_start.y + 1 then
