@@ -87,39 +87,18 @@ end
 
 -- Local functions - Formspec
 
-local function make_formspec (file, io_angle, area_size, area_nodes)
-	local formspec="size[6,4]"..
-		default.gui_bg..
-		default.gui_bg_img..
-		default.gui_slots..
-		"field[0,0;4,2;file;File;"..file.."]"..
-		"field[4,0;2,2;io_angle;Import angle;"..io_angle.."]"..
-		"label[0,1;Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes.."]"..
-		"button[0,2;2,1;io_import;Import]"..
-		"button[2,2;2,1;io_export;Export]"..
-		"button[4,2;2,1;io_clear;Clear]"..
-		"button_exit[0,3;6,1;exit;OK]"
-	return formspec
-end
-
-local function make_formspec_size (pos)
-	local pos_markers = markers_get(pos)
-	if pos_markers.x == nil or pos_markers.y == nil or pos_markers.z == nil then return nil end
-
+local function make_formspec_size (pos, pos_markers)
 	local size = calculate_distance(pos, pos_markers)
+
 	-- remove edge from calculation
 	size.x = size.x - 1
 	size.y = size.y - 1
 	size.z = size.z - 1
-	-- local s = size.x..","..size.y..","..size.z.."\n"
 
 	return size
 end
 
-local function make_formspec_nodes (pos)
-	local pos_markers = markers_get(pos)
-	if pos_markers.x == nil or pos_markers.y == nil or pos_markers.z == nil then return nil end
-	
+local function make_formspec_nodes (pos, pos_markers)
 	local nodes = 0
 
 	for loop_x = math.min(pos.x, pos_markers.x) + 1, math.max(pos.x, pos_markers.x) - 1 do
@@ -137,27 +116,52 @@ local function make_formspec_nodes (pos)
 	return nodes
 end
 
+local function make_formspec (file, pos, angle)
+	local pos_markers = markers_get(pos)
+	if pos_markers.x == nil or pos_markers.y == nil or pos_markers.z == nil then return nil end
+
+	local area_size = make_formspec_size(pos, pos_markers)
+	local area_nodes = make_formspec_nodes(pos, pos_markers)
+	local formspec="size[6,4]"..
+		default.gui_bg..
+		default.gui_bg_img..
+		default.gui_slots..
+		"field[0,0;4,2;file;File;"..file.."]"..
+		"field[4,0;2,2;angle;Import angle;"..angle.."]"..
+		"label[0,1;Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes.."]"..
+		"button[0,2;2,1;io_import;Import]"..
+		"button[2,2;2,1;io_export;Export]"..
+		"button[4,2;2,1;io_clear;Clear]"..
+		"button_exit[0,3;6,1;exit;OK]"
+	return formspec
+end
+
 -- Global functions - Item connections
 
 -- removes all 3 markers and disables the manager node
 function markers_remove (pos)
 	local pos_markers = markers_get(pos)
-	local pos_here = {}
 
 	-- remove X
-	pos_here = {x = pos_markers.x, y = pos.y, z = pos.z}
-	if minetest.env:get_node(pos_here).name == "structures:marker" then
-		minetest.env:remove_node(pos_here)
+	if pos_markers.x ~= nil then
+		local pos_here = {x = pos_markers.x, y = pos.y, z = pos.z}
+		if minetest.env:get_node(pos_here).name == "structures:marker" then
+			minetest.env:remove_node(pos_here)
+		end
 	end
 	-- remove Y
-	pos_here = {x = pos.x, y = pos_markers.y, z = pos.z}
-	if minetest.env:get_node(pos_here).name == "structures:marker" then
-		minetest.env:remove_node(pos_here)
+	if pos_markers.y ~= nil then
+		local pos_here = {x = pos.x, y = pos_markers.y, z = pos.z}
+		if minetest.env:get_node(pos_here).name == "structures:marker" then
+			minetest.env:remove_node(pos_here)
+		end
 	end
 	-- remove Z
-	pos_here = {x = pos.x, y = pos.y, z = pos_markers.z}
-	if minetest.env:get_node(pos_here).name == "structures:marker" then
-		minetest.env:remove_node(pos_here)
+	if pos_markers.z ~= nil then
+		local pos_here = {x = pos.x, y = pos.y, z = pos_markers.z}
+		if minetest.env:get_node(pos_here).name == "structures:marker" then
+			minetest.env:remove_node(pos_here)
+		end
 	end
 
 	minetest.env:add_node(pos, {name = "structures:manager_disabled"})
@@ -165,27 +169,39 @@ end
 
 -- search for in-line markers on the X / Y / Z axes within radius and return their positions
 function markers_get (pos)
-	local pos_markers = {x = nil, y = nil, z = nil}
+	local pos_markers = {x = nil, y = nil, z = nil, ignore = false}
+
 	-- search X
 	for search = pos.x - CONNECT_DISTANCE, pos.x + CONNECT_DISTANCE do
 		local pos_search = {x = search, y = pos.y, z = pos.z}
-		if minetest.env:get_node(pos_search).name == "structures:marker" then
+		local pos_name = minetest.env:get_node(pos_search).name
+		if pos_name == "ignore" then
+			pos_markers.ignore = true
+		elseif pos_name == "structures:marker" then
 			pos_markers.x = pos_search.x
 			break
 		end
 	end
+
 	-- search Y
 	for search = pos.y - CONNECT_DISTANCE, pos.y + CONNECT_DISTANCE do
 		local pos_search = {x = pos.x, y = search, z = pos.z}
-		if minetest.env:get_node(pos_search).name == "structures:marker" then
+		local pos_name = minetest.env:get_node(pos_search).name
+		if pos_name == "ignore" then
+			pos_markers.ignore = true
+		elseif pos_name == "structures:marker" then
 			pos_markers.y = pos_search.y
 			break
 		end
 	end
+
 	-- search Z
 	for search = pos.z - CONNECT_DISTANCE, pos.z + CONNECT_DISTANCE do
 		local pos_search = {x = pos.x, y = pos.y, z = search}
-		if minetest.env:get_node(pos_search).name == "structures:marker" then
+		local pos_name = minetest.env:get_node(pos_search).name
+		if pos_name == "ignore" then
+			pos_markers.ignore = true
+		elseif pos_name == "structures:marker" then
 			pos_markers.z = pos_search.z
 			break
 		end
@@ -197,13 +213,15 @@ end
 -- check that the block is connected to 3 markers and change it accordingly
 function markers_transform (pos)
 	local pos_markers = markers_get(pos)
-	if pos_markers.x ~= nil and pos_markers.y ~= nil and pos_markers.z ~= nil then
-		if minetest.env:get_node(pos).name == "structures:manager_disabled" then
-			minetest.env:add_node(pos, {name = "structures:manager_enabled"})
-		end
-	else
-		if minetest.env:get_node(pos).name == "structures:manager_enabled" then
-			minetest.env:add_node(pos, {name = "structures:manager_disabled"})
+	if pos_markers.ignore == false then
+		if pos_markers.x ~= nil and pos_markers.y ~= nil and pos_markers.z ~= nil then
+			if minetest.env:get_node(pos).name == "structures:manager_disabled" then
+				minetest.env:add_node(pos, {name = "structures:manager_enabled"})
+			end
+		else
+			if minetest.env:get_node(pos).name == "structures:manager_enabled" then
+				minetest.env:add_node(pos, {name = "structures:manager_disabled"})
+			end
 		end
 	end
 end
@@ -234,9 +252,10 @@ minetest.register_node("structures:manager_enabled", {
 
 	on_construct = function(pos)
 		local meta = minetest.env:get_meta(pos)
+		local formspec = make_formspec("structure", pos, 0)
 		meta:set_string("file", "structure")
-		meta:set_float("io_angle", 0)
-		meta:set_string("formspec", make_formspec("structure", 0, make_formspec_size(pos), make_formspec_nodes(pos)))
+		meta:set_float("angle", 0)
+		meta:set_string("formspec", formspec)
 		meta:set_string("infotext", "I/O ready")
 	end,
 
@@ -247,23 +266,26 @@ minetest.register_node("structures:manager_enabled", {
 			return
 		end
 
-		local meta = minetest.env:get_meta(pos)
-		if fields.file then
-			meta:set_string("file", fields.file)
-		end
-		if fields.io_angle then
-			meta:set_float("io_angle", fields.io_angle)
-		end
-		if fields.file and fields.io_angle then
-			meta:set_string("formspec", make_formspec(fields.file, fields.io_angle, make_formspec_size(pos), make_formspec_nodes(pos)))
-		end
+		if fields.file and fields.angle then
+			local pos_markers = markers_get(pos)
+			if pos_markers.x ~= nil and pos_markers.y ~= nil and pos_markers.z ~= nil then
+				if fields.io_export then
+					io_area_export(pos, pos_markers, fields.file..".mts")
+				elseif fields.io_import then
+					io_area_import(pos, pos_markers, tonumber(fields.angle), fields.file..".mts", {}, true, true, nil)
+				elseif fields.io_clear then
+					io_area_fill(pos, pos_markers, nil)
+				end
+			else
+				minetest.chat_send_player(player, "Error: The area marked by the markers is invalid", false)
+				return
+			end
 
-		if fields.io_export then
-			io_area_export(pos, markers_get(pos), fields.file..".mts")
-		elseif fields.io_import then
-			io_area_import(pos, markers_get(pos), tonumber(fields.io_angle), fields.file..".mts", {}, true, true, nil)
-		elseif fields.io_clear then
-			io_area_fill(pos, markers_get(pos), nil)
+			local meta = minetest.env:get_meta(pos)
+			local formspec = make_formspec(fields.file, pos, fields.angle)
+			meta:set_string("file", fields.file)
+			meta:set_float("angle", fields.angle)
+			meta:set_string("formspec", formspec)
 		end
 	end
 })
