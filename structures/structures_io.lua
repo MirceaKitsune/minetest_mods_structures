@@ -34,34 +34,49 @@ function io_get_size (angle, filename)
 	return size
 end
 
+-- runs the necessary updates on a vm after changes were made
+function io_vm_update (voxelmanip)
+	voxelmanip.vm:update_map()
+	voxelmanip.vm:update_liquids()
+	voxelmanip.vm:calc_lighting()
+	voxelmanip.vm:write_to_map()
+end
+
 -- fills the marked area, ignored objects are not affected
-function io_area_fill (pos, ends, node)
+function io_area_fill (pos, ends, node, force, voxelmanip)
 	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
 	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
 
-	-- no node specified means we clear the area
-	if node == nil then
-		node = "air"
+	-- create a vm if none is given
+	local voxelmanip_this = {}
+	if voxelmanip then
+		voxelmanip_this = {vm = voxelmanip.vm, emin = voxelmanip.emin, emax = voxelmanip.emax, minp = voxelmanip.minp, maxp = voxelmanip.maxp, update = false}
+	else
+		voxelmanip_this = {vm = VoxelManip(), emin = pos_start, emax = pos_end, minp = pos_start, maxp = pos_end, update = true}
 	end
 
-	-- erase each node in the marked area
-	local vm = VoxelManip()
-	local minp, maxp = vm:read_from_map(pos_start, pos_end)
-	local data = vm:get_data()
-	local va = VoxelArea:new{MinEdge = minp, MaxEdge = maxp}
-	for x = pos_start.x, pos_end.x do
-		for y = pos_start.y, pos_end.y do
-			for z = pos_start.z, pos_end.z do
-				local i = va:index(x, y, z)
-				data[i] = minetest.get_content_id(node)
+	local data = voxelmanip_this.vm:get_data()
+	local area = VoxelArea:new{MinEdge = voxelmanip_this.emin, MaxEdge = voxelmanip_this.emax}
+	local node_content = minetest.get_content_id(node)
+	local node_air_content = minetest.get_content_id("air")
+
+	-- set each node in the marked area
+	for i in area:iterp(voxelmanip_this.minp, voxelmanip_this.maxp) do
+		if data[i] == node_air_content or force == true then
+			local pos_this = area:position(i)
+			if pos_this.x >= pos_start.x and pos_this.x <= pos_end.x and
+			pos_this.y >= pos_start.y and pos_this.y <= pos_end.y and
+			pos_this.z >= pos_start.z and pos_this.z <= pos_end.z then
+				data[i] = node_content
 			end
 		end
 	end
-	vm:set_data(data)
-	vm:write_to_map()
-	vm:update_map()
-	vm:calc_lighting()
-	vm:update_liquids()
+
+	-- write new vm data, preform updates here if we used a local vm
+	voxelmanip_this.vm:set_data(data)
+	if voxelmanip_this.update == true then
+		io_vm_update(voxelmanip_this)
+	end
 end
 
 -- export structure to a schematic
@@ -89,7 +104,7 @@ function io_area_export (pos, ends, filename)
 end
 
 -- import structure from a schematic
-function io_area_import (pos, ends, angle, filename, replacements, force, check_bounds, vm)
+function io_area_import (pos, ends, angle, filename, replacements, force, check_bounds, voxelmanip)
 	if ends == nil or not filename or filename == "" then return end
 	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
 	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
@@ -112,8 +127,8 @@ function io_area_import (pos, ends, angle, filename, replacements, force, check_
 	file:close()
 
 	-- place on vmanip if a vm is given, otherwise just place on the map
-	if vm then
-		minetest.place_schematic_on_vmanip(vm, pos_start, filename, angle, replacements, force)
+	if voxelmanip then
+		minetest.place_schematic_on_vmanip(voxelmanip.vm, pos_start, filename, angle, replacements, force)
 	else
 		minetest.place_schematic(pos_start, filename, angle, replacements, force)
 	end

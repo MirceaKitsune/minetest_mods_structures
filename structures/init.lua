@@ -274,7 +274,7 @@ minetest.register_node("structures:manager_enabled", {
 				elseif fields.io_import then
 					io_area_import(pos, pos_markers, tonumber(fields.angle), fields.file..".mts", {}, true, true, nil)
 				elseif fields.io_clear then
-					io_area_fill(pos, pos_markers, nil)
+					io_area_fill(pos, pos_markers, "air", true, nil)
 				end
 			else
 				minetest.chat_send_player(player, "Error: The area marked by the markers is invalid", false)

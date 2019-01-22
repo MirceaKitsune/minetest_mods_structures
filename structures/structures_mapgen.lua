@@ -135,7 +135,7 @@ local function mapgen_generate_area (pos)
 end
 
 -- handles spawning the given structure
-local function mapgen_generate_structure (structure_index, area_index, minp, maxp, heightmap, vm)
+local function mapgen_generate_structure (structure_index, area_index, minp, maxp, voxelmanip, heightmap)
 	local area = structures.mapgen_areas[area_index]
 	local structure = area.structures[structure_index]
 	local group_id = area.group
@@ -195,19 +195,19 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 				if structure.base then
 					local pos_base_start = {x = pos_start.x, y = height_lowest, z = pos_start.z}
 					local pos_base_end = {x = pos_end.x, y = pos_start.y + 1, z = pos_end.z}
-					if pos_base_end.y > pos_base_start.y + 1 then
-						io_area_fill(pos_base_start, pos_base_end, structure.base)
+					if pos_base_end.x > pos_base_start.x + 1 and pos_base_end.y > pos_base_start.y + 1 and pos_base_end.z > pos_base_start.z + 1 then
+						io_area_fill(pos_base_start, pos_base_end, structure.base, structure.force, voxelmanip)
 					end
 
 					local pos_clear_start = {x = pos_start.x, y = pos_end.y - 1, z = pos_start.z}
 					local pos_clear_end = {x = pos_end.x, y = height_highest + structures.mapgen_structure_clear, z = pos_end.z}
-					if pos_clear_end.y > pos_clear_start.y + 1 then
-						io_area_fill(pos_clear_start, pos_clear_end, nil)
+					if pos_clear_end.x > pos_clear_start.x + 1 and pos_clear_end.y > pos_clear_start.y + 1 and pos_clear_end.z > pos_clear_start.z + 1 then
+						io_area_fill(pos_clear_start, pos_clear_end, "air", structure.force, voxelmanip)
 					end
 				end
 
 				-- import the structure
-				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, false, vm)
+				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, false, voxelmanip)
 
 				-- execute the structure's post-spawn function if one is present
 				if group.spawn_structure_post then group.spawn_structure_post(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
@@ -222,7 +222,7 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 end
 
 -- main mapgen function, plans or spawns the town
-local function mapgen_generate (minp, maxp, seed, vm)
+local function mapgen_generate (minp, maxp, seed)
 	if #structures.mapgen_groups == 0 then return end
 
 	local pos = {
@@ -314,6 +314,8 @@ local function mapgen_generate (minp, maxp, seed, vm)
 
 		-- only advance if this chunk intersects a height where buildings might exist
 		if minp.y <= group.height_max + group.size_vertical and maxp.y >= group.height_min then
+			local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
+			local voxelmanip = {vm = vm, emin = emin, emax = emax, minp = minp, maxp = maxp}
 			local heightmap = minetest.get_mapgen_object("heightmap")
 
 			-- spawn this structure
@@ -321,9 +323,12 @@ local function mapgen_generate (minp, maxp, seed, vm)
 				if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
 				structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
 				structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
-					mapgen_generate_structure(i, area_index, minp, maxp, heightmap, vm)
+					mapgen_generate_structure(i, area_index, minp, maxp, voxelmanip, heightmap)
 				end
 			end
+
+			-- update vm data
+			io_vm_update(voxelmanip)
 		end
 	end
 end
@@ -350,13 +355,7 @@ end
 
 -- run the map_generate function
 minetest.register_on_generated(function(minp, maxp, seed)
-	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
-
-	-- execute the main generate function
-	mapgen_generate(minp, maxp, seed, vm)
-
-	vm:calc_lighting()
-	vm:write_to_map()
+	mapgen_generate(minp, maxp, seed)
 end)
 
 -- load mapgen areas from the file on first run
