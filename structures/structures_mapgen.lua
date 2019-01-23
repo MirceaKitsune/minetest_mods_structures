@@ -144,7 +144,6 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 	local structure = area.structures[structure_index]
 	local group_id = area.group
 	local group = structures.mapgen_groups[group_id]
-	local link = structure.chaining and structure.chaining.link
 	-- note 1: since the I/O function doesn't include the start and end nodes, decrease start position by 1 to get the right spot
 	-- note 2: the X and Z positions of the structure represent the full position, but Y only represents the offset, since we can only scan the heightmap and determine real height here
 	-- determine the corners of the structure's cube, part X and Z
@@ -173,22 +172,23 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 	end
 
 	-- calculate the final elevation based on the results above
+	-- if chaining is enabled for this structure, center it toward the position of the first structure
+	-- also bound between minimum and maximum height rather than letting the structure not spawn, to prevent road segments getting cut if the road gets too high or too low
 	local height_final = nil
 	if height_lowest and height_highest then
 		height_final = math.floor(calculate_lerp(height_lowest, height_highest, group.elevation))
 	end
-	-- if chaining is enabled for this structure, center it toward the position of the first structure
-	-- also bound between minimum and maximum height rather than letting the structure not spawn, to prevent road segments getting cut if the road gets too high or too low
-	if link and area.chain[link] then
-		height_final = math.floor(calculate_lerp(height_final, area.chain[link], structure.chaining.flatness))
+	if structure.link and area.chain[structure.link] then
+		height_final = math.floor(calculate_lerp(height_final, area.chain[structure.link], structure.flatness))
 		height_final = math.max(group.height_min, math.min(group.height_max, height_final))
 	end
 
 	-- calculate the maximum terrain noise level allowed for this structure based on its width
-	-- does not apply to linked road segments, othewise roads would abruptly cut off when a segment no longer meets the noise requirements
-	local tolerance = math.floor(math.max(structure.size.x, structure.size.z) * group.tolerance)
-
-	if height_final and (height_highest - height_lowest <= tolerance or (link and area.chain[link])) then
+	-- for linked road segments, only spawn if the distance from terrain in either direction is under the tolerance level
+	local tolerance_noise = math.floor(math.max(structure.size.x, structure.size.z) * group.tolerance)
+	local tolerance_pos_low = math.floor(height_lowest - math.max(structure.size.x, structure.size.z) * group.tolerance_link)
+	local tolerance_pos_high = math.floor(height_highest + math.max(structure.size.x, structure.size.z) * group.tolerance_link)
+	if height_final and height_highest - height_lowest <= tolerance_noise and height_final >= tolerance_pos_low and height_final <= tolerance_pos_high then
 		-- determine the corners of the structure's cube, part Y
 		pos_start.y = math.floor(height_final + structure.pos.y - 1)
 		pos_end.y = math.floor(pos_start.y + structure.size.y + 1)
@@ -246,8 +246,8 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 			end
 
 			-- record the height of the first structure in the chain
-			if link and not structures.mapgen_areas[area_index].chain[link] then
-				structures.mapgen_areas[area_index].chain[link] = height_final
+			if structure.link and not structures.mapgen_areas[area_index].chain[structure.link] then
+				structures.mapgen_areas[area_index].chain[structure.link] = height_final
 			end
 
 			-- execute the structure's post-spawn function if one is present

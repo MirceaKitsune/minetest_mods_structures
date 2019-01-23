@@ -135,13 +135,10 @@ local function mapgen_roads_branch_draw (point_start, points_end, size, link, en
 	local new_scheme = {}
 	local pos_start = {x = point_start.x, z = point_start.z}
 
-	-- chaining settings, containing the id of structures to chain to and the amount of flatness
-	local chaining = {link = link, flatness = entry.flatness}
-
 	-- draw the intersection at the starting point
 	local point_start_pos = {x = pos_start.x, y = entry.offset + 1, z = pos_start.z}
 	local point_start_name, point_start_angle = mapgen_roads_branch_draw_intersection(point_start.paths, entry)
-	table.insert(new_scheme, {name = point_start_name, pos = point_start_pos, angle = point_start_angle, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
+	table.insert(new_scheme, {name = point_start_name, pos = point_start_pos, angle = point_start_angle, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, flatness = entry.flatness, link = link})
 
 	-- loop through the end points if any
 	for _, point_end in ipairs(points_end) do
@@ -152,25 +149,25 @@ local function mapgen_roads_branch_draw (point_start, points_end, size, link, en
 			-- the point is left
 			for w = pos_start.x - size.x, pos_end.x + size.x, -size.x do
 				local pos = {x = w, y = entry.offset + 1, z = pos_start.z}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 180, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 180, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, flatness = entry.flatness, link = link})
 			end
 		elseif pos_start.x < pos_end.x then
 			-- the point is right
 			for w = pos_start.x + size.x, pos_end.x - size.x, size.x do
 				local pos = {x = w, y = entry.offset + 1, z = pos_start.z}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 0, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 0, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, flatness = entry.flatness, link = link})
 			end
 		elseif pos_start.z > pos_end.z then
 			-- the point is down
 			for w = pos_start.z - size.z, pos_end.z + size.z, -size.z do
 				local pos = {x = pos_start.x, y = entry.offset + 1, z = w}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 270, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 270, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, flatness = entry.flatness, link = link})
 			end
 		elseif pos_start.z < pos_end.z then
 			-- the point is up
 			for w = pos_start.z + size.z, pos_end.z - size.z, size.z do
 				local pos = {x = pos_start.x, y = entry.offset + 1, z = w}
-				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 90, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, chaining = chaining})
+				table.insert(new_scheme, {name = entry.name_I, pos = pos, angle = 90, size = size, base = entry.base, replacements = entry.replacements, force = entry.force, flatness = entry.flatness, link = link})
 			end
 		end
 	end
