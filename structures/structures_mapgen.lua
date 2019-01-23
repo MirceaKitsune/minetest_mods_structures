@@ -185,10 +185,17 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 
 	-- calculate the maximum terrain noise level allowed for this structure based on its width
 	-- for linked road segments, only spawn if the distance from terrain in either direction is under the tolerance level
-	local tolerance_noise = math.floor(math.max(structure.size.x, structure.size.z) * group.tolerance)
-	local tolerance_pos_low = math.floor(height_lowest - math.max(structure.size.x, structure.size.z) * group.tolerance_link)
-	local tolerance_pos_high = math.floor(height_highest + math.max(structure.size.x, structure.size.z) * group.tolerance_link)
-	if height_final and height_highest - height_lowest <= tolerance_noise and height_final >= tolerance_pos_low and height_final <= tolerance_pos_high then
+	local tolerance = false
+	if structure.link and area.chain[structure.link] then
+		local tolerance_pos_low = math.floor(height_lowest - math.max(structure.size.x, structure.size.z) * group.tolerance_link)
+		local tolerance_pos_high = math.floor(height_highest + math.max(structure.size.x, structure.size.z) * group.tolerance_link)
+		tolerance = height_final >= tolerance_pos_low and height_final <= tolerance_pos_high
+	else
+		local tolerance_noise = math.floor(math.max(structure.size.x, structure.size.z) * group.tolerance)
+		tolerance = height_highest - height_lowest <= tolerance_noise
+	end
+
+	if height_final ~= nil and tolerance == true then
 		-- determine the corners of the structure's cube, part Y
 		pos_start.y = math.floor(height_final + structure.pos.y - 1)
 		pos_end.y = math.floor(pos_start.y + structure.size.y + 1)
