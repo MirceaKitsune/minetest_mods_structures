@@ -3,6 +3,10 @@
 
 -- Local & Global values
 
+-- stores the nodes to generate post-spawn, used temporarily during each instance of mapgen_generate
+-- format: {pos_start = {x = 0, y = 0, z = 0}, pos_end = {x = 0, y = 0, z = 0}, node = "", force = false}
+local mapgen_nodes = {}
+
 -- stores the structure groups
 structures.mapgen_groups = {}
 -- stores the virtual areas in which cities are calculated
@@ -134,8 +138,8 @@ local function mapgen_generate_area (pos)
 	return index
 end
 
--- handles spawning the given structure
-local function mapgen_generate_structure (structure_index, area_index, minp, maxp, voxelmanip, heightmap)
+-- handles spawning the given structure, returns true if a schematic was imported
+local function mapgen_generate_structure (structure_index, area_index, minp, maxp, heightmap, vm)
 	local area = structures.mapgen_areas[area_index]
 	local structure = area.structures[structure_index]
 	local group_id = area.group
@@ -143,9 +147,13 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 	local link = structure.chaining and structure.chaining.link
 	-- note 1: since the I/O function doesn't include the start and end nodes, decrease start position by 1 to get the right spot
 	-- note 2: the X and Z positions of the structure represent the full position, but Y only represents the offset, since we can only scan the heightmap and determine real height here
-	-- determine the corners of the structure's cube, X and Z
-	local pos_start = {x = structure.pos.x - 1, z = structure.pos.z - 1}
-	local pos_end = {x = pos_start.x + structure.size.x + 1, z = pos_start.z + structure.size.z + 1}
+	-- determine the corners of the structure's cube, part X and Z
+	local pos_start = {
+		x = math.floor(structure.pos.x - 1),
+		z = math.floor(structure.pos.z - 1)}
+	local pos_end = {
+		x = math.floor(pos_start.x + structure.size.x + 1),
+		z = math.floor(pos_start.z + structure.size.z + 1)}
 
 	-- get the height at each valid point and note down the lowest and highest
 	local height_lowest = nil
@@ -181,49 +189,82 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 	local tolerance = math.floor(math.max(structure.size.x, structure.size.z) * group.tolerance)
 
 	if height_final and (height_highest - height_lowest <= tolerance or (link and area.chain[link])) then
-		-- determine the corners of the structure's cube, Y
-		pos_start.y = height_final + structure.pos.y - 1
-		pos_end.y = pos_start.y + structure.size.y + 1
+		-- determine the corners of the structure's cube, part Y
+		pos_start.y = math.floor(height_final + structure.pos.y - 1)
+		pos_end.y = math.floor(pos_start.y + structure.size.y + 1)
 
 		-- only spawn this structure if it's within the allowed height limits
 		if height_final >= group.height_min and height_final + structure.size.y <= group.height_max + group.size_vertical then
 			-- execute the structure's pre-spawn function if one is present, and abort spawning if it returns false
 			local spawn = true
 			if group.spawn_structure_pre then spawn = group.spawn_structure_pre(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
-			if spawn then
-				-- generate the base and clear the terrain abote this structure
-				if structure.base then
-					local pos_base_start = {x = pos_start.x, y = height_lowest, z = pos_start.z}
-					local pos_base_end = {x = pos_end.x, y = pos_start.y + 1, z = pos_end.z}
-					if pos_base_end.x > pos_base_start.x + 1 and pos_base_end.y > pos_base_start.y + 1 and pos_base_end.z > pos_base_start.z + 1 then
-						io_area_fill(pos_base_start, pos_base_end, structure.base, structure.force, voxelmanip)
-					end
+			if spawn == nil or spawn == false then return false end
 
-					local pos_clear_start = {x = pos_start.x, y = pos_end.y - 1, z = pos_start.z}
-					local pos_clear_end = {x = pos_end.x, y = height_highest + structures.mapgen_structure_clear, z = pos_end.z}
-					if pos_clear_end.x > pos_clear_start.x + 1 and pos_clear_end.y > pos_clear_start.y + 1 and pos_clear_end.z > pos_clear_start.z + 1 then
-						io_area_fill(pos_clear_start, pos_clear_end, "air", structure.force, voxelmanip)
+			-- import the structure
+			local imported = false
+			if pos_start.x <= maxp.x and pos_end.x >= minp.x and
+			pos_start.y <= maxp.y and pos_end.y >= minp.y and
+			pos_start.z <= maxp.z and pos_end.z >= minp.z then
+				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, false, vm)
+				imported = true
+			end
+
+			if structure.base ~= nil then
+				-- generate the base below this structure
+				local pos_base_start = {
+					x = math.floor(pos_start.x + 1),
+					y = math.floor(math.max(height_lowest, group.height_min - structures.mapgen_structure_base_padding)),
+					z = math.floor(pos_start.z + 1)}
+				local pos_base_end = {
+					x = math.floor(pos_end.x - 1),
+					y = math.floor(pos_start.y),
+					z = math.floor(pos_end.z - 1)}
+				if pos_base_start.x <= maxp.x and pos_base_end.x >= minp.x and
+				pos_base_start.y <= maxp.y and pos_base_end.y >= minp.y and
+				pos_base_start.z <= maxp.z and pos_base_end.z >= minp.z then
+					if pos_base_end.x > pos_base_start.x + 1 and pos_base_end.y > pos_base_start.y + 1 and pos_base_end.z > pos_base_start.z + 1 then
+						table.insert(mapgen_nodes, {pos_start = pos_base_start, pos_end = pos_base_end, node = structure.base, force = structure.force})
 					end
 				end
 
-				-- import the structure
-				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, false, voxelmanip)
-
-				-- execute the structure's post-spawn function if one is present
-				if group.spawn_structure_post then group.spawn_structure_post(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
-
-				-- record the height of the first structure in the chain
-				if link and not structures.mapgen_areas[area_index].chain[link] then
-					structures.mapgen_areas[area_index].chain[link] = height_final
+				-- clear the terrain above this structure
+				local pos_clear_start = {
+					x = math.floor(pos_start.x + 1),
+					y = math.floor(pos_end.y),
+					z = math.floor(pos_start.z + 1)}
+				local pos_clear_end = {
+					x = math.floor(pos_end.x - 1),
+					y = math.floor(math.min(height_highest, group.height_max) + structures.mapgen_structure_base_padding),
+					z = math.floor(pos_end.z - 1)}
+				if pos_clear_start.x <= maxp.x and pos_clear_end.x >= minp.x and
+				pos_clear_start.y <= maxp.y and pos_clear_end.y >= minp.y and
+				pos_clear_start.z <= maxp.z and pos_clear_end.z >= minp.z then
+					if pos_clear_end.x > pos_clear_start.x + 1 and pos_clear_end.y > pos_clear_start.y + 1 and pos_clear_end.z > pos_clear_start.z + 1 then
+						table.insert(mapgen_nodes, {pos_start = pos_clear_start, pos_end = pos_clear_end, node = "air", force = structure.force})
+					end
 				end
 			end
+
+			-- record the height of the first structure in the chain
+			if link and not structures.mapgen_areas[area_index].chain[link] then
+				structures.mapgen_areas[area_index].chain[link] = height_final
+			end
+
+			-- execute the structure's post-spawn function if one is present
+			if group.spawn_structure_post then group.spawn_structure_post(structure.name, structure_index, pos_start, pos_end, structure.size, structure.angle) end
+
+			return imported
 		end
 	end
+	return false
 end
 
 -- main mapgen function, plans or spawns the town
 local function mapgen_generate (minp, maxp, seed)
 	if #structures.mapgen_groups == 0 then return end
+
+	-- clear the temporary nodes table
+	mapgen_nodes = {}
 
 	local pos = {
 		x = (minp.x + maxp.x) / 2,
@@ -315,22 +356,56 @@ local function mapgen_generate (minp, maxp, seed)
 		-- only advance if this chunk intersects a height where buildings might exist
 		if minp.y <= group.height_max + group.size_vertical and maxp.y >= group.height_min then
 			local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
-			local voxelmanip = {vm = vm, emin = emin, emax = emax, minp = minp, maxp = maxp}
 			local heightmap = minetest.get_mapgen_object("heightmap")
 
 			-- spawn this structure
+			-- only check the position horizontally here as vertical position is determined later
+			local imported = false
 			for i, structure in pairs(area.structures) do
-				if structure.pos.x >= minp.x and structure.pos.x <= maxp.x and
-				structure.pos.y >= minp.y and structure.pos.y <= maxp.y and
-				structure.pos.z >= minp.z and structure.pos.z <= maxp.z then
-					mapgen_generate_structure(i, area_index, minp, maxp, voxelmanip, heightmap)
+				if structure.pos.x <= maxp.x and structure.pos.x + structure.size.x >= minp.x and
+				structure.pos.z <= maxp.z and structure.pos.z + structure.size.z >= minp.z then
+					local imported_this = mapgen_generate_structure(i, area_index, minp, maxp, heightmap, vm)
+					imported = imported or imported_this
 				end
 			end
 
-			-- update vm data
-			io_vm_update(voxelmanip)
+			-- loop through all nodes in this area and preform post-spawn operations
+			if imported == true or #mapgen_nodes > 0 then
+				local data = vm:get_data()
+				local area = VoxelArea:new{MinEdge = emin, MaxEdge = emax}
+				local node_content_air = minetest.get_content_id("air")
+				for i in area:iterp(minp, maxp) do
+					local pos = area:position(i)
+					local name = minetest.get_name_from_content_id(data[i])
+
+					-- spawn additional nodes added by structures
+					for _, node in ipairs(mapgen_nodes) do
+						if pos.x >= node.pos_start.x and pos.x <= node.pos_end.x and
+						pos.y >= node.pos_start.y and pos.y <= node.pos_end.y and
+						pos.z >= node.pos_start.z and pos.z <= node.pos_end.z then
+							if(data[i] == node_content_air or node.force == true) then
+								data[i] = minetest.get_content_id(node.node)
+							end
+						end
+					end
+
+					-- we need to call on_construct for each node that has it, otherwise some nodes won't work correctly or cause a crash
+					if minetest.registered_nodes[name] and minetest.registered_nodes[name].on_construct then
+						minetest.registered_nodes[name].on_construct(pos)
+					end
+				end
+
+				-- update vm and node data
+				vm:set_data(data)
+				vm:update_liquids()
+				vm:calc_lighting()
+				vm:write_to_map()
+			end
 		end
 	end
+
+	-- clear the temporary nodes table
+	mapgen_nodes = {}
 end
 
 -- Global functions

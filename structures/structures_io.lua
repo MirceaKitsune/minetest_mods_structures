@@ -34,51 +34,6 @@ function io_get_size (angle, filename)
 	return size
 end
 
--- runs the necessary updates on a vm after changes were made
-function io_vm_update (voxelmanip)
-	voxelmanip.vm:update_map()
-	voxelmanip.vm:update_liquids()
-	voxelmanip.vm:calc_lighting()
-	voxelmanip.vm:write_to_map()
-end
-
--- fills the marked area, ignored objects are not affected
-function io_area_fill (pos, ends, node, force, voxelmanip)
-	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
-	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
-
-	-- create a vm if none is given
-	local voxelmanip_this = {}
-	if voxelmanip then
-		voxelmanip_this = {vm = voxelmanip.vm, emin = voxelmanip.emin, emax = voxelmanip.emax, minp = voxelmanip.minp, maxp = voxelmanip.maxp, update = false}
-	else
-		voxelmanip_this = {vm = VoxelManip(), emin = pos_start, emax = pos_end, minp = pos_start, maxp = pos_end, update = true}
-	end
-
-	local data = voxelmanip_this.vm:get_data()
-	local area = VoxelArea:new{MinEdge = voxelmanip_this.emin, MaxEdge = voxelmanip_this.emax}
-	local node_content = minetest.get_content_id(node)
-	local node_air_content = minetest.get_content_id("air")
-
-	-- set each node in the marked area
-	for i in area:iterp(voxelmanip_this.minp, voxelmanip_this.maxp) do
-		if data[i] == node_air_content or force == true then
-			local pos_this = area:position(i)
-			if pos_this.x >= pos_start.x and pos_this.x <= pos_end.x and
-			pos_this.y >= pos_start.y and pos_this.y <= pos_end.y and
-			pos_this.z >= pos_start.z and pos_this.z <= pos_end.z then
-				data[i] = node_content
-			end
-		end
-	end
-
-	-- write new vm data, preform updates here if we used a local vm
-	voxelmanip_this.vm:set_data(data)
-	if voxelmanip_this.update == true then
-		io_vm_update(voxelmanip_this)
-	end
-end
-
 -- export structure to a schematic
 function io_area_export (pos, ends, filename)
 	if ends == nil or not filename or filename == "" then return end
@@ -104,7 +59,7 @@ function io_area_export (pos, ends, filename)
 end
 
 -- import structure from a schematic
-function io_area_import (pos, ends, angle, filename, replacements, force, check_bounds, voxelmanip)
+function io_area_import (pos, ends, angle, filename, replacements, force, check_bounds, vm)
 	if ends == nil or not filename or filename == "" then return end
 	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
 	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
@@ -126,23 +81,10 @@ function io_area_import (pos, ends, angle, filename, replacements, force, check_
 	if file == nil then return end
 	file:close()
 
-	-- place on vmanip if a vm is given, otherwise just place on the map
-	if voxelmanip then
-		minetest.place_schematic_on_vmanip(voxelmanip.vm, pos_start, filename, angle, replacements, force)
+	-- place on vm if a voxelmanip is given, otherwise just place on the map
+	if vm then
+		minetest.place_schematic_on_vmanip(vm, pos_start, filename, angle, replacements, force)
 	else
 		minetest.place_schematic(pos_start, filename, angle, replacements, force)
-	end
-
-	-- we need to call on_construct for each node that has one, otherwise some nodes won't work correctly and even crash
-	for search_x = pos_start.x, pos_end.x do
-		for search_y = pos_start.y, pos_end.y do
-			for search_z = pos_start.z, pos_end.z do
-				local pos = {x = search_x, y = search_y, z = search_z}
-				local node = minetest.get_node(pos).name
-				if minetest.registered_nodes[node] and minetest.registered_nodes[node].on_construct then
-					minetest.registered_nodes[node].on_construct(pos)
-				end
-			end
-		end
 	end
 end

@@ -273,8 +273,49 @@ minetest.register_node("structures:manager_enabled", {
 					io_area_export(pos, pos_markers, fields.file..".mts")
 				elseif fields.io_import then
 					io_area_import(pos, pos_markers, tonumber(fields.angle), fields.file..".mts", {}, true, true, nil)
+
+					-- we need to call on_construct for each node that has it, otherwise some nodes won't work correctly or cause a crash
+					local vm = VoxelManip()
+					local minp, maxp = vm:read_from_map(pos, pos_markers)
+					local data = vm:get_data()
+					local va = VoxelArea:new{MinEdge = minp, MaxEdge = maxp}
+					local pos_start = {x = math.min(pos.x, pos_markers.x) + 1, y = math.min(pos.y, pos_markers.y) + 1, z = math.min(pos.z, pos_markers.z) + 1}
+					local pos_end = {x = math.max(pos.x, pos_markers.x) - 1, y = math.max(pos.y, pos_markers.y) - 1, z = math.max(pos.z, pos_markers.z) - 1}
+					for search_x = pos_start.x, pos_end.x do
+						for search_y = pos_start.y, pos_end.y do
+							for search_z = pos_start.z, pos_end.z do
+								local search_pos = {x = search_x, y = search_y, z = search_z}
+								local i = va:indexp(search_pos)
+								local name = minetest.get_name_from_content_id(data[i])
+								if minetest.registered_nodes[name] and minetest.registered_nodes[name].on_construct then
+									minetest.registered_nodes[name].on_construct(search_pos)
+								end
+							end
+						end
+					end
 				elseif fields.io_clear then
-					io_area_fill(pos, pos_markers, "air", true, nil)
+					local vm = VoxelManip()
+					local minp, maxp = vm:read_from_map(pos, pos_markers)
+					local data = vm:get_data()
+					local va = VoxelArea:new{MinEdge = minp, MaxEdge = maxp}
+					local pos_start = {x = math.min(pos.x, pos_markers.x) + 1, y = math.min(pos.y, pos_markers.y) + 1, z = math.min(pos.z, pos_markers.z) + 1}
+					local pos_end = {x = math.max(pos.x, pos_markers.x) - 1, y = math.max(pos.y, pos_markers.y) - 1, z = math.max(pos.z, pos_markers.z) - 1}
+					local node_content_air = minetest.get_content_id("air")
+					for search_x = pos_start.x, pos_end.x do
+						for search_y = pos_start.y, pos_end.y do
+							for search_z = pos_start.z, pos_end.z do
+								local search_pos = {x = search_x, y = search_y, z = search_z}
+								local i = va:indexp(search_pos)
+								data[i] = node_content_air
+							end
+						end
+					end
+
+					-- update vm and node data
+					vm:set_data(data)
+					vm:update_liquids()
+					vm:calc_lighting()
+					vm:write_to_map()
 				end
 			else
 				minetest.chat_send_player(player, "Error: The area marked by the markers is invalid", false)

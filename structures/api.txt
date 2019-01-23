@@ -1,15 +1,15 @@
 * Settings:
 
 structures.mapgen_area_multiply = 1: Multiply the size of the virtual area by this amount. Larger values decrease town frequency, but give more room for towns to be arranged in.
-structures.mapgen_structure_clear = 10: Clear this many nodes above terrain for spawned structures. Used to reduce the tree parts being left in the air as structures cut through them, should be as high as the tallest tree. Only used if the structure's "base" field is set a node and its "force" flag is true.
+structures.mapgen_structure_base_padding = 10: Extends the base and terrain clearing of spawned structures by this many nodes. Should be as high as the tallest tree or the deepest ocean. Only used if the structure's "base" field is set a node.
 
 * Main functions and values:
 
 structures:register_group({...}): The function used to define a structure group. Each group is scanned when a virtual area is activated, and chosen as a potential group if it meets the necessary criteria. Parameters:
 	name = "town": The name used to identify this structure group.
 	biomes = {1, ...}: The biomes this group may spawn in, represented as a list of biome ID's. Optional, only works if the mapgen can report biomes. Note that biomes are checked in the first chunk that activates the virtual area, which means success is probabilistic.
-	height_min = 2: Minimum height at which this group and its structures are allowed to spawn.
-	height_max = 2: Maximum height at which this group and its structures are allowed to spawn.
+	height_min = 2: Minimum height at which this group and its structures are allowed to spawn. Note that the base under structures will only go as low as this height minus the value of structures.mapgen_structure_base_padding.
+	height_max = 2: Maximum height at which this group and its structures are allowed to spawn. Note that the area cleared above structures will only go as far as this height plus the value of structures.mapgen_structure_base_padding.
 	tolerance = 0.5: Maximum terrain noise allowed (difference between lowest and highest point). At 1 the structure will spawn on terrain as tall as its own width, 0.5 allows terrain up to half its width, 2 allows a noise level double its width. For chained structures this only applies to the initial segment.
 	elevation = 0.5: Amount by which structures should be buried or elevated when aligned to the surrounding terrain. At 0 they'll be buried as low as possible (results in larger areas cut above them), at 1 they'll be elevated as high as possible (results in larger foundations under them).
 	buildings = {{...}, {...}}: The table that contains this group's buildings, each building defined in a sub-table. Parameters:
