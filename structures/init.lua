@@ -8,9 +8,6 @@ structures = {}
 -- number of nodes in which a structure manager searches for markers
 -- higher values allow for larger areas but cause a longer loop to execute
 local CONNECT_DISTANCE = 100
--- how frequently a node manager detects if markers were added or removed in its range
--- high values cause slower updates, low values cause the check to be preformed more often which might be costly
-local CONNECT_TIME = 1
 
 -- Global functions - Calculate
 
@@ -118,10 +115,20 @@ end
 
 local function make_formspec (file, pos, angle, replace)
 	local pos_markers = markers_get(pos)
-	if pos_markers.x == nil or pos_markers.y == nil or pos_markers.z == nil then return nil end
+	local area_info = ""
 
-	local area_size = make_formspec_size(pos, pos_markers)
-	local area_nodes = make_formspec_nodes(pos, pos_markers)
+	if pos_markers.x == nil then
+		area_info = "Error: No marker found on X axis!"
+	elseif pos_markers.y == nil then
+		area_info = "Error: No marker found on Y axis!"
+	elseif pos_markers.z == nil then
+		area_info = "Error: No marker found on Z axis!"
+	else
+		local area_size = make_formspec_size(pos, pos_markers)
+		local area_nodes = make_formspec_nodes(pos, pos_markers)
+		area_info = "Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes
+	end
+
 	local formspec="size[6,5]"..
 		default.gui_bg..
 		default.gui_bg_img..
@@ -129,7 +136,7 @@ local function make_formspec (file, pos, angle, replace)
 		"field[0,0;4,2;file;File;"..file.."]"..
 		"field[4,0;2,2;angle;Import angle;"..angle.."]"..
 		"field[0,1;6,2;replace;Import replace (a=b,c=d);"..replace.."]"..
-		"label[0,2;Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes.."]"..
+		"label[0,2;"..area_info.."]"..
 		"button[0,3;2,1;io_import;Import]"..
 		"button[2,3;2,1;io_export;Export]"..
 		"button[4,3;2,1;io_clear;Clear]"..
@@ -164,67 +171,85 @@ function markers_remove (pos)
 			minetest.env:remove_node(pos_here)
 		end
 	end
-
-	minetest.env:add_node(pos, {name = "structures:manager_disabled"})
 end
 
 -- search for in-line markers on the X / Y / Z axes within radius and return their positions
 function markers_get (pos)
-	local pos_markers = {x = nil, y = nil, z = nil, ignore = false}
+	local pos_markers = {x = nil, y = nil, z = nil}
 
-	-- search X
-	for search = pos.x - CONNECT_DISTANCE, pos.x + CONNECT_DISTANCE do
-		local pos_search = {x = search, y = pos.y, z = pos.z}
-		local pos_name = minetest.env:get_node(pos_search).name
-		if pos_name == "ignore" then
-			pos_markers.ignore = true
-		elseif pos_name == "structures:marker" then
-			pos_markers.x = pos_search.x
-			break
+	-- search +X
+	if pos_markers.x == nil then
+		for search = pos.x + 1, pos.x + CONNECT_DISTANCE, 1 do
+			local pos_search = {x = search, y = pos.y, z = pos.z}
+			local pos_name = minetest.env:get_node(pos_search).name
+			if pos_name == "structures:marker" then
+				pos_markers.x = pos_search.x
+				break
+			end
 		end
 	end
 
-	-- search Y
-	for search = pos.y - CONNECT_DISTANCE, pos.y + CONNECT_DISTANCE do
-		local pos_search = {x = pos.x, y = search, z = pos.z}
-		local pos_name = minetest.env:get_node(pos_search).name
-		if pos_name == "ignore" then
-			pos_markers.ignore = true
-		elseif pos_name == "structures:marker" then
-			pos_markers.y = pos_search.y
-			break
+	-- search -X
+	if pos_markers.x == nil then
+		for search = pos.x - 1, pos.x - CONNECT_DISTANCE, -1 do
+			local pos_search = {x = search, y = pos.y, z = pos.z}
+			local pos_name = minetest.env:get_node(pos_search).name
+			if pos_name == "structures:marker" then
+				pos_markers.x = pos_search.x
+				break
+			end
 		end
 	end
 
-	-- search Z
-	for search = pos.z - CONNECT_DISTANCE, pos.z + CONNECT_DISTANCE do
-		local pos_search = {x = pos.x, y = pos.y, z = search}
-		local pos_name = minetest.env:get_node(pos_search).name
-		if pos_name == "ignore" then
-			pos_markers.ignore = true
-		elseif pos_name == "structures:marker" then
-			pos_markers.z = pos_search.z
-			break
+	-- search +Y
+	if pos_markers.y == nil then
+		for search = pos.y + 1, pos.y + CONNECT_DISTANCE, 1 do
+			local pos_search = {x = pos.x, y = search, z = pos.z}
+			local pos_name = minetest.env:get_node(pos_search).name
+			if pos_name == "structures:marker" then
+				pos_markers.y = pos_search.y
+				break
+			end
+		end
+	end
+
+	-- search -Y
+	if pos_markers.y == nil then
+		for search = pos.y - 1, pos.y - CONNECT_DISTANCE, -1 do
+			local pos_search = {x = pos.x, y = search, z = pos.z}
+			local pos_name = minetest.env:get_node(pos_search).name
+			if pos_name == "structures:marker" then
+				pos_markers.y = pos_search.y
+				break
+			end
+		end
+	end
+
+	-- search +Z
+	if pos_markers.z == nil then
+		for search = pos.z + 1, pos.z + CONNECT_DISTANCE, 1 do
+			local pos_search = {x = pos.x, y = pos.y, z = search}
+			local pos_name = minetest.env:get_node(pos_search).name
+			if pos_name == "structures:marker" then
+				pos_markers.z = pos_search.z
+				break
+			end
+		end
+	end
+
+	-- search -Z
+	if pos_markers.z == nil then
+		for search = pos.z - 1, pos.z - CONNECT_DISTANCE, -1 do
+			local pos_search = {x = pos.x, y = pos.y, z = search}
+			local pos_name = minetest.env:get_node(pos_search).name
+			if pos_name == "structures:marker" then
+				pos_markers.z = pos_search.z
+				break
+			end
 		end
 	end
 
 	return pos_markers
-end
-
--- check that the block is connected to 3 markers and change it accordingly
-function markers_transform (pos)
-	local pos_markers = markers_get(pos)
-	if pos_markers.ignore == false then
-		if pos_markers.x ~= nil and pos_markers.y ~= nil and pos_markers.z ~= nil then
-			if minetest.env:get_node(pos).name == "structures:manager_disabled" then
-				minetest.env:add_node(pos, {name = "structures:manager_enabled"})
-			end
-		else
-			if minetest.env:get_node(pos).name == "structures:manager_enabled" then
-				minetest.env:add_node(pos, {name = "structures:manager_disabled"})
-			end
-		end
-	end
 end
 
 -- Item definitions
@@ -234,22 +259,13 @@ minetest.register_privilege("structures", {
 	give_to_singleplayer = true
 })
 
-minetest.register_node("structures:manager_disabled", {
+minetest.register_node("structures:manager", {
 	description = "Structure Manager",
-	tiles = {"structure_io_disabled.png"},
+	tiles = {"structure_io_plus_y.png", "structure_io_minus_y.png", "structure_io_plus_x.png", "structure_io_minus_x.png", "structure_io_plus_z.png", "structure_io_minus_z.png"},
 	is_ground_content = true,
-	groups = {cracky = 1,level = 2},
-	drop = 'structures:manager_disabled',
-	sounds = default.node_sound_stone_defaults(),
-})
-
-minetest.register_node("structures:manager_enabled", {
-	description = "Structure Manager",
-	tiles = {"structure_io_enabled.png"},
-	is_ground_content = true,
-	groups = {not_in_creative_inventory = 1, cracky = 1,level = 2},
-	drop = 'structures:manager_disabled',
-	sounds = default.node_sound_stone_defaults(),
+	groups = {cracky = 1, level = 2},
+	drop = 'structures:manager',
+	sounds = default.node_sound_metal_defaults(),
 
 	on_construct = function(pos)
 		local meta = minetest.env:get_meta(pos)
@@ -257,7 +273,7 @@ minetest.register_node("structures:manager_enabled", {
 		meta:set_string("file", "structure")
 		meta:set_float("angle", 0)
 		meta:set_string("formspec", formspec)
-		meta:set_string("infotext", "I/O ready")
+		meta:set_string("infotext", "Structure not configured")
 	end,
 
 	on_receive_fields = function(pos, formname, fields, sender)
@@ -269,6 +285,7 @@ minetest.register_node("structures:manager_enabled", {
 
 		if fields.file and fields.angle then
 			local pos_markers = markers_get(pos)
+			local infotext = ""
 			if pos_markers.x ~= nil and pos_markers.y ~= nil and pos_markers.z ~= nil then
 				if fields.io_export then
 					io_area_export(pos, pos_markers, fields.file..".mts")
@@ -332,9 +349,10 @@ minetest.register_node("structures:manager_enabled", {
 					vm:calc_lighting()
 					vm:write_to_map()
 				end
+				infotext = "Structure: "..fields.file
 			else
 				minetest.chat_send_player(player, "Error: The area marked by the markers is invalid", false)
-				return
+				infotext = "Structure: "..fields.file.." (error)"
 			end
 
 			local meta = minetest.env:get_meta(pos)
@@ -342,6 +360,7 @@ minetest.register_node("structures:manager_enabled", {
 			meta:set_string("file", fields.file)
 			meta:set_float("angle", fields.angle)
 			meta:set_string("formspec", formspec)
+			meta:set_string("infotext", infotext)
 		end
 	end
 })
@@ -352,9 +371,9 @@ minetest.register_node("structures:marker", {
 	tiles = {"structure_io_marker.png"},
 	paramtype = "light",
 	is_ground_content = true,
-	groups = {cracky = 1,level = 2},
+	groups = {cracky = 1, level = 2},
 	drop = 'structures:marker',
-	sounds = default.node_sound_stone_defaults(),
+	sounds = default.node_sound_metal_defaults(),
 
 	node_box = {
 		type = "fixed",
@@ -362,16 +381,6 @@ minetest.register_node("structures:marker", {
 			{-0.125, -0.5, -0.125, 0.125, 0.5, 0.125},
 		},
 	}
-})
-
-minetest.register_abm({
-	nodenames = {"structures:manager_disabled", "structures:manager_enabled"},
-	interval = CONNECT_TIME,
-	chance = 1,
-
-	action = function(pos, node, active_object_count, active_object_count_wider)
-		markers_transform(pos)
-	end
 })
 
 -- Other scripts

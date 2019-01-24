@@ -76,8 +76,8 @@ structures:register_group({
 	biomes = nil,
 	height_min = 10,
 	height_max = 100,
-	tolerance = 0.75,
-	tolerance_link = 0.5,
+	tolerance_buildings = 0.75,
+	tolerance_roads = 0.5,
 	elevation = 0.5,
 	buildings = {
 

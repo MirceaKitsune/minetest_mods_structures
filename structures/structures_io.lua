@@ -4,13 +4,17 @@
 -- Settings
 
 -- don't import the nodes listed here
-structures.IO_ignore = {"ignore", "air", "structures:manager_disabled", "structures:manager_enabled", "structures:marker"}
+structures.IO_ignore = {"ignore", "air", "structures:manager", "structures:marker"}
 
 -- Global functions - Import / export
 
 -- gets the size of a structure file
 function io_get_size (angle, filename)
-	if not filename or filename == "" then return nil end
+	-- abort if file doesn't exist
+	local file = io.open(filename, "r")
+	if file == nil then return end
+	file:close()
+
 	-- obtain size from the serialized schematic in lua format
 	-- since the table is returned as a string, use loadstring to activate it like a piece of lua code
 	local file = minetest.serialize_schematic(filename, "lua", {})
