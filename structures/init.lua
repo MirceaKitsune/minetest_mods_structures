@@ -116,23 +116,24 @@ local function make_formspec_nodes (pos, pos_markers)
 	return nodes
 end
 
-local function make_formspec (file, pos, angle)
+local function make_formspec (file, pos, angle, replace)
 	local pos_markers = markers_get(pos)
 	if pos_markers.x == nil or pos_markers.y == nil or pos_markers.z == nil then return nil end
 
 	local area_size = make_formspec_size(pos, pos_markers)
 	local area_nodes = make_formspec_nodes(pos, pos_markers)
-	local formspec="size[6,4]"..
+	local formspec="size[6,5]"..
 		default.gui_bg..
 		default.gui_bg_img..
 		default.gui_slots..
 		"field[0,0;4,2;file;File;"..file.."]"..
 		"field[4,0;2,2;angle;Import angle;"..angle.."]"..
-		"label[0,1;Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes.."]"..
-		"button[0,2;2,1;io_import;Import]"..
-		"button[2,2;2,1;io_export;Export]"..
-		"button[4,2;2,1;io_clear;Clear]"..
-		"button_exit[0,3;6,1;exit;OK]"
+		"field[0,1;6,2;replace;Import replace (a=b,c=d);"..replace.."]"..
+		"label[0,2;Size: X = "..area_size.x.." Y = "..area_size.y.." Z = "..area_size.z.." Nodes: "..area_nodes.."]"..
+		"button[0,3;2,1;io_import;Import]"..
+		"button[2,3;2,1;io_export;Export]"..
+		"button[4,3;2,1;io_clear;Clear]"..
+		"button_exit[0,4;6,1;exit;OK]"
 	return formspec
 end
 
@@ -252,7 +253,7 @@ minetest.register_node("structures:manager_enabled", {
 
 	on_construct = function(pos)
 		local meta = minetest.env:get_meta(pos)
-		local formspec = make_formspec("structure", pos, 0)
+		local formspec = make_formspec("structure", pos, 0, "")
 		meta:set_string("file", "structure")
 		meta:set_float("angle", 0)
 		meta:set_string("formspec", formspec)
@@ -272,7 +273,21 @@ minetest.register_node("structures:manager_enabled", {
 				if fields.io_export then
 					io_area_export(pos, pos_markers, fields.file..".mts")
 				elseif fields.io_import then
-					io_area_import(pos, pos_markers, tonumber(fields.angle), fields.file..".mts", {}, true, true, nil)
+					-- determine node replacements
+					local replace = {}
+					if fields.replace then
+						-- separate string by comma (",")
+						for token_comma in string.gmatch(fields.replace, "[^,]+") do
+							-- separate string by equals ("=")
+							local entries = {}
+							for token_equals in string.gmatch(token_comma, "[^=]+") do
+								table.insert(entries, token_equals)
+							end
+							replace[entries[1]] = entries[2]
+						end
+					end
+
+					io_area_import(pos, pos_markers, tonumber(fields.angle), fields.file..".mts", replace, true, true, nil)
 
 					-- we need to call on_construct for each node that has it, otherwise some nodes won't work correctly or cause a crash
 					local vm = VoxelManip()
@@ -323,7 +338,7 @@ minetest.register_node("structures:manager_enabled", {
 			end
 
 			local meta = minetest.env:get_meta(pos)
-			local formspec = make_formspec(fields.file, pos, fields.angle)
+			local formspec = make_formspec(fields.file, pos, fields.angle, fields.replace)
 			meta:set_string("file", fields.file)
 			meta:set_float("angle", fields.angle)
 			meta:set_string("formspec", formspec)
