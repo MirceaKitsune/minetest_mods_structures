@@ -8,9 +8,15 @@ structures.IO_ignore = {"ignore", "air", "structures:manager", "structures:marke
 
 -- Global functions - Import / export
 
--- gets the size of a structure file
-function io_get_size (angle, filename)
-	-- abort if file doesn't exist
+-- stores the cache of schematic sizes
+local io_size_cache = {}
+
+-- reads the size of a structure file then caches it
+function io_get_size_cache (filename)
+	-- return if the structure is already cached
+	if io_size_cache[filename] then return end
+
+	-- return if the file doesn't exist
 	local file = io.open(filename, "r")
 	if file == nil then return end
 	file:close()
@@ -27,7 +33,29 @@ function io_get_size (angle, filename)
 		func = load(file, nil, "t", env)
 	end
 	func()
-	local size = env.schematic.size
+
+	-- store the size of this schematic
+	io_size_cache[filename] = env.schematic.size
+end
+
+-- clears the size of a structure from the cache
+function io_get_size_uncache (filename)
+	-- clear the size of this schematic
+	io_size_cache[filename] = nil
+end
+
+-- gets the size of a structure file
+function io_get_size (angle, filename)
+	-- fetch the size of this schematic from its cache
+	-- if the schematic size is not cached, cache it now then fetch it
+	local size = nil
+	if not io_size_cache[filename] then
+		io_get_size_cache(filename)
+	end
+	size = io_size_cache[filename]
+	if not size then
+		return nil
+	end
 
 	-- rotate box size with angle
 	if angle == 90 or angle == 270 then

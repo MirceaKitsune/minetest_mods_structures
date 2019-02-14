@@ -433,6 +433,13 @@ function structures:register_group(def)
 	end
 end
 
+-- the function used to cache the schematics used by a town
+function structures:register_cache(filenames)
+	for _, filename in ipairs(filenames) do
+		io_get_size_cache(filename)
+	end
+end
+
 -- Minetest functions
 
 -- run the map_generate function

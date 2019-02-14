@@ -71,6 +71,32 @@ end
 
 -- #3 - Towns
 
+structures:register_cache({
+	path_schematics.."apartment_large_1_G.mts",
+	path_schematics.."apartment_large_1_F.mts",
+	path_schematics.."apartment_large_1_R.mts",
+	path_schematics.."road_small_I.mts",
+	path_schematics.."road_small_L.mts",
+	path_schematics.."road_small_P.mts",
+	path_schematics.."road_small_T.mts",
+	path_schematics.."road_small_X.mts",
+	path_schematics.."road_large_I.mts",
+	path_schematics.."road_large_L.mts",
+	path_schematics.."road_large_P.mts",
+	path_schematics.."road_large_T.mts",
+	path_schematics.."road_large_X.mts",
+	path_schematics.."road_tunnel_I.mts",
+	path_schematics.."road_tunnel_L.mts",
+	path_schematics.."road_tunnel_P.mts",
+	path_schematics.."road_tunnel_T.mts",
+	path_schematics.."road_tunnel_X.mts",
+	path_schematics.."road_rail_I.mts",
+	path_schematics.."road_rail_L.mts",
+	path_schematics.."road_rail_P.mts",
+	path_schematics.."road_rail_T.mts",
+	path_schematics.."road_rail_X.mts",
+})
+
 structures:register_group({
 	name = "mtg_city",
 	biomes = nil,

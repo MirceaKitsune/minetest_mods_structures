@@ -289,6 +289,7 @@ minetest.register_node("structures:manager", {
 			if pos_markers.x ~= nil and pos_markers.y ~= nil and pos_markers.z ~= nil then
 				if fields.io_export then
 					io_area_export(pos, pos_markers, fields.file..".mts")
+					io_get_size_uncache(fields.file..".mts")
 				elseif fields.io_import then
 					-- determine node replacements
 					local replace = {}
@@ -304,6 +305,7 @@ minetest.register_node("structures:manager", {
 						end
 					end
 
+					io_get_size_cache(fields.file..".mts")
 					io_area_import(pos, pos_markers, tonumber(fields.angle), fields.file..".mts", replace, true, true, nil)
 
 					-- we need to call on_construct for each node that has it, otherwise some nodes won't work correctly or cause a crash

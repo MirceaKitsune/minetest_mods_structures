@@ -5,6 +5,7 @@ structures.mapgen_structure_base_padding = 10: Extends the base and terrain clea
 
 * Main functions and values:
 
+structures:register_cache({...}): This should be called with a list of all schematics used by the town, in order to properly cache their files and improve performance.
 structures:register_group({...}): The function used to define a structure group. Each group is scanned when a virtual area is activated, and chosen as a potential group if it meets the necessary criteria. Parameters:
 	name = "town": The name used to identify this structure group.
 	biomes = {1, ...}: The biomes this group may spawn in, represented as a list of biome ID's. Optional, only works if the mapgen can report biomes. Note that biomes are checked in the first chunk that activates the virtual area, which means success is probabilistic.
