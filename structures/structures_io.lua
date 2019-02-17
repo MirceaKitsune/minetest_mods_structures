@@ -45,7 +45,7 @@ function io_get_size_uncache (filename)
 end
 
 -- gets the size of a structure file
-function io_get_size (angle, filename)
+function io_get_size (filename, angle)
 	-- fetch the size of this schematic from its cache
 	-- if the schematic size is not cached, cache it now then fetch it
 	local size = nil
@@ -91,21 +91,18 @@ function io_area_export (pos, ends, filename)
 end
 
 -- import structure from a schematic
-function io_area_import (pos, ends, angle, filename, replacements, force, check_bounds, vm)
+function io_area_import (pos, ends, angle, filename, replacements, force, vm)
 	if ends == nil or not filename or filename == "" then return end
 	local pos_start = {x = math.min(pos.x, ends.x) + 1, y = math.min(pos.y, ends.y) + 1, z = math.min(pos.z, ends.z) + 1}
 	local pos_end = {x = math.max(pos.x, ends.x) - 1, y = math.max(pos.y, ends.y) - 1, z = math.max(pos.z, ends.z) - 1}
 
-	-- check if the structure fits between the start and end positions if necessary
-	if check_bounds == true then
-		local size = io_get_size(angle, filename)
-		if size == nil then return end
-
-		-- abort if a node is larger than the marked area
-		if pos_start.x + size.x - 1 > pos_end.x or pos_start.y + size.y - 1 > pos_end.y or pos_start.z + size.z - 1 > pos_end.z then
-			print("Structure I/O Error: Structure is larger than the marked area, aborting.")
-			return
-		end
+	-- check if the structure fits between the start and end positions
+	-- abort if a node is larger than the marked area
+	local size = io_get_size(filename, angle)
+	if size == nil then return end
+	if pos_start.x + size.x - 1 > pos_end.x or pos_start.y + size.y - 1 > pos_end.y or pos_start.z + size.z - 1 > pos_end.z then
+		print("Structure I/O Error: Structure is larger than the marked area, aborting.")
+		return
 	end
 
 	-- abort if file doesn't exist

@@ -40,12 +40,12 @@ local function mapgen_group_size (id)
 		entry.name = calculate_entry(entry.name)
 		entry.name_start = calculate_entry(entry.name_start)
 		entry.name_end = calculate_entry(entry.name_end)
-		local size = io_get_size(0, entry.name)
+		local size = io_get_size(entry.name, 0)
 
 		-- if this building has floors, use the maximum height of all segments
 		if entry.floors_min and entry.floors_max and entry.floors_max > 0 then
-			local size_start = io_get_size(0, entry.name_start)
-			local size_end = io_get_size(0, entry.name_end)
+			local size_start = io_get_size(entry.name_start, 0)
+			local size_end = io_get_size(entry.name_end, 0)
 			size.y = size_start.y + size_end.y + size.y * (entry.floors_max - 1)
 		end
 
@@ -75,7 +75,7 @@ local function mapgen_group_size (id)
 		entry.name_P = calculate_entry(entry.name_P)
 		entry.name_T = calculate_entry(entry.name_T)
 		entry.name_X = calculate_entry(entry.name_X)
-		local size = io_get_size(0, entry.name_I)
+		local size = io_get_size(entry.name_I, 0)
 
 		if size ~= nil then
 			-- add the estimated horizontal scale of roads
@@ -212,7 +212,7 @@ local function mapgen_generate_structure (structure_index, area_index, minp, max
 			if pos_start.x <= maxp.x and pos_end.x >= minp.x and
 			pos_start.y <= maxp.y and pos_end.y >= minp.y and
 			pos_start.z <= maxp.z and pos_end.z >= minp.z then
-				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, false, vm)
+				io_area_import(pos_start, pos_end, structure.angle, structure.name, structure.replacements, structure.force, vm)
 				imported = true
 			end
 

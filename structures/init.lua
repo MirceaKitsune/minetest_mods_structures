@@ -306,7 +306,7 @@ minetest.register_node("structures:manager", {
 					end
 
 					io_get_size_cache(fields.file..".mts")
-					io_area_import(pos, pos_markers, tonumber(fields.angle), fields.file..".mts", replace, true, true, nil)
+					io_area_import(pos, pos_markers, tonumber(fields.angle), fields.file..".mts", replace, true, nil)
 
 					-- we need to call on_construct for each node that has it, otherwise some nodes won't work correctly or cause a crash
 					local vm = VoxelManip()

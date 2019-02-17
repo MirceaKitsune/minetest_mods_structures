@@ -336,7 +336,7 @@ function mapgen_roads_get (pos_start, pos_end, roads)
 			entry.name_P = calculate_entry(entry.name_P)
 			entry.name_T = calculate_entry(entry.name_T)
 			entry.name_X = calculate_entry(entry.name_X)
-			local size = io_get_size(0, calculate_entry(entry.name_I))
+			local size = io_get_size(calculate_entry(entry.name_I), 0)
 			-- now create the starting point in an available area
 			local area_index = math.random(1, #start_areas[i])
 			local area = start_areas[i][area_index]

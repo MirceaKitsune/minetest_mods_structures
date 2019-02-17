@@ -82,10 +82,10 @@ function mapgen_buildings_get (pos_start, pos_end, rectangles, buildings)
 		end
 
 		-- obtain this building's size
-		local size = io_get_size(angle, entry.name)
+		local size = io_get_size(entry.name, angle)
 		if floors and floors > 0 then
-			local size_start = io_get_size(angle, entry.name_start)
-			local size_end = io_get_size(angle, entry.name_end)
+			local size_start = io_get_size(entry.name_start, angle)
+			local size_end = io_get_size(entry.name_end, angle)
 
 			-- the height of each segment might be different, so store that of the start and end segments separately
 			size.y_start = size_start.y
